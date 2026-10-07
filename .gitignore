@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build output (shipped as a release asset, not committed)
+main.js
+*.js.map
+
+# Obsidian plugin settings when the repo is linked into a test vault
+data.json
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
