@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian';
-import { DEFAULT_SETTINGS, MattersSettings } from './settings';
+import type { MattersSettings } from './settings';
+import { migrateSettings } from './services/migrations';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
@@ -9,8 +10,7 @@ export default class MattersPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const saved = (await this.loadData()) as Partial<MattersSettings> | null;
-		this.settings = { ...structuredClone(DEFAULT_SETTINGS), ...saved };
+		this.settings = migrateSettings(await this.loadData());
 	}
 
 	async saveSettings() {
