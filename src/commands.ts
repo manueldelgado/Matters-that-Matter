@@ -9,6 +9,12 @@ import { frontmatterOf } from './vault/notes';
 
 export function registerCommands(plugin: MattersPlugin): void {
 	plugin.addCommand({
+		id: 'new-matter',
+		name: STRINGS.commands.newMatter,
+		callback: () => plugin.newMatter(),
+	});
+
+	plugin.addCommand({
 		id: 'run-setup',
 		name: STRINGS.commands.runSetup,
 		callback: () => void plugin.openSetup(),

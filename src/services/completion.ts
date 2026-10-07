@@ -37,37 +37,43 @@ export function applyStatus(
 	else if (change === 'remove') delete fm['mtm-completed'];
 }
 
-/** The last category seen for each Action path. */
+/** The last status seen for each Action path: raw value and effective category. */
 export class StatusCache {
-	private categories = new Map<string, StatusCategory>();
+	private seen = new Map<string, { raw: unknown; category: StatusCategory }>();
 
-	/** Records a category without judging a transition (on load, and after the plugin's own writes). */
-	seed(path: string, category: StatusCategory): void {
-		this.categories.set(path, category);
+	/** Records a status without judging a transition (on load, and when settings change). */
+	seed(path: string, raw: unknown, category: StatusCategory): void {
+		this.seen.set(path, { raw, category });
 	}
 
 	get(path: string): StatusCategory | undefined {
-		return this.categories.get(path);
+		return this.seen.get(path)?.category;
 	}
 
-	/** Records a metadata change and returns what to do with mtm-completed. */
-	observe(path: string, category: StatusCategory, hasCompleted: boolean): CompletionChange {
-		const change = completionChange(this.categories.get(path), category, hasCompleted);
-		this.categories.set(path, category);
-		return change;
+	/**
+	 * Records a metadata change and returns what to do with mtm-completed.
+	 * Only a change of the raw status counts: a category edited in settings is not a transition.
+	 */
+	observe(path: string, raw: unknown, category: StatusCategory, hasCompleted: boolean): CompletionChange {
+		const previous = this.seen.get(path);
+		this.seen.set(path, { raw, category });
+		if (!previous || previous.raw === raw) return 'none';
+		return completionChange(previous.category, category, hasCompleted);
 	}
 
 	rename(oldPath: string, newPath: string): void {
-		const category = this.categories.get(oldPath);
-		this.categories.delete(oldPath);
-		if (category !== undefined) this.categories.set(newPath, category);
+		const entry = this.seen.get(oldPath);
+		this.seen.delete(oldPath);
+		if (entry) this.seen.set(newPath, entry);
 	}
 
 	forget(path: string): void {
-		this.categories.delete(path);
+		this.seen.delete(path);
 	}
 
 	clear(): void {
-		this.categories.clear();
+		this.seen.clear();
 	}
 }
+
+export { hasValue as hasCompletedValue };

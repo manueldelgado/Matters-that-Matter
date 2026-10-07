@@ -31,6 +31,11 @@ export function parseCadence(raw: unknown): Cadence | null {
 	return { n, unit: (m[2] ?? 'd').toLowerCase() as Cadence['unit'] };
 }
 
+/** The form the plugin writes: `<n>d`, `<n>w` or `<n>m`. */
+export function formatCadence(c: Cadence): string {
+	return `${c.n}${c.unit}`;
+}
+
 export function addCadence(ymd: Ymd, c: Cadence): Ymd {
 	if (c.unit === 'm') return addMonths(ymd, c.n);
 	return addDays(ymd, c.unit === 'w' ? c.n * 7 : c.n);

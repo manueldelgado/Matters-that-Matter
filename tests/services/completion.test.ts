@@ -26,36 +26,40 @@ describe('completionChange', () => {
 describe('StatusCache', () => {
 	it('does not backfill: seeding on load never reports a change', () => {
 		const cache = new StatusCache();
-		cache.seed('a.md', 'closed');
-		expect(cache.observe('a.md', 'closed', false)).toBe('none');
+		cache.seed('a.md', 'done', 'closed');
+		expect(cache.observe('a.md', 'done', 'closed', false)).toBe('none');
 	});
 
-	it('reports observed transitions and remembers the new category', () => {
+	it('reports observed transitions and remembers the new status', () => {
 		const cache = new StatusCache();
-		cache.seed('a.md', 'open');
-		expect(cache.observe('a.md', 'closed', false)).toBe('set');
+		cache.seed('a.md', 'next', 'open');
+		expect(cache.observe('a.md', 'done', 'closed', false)).toBe('set');
 		expect(cache.get('a.md')).toBe('closed');
-		expect(cache.observe('a.md', 'open', true)).toBe('remove');
+		expect(cache.observe('a.md', 'next', 'open', true)).toBe('remove');
 	});
 
-	it("ignores the plugin's own writes once seeded", () => {
+	it("ignores the plugin's own writes, which already set mtm-completed", () => {
 		const cache = new StatusCache();
-		cache.seed('a.md', 'open');
-		// The plugin writes the done status and mtm-completed together, then seeds.
-		cache.seed('a.md', 'closed');
-		expect(cache.observe('a.md', 'closed', true)).toBe('none');
+		cache.seed('a.md', 'next', 'open');
+		expect(cache.observe('a.md', 'done', 'closed', true)).toBe('none');
+	});
+
+	it('ignores changes that keep the raw status (a category edited in settings)', () => {
+		const cache = new StatusCache();
+		cache.seed('a.md', 'waiting', 'active');
+		expect(cache.observe('a.md', 'waiting', 'closed', false)).toBe('none');
 	});
 
 	it('treats a new file as unknown', () => {
-		expect(new StatusCache().observe('new.md', 'closed', false)).toBe('none');
+		expect(new StatusCache().observe('new.md', 'done', 'closed', false)).toBe('none');
 	});
 
 	it('follows renames and deletions', () => {
 		const cache = new StatusCache();
-		cache.seed('a.md', 'open');
+		cache.seed('a.md', 'next', 'open');
 		cache.rename('a.md', 'b.md');
 		expect(cache.get('a.md')).toBeUndefined();
-		expect(cache.observe('b.md', 'closed', false)).toBe('set');
+		expect(cache.observe('b.md', 'done', 'closed', false)).toBe('set');
 		cache.forget('b.md');
 		expect(cache.get('b.md')).toBeUndefined();
 	});

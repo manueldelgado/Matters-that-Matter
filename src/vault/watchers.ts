@@ -1,0 +1,130 @@
+// Vault-wide behaviour that runs once setup is done: completion dates on observed status changes,
+// Inbox protection and the ribbon counter.
+
+import { debounce, normalizePath, Notice, TFile, type CachedMetadata } from 'obsidian';
+import type MattersPlugin from '../main';
+import { STRINGS } from '../strings';
+import { toYmd } from '../model/dates';
+import { hasCompletedValue, StatusCache } from '../services/completion';
+import { effectiveAction } from '../services/effective';
+import { inboxRepairs, isInboxDuplicate } from '../services/inboxGuard';
+import { resolverFor } from './index';
+import { createNote, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
+
+const INBOX_RESTORE_DELAY = 4000;
+
+export class Watchers {
+	private statuses = new StatusCache();
+	private ribbonEl: HTMLElement | null = null;
+	private updateRibbon = debounce(() => this.renderRibbon(), 300, true);
+
+	constructor(private plugin: MattersPlugin) {}
+
+	/** Called once the layout is ready and setup is done. */
+	start(ribbonEl: HTMLElement): void {
+		const { app } = this.plugin;
+		this.ribbonEl = ribbonEl;
+		this.seedStatuses();
+		this.warnInboxDuplicates();
+		this.renderRibbon();
+
+		this.plugin.registerEvent(app.metadataCache.on('changed', (file, _data, cache) => void this.onChanged(file, cache)));
+		this.plugin.registerEvent(
+			app.vault.on('delete', (file) => {
+				this.statuses.forget(file.path);
+				if (file.path === this.plugin.settings.inboxPath) this.restoreInboxLater(file.path);
+				this.updateRibbon();
+			}),
+		);
+		this.plugin.registerEvent(
+			app.vault.on('rename', (file, oldPath) => {
+				this.statuses.rename(oldPath, file.path);
+				this.plugin.selection.rename(oldPath, file.path);
+				this.updateRibbon();
+			}),
+		);
+		this.plugin.registerEvent(
+			this.plugin.events.on('settings-changed', () => {
+				this.seedStatuses();
+				this.updateRibbon();
+			}),
+		);
+	}
+
+	private seedStatuses(): void {
+		const { app, settings } = this.plugin;
+		this.statuses.clear();
+		for (const file of notesOfKind(app, 'action')) {
+			const fm = frontmatterOf(app, file);
+			const effective = effectiveAction(fm, settings, resolverFor(app, file.path));
+			this.statuses.seed(file.path, fm?.['mtm-status'], effective.category);
+		}
+	}
+
+	private async onChanged(file: TFile, cache: CachedMetadata): Promise<void> {
+		const { app, settings } = this.plugin;
+		const fm = cache.frontmatter;
+		if (file.path === settings.inboxPath) await this.guardInbox(file, fm);
+
+		if (fm?.['mtm-kind'] !== 'action') {
+			this.statuses.forget(file.path);
+		} else {
+			const effective = effectiveAction(fm, settings, resolverFor(app, file.path));
+			const change = this.statuses.observe(file.path, fm['mtm-status'], effective.category, hasCompletedValue(fm['mtm-completed']));
+			if (change !== 'none') {
+				await app.fileManager.processFrontMatter(file, (data: Frontmatter) => {
+					if (change === 'set') data['mtm-completed'] = toYmd(new Date());
+					else delete data['mtm-completed'];
+				});
+			}
+		}
+		this.updateRibbon();
+	}
+
+	// ——— Inbox ———
+
+	private async guardInbox(file: TFile, fm: Frontmatter | undefined): Promise<void> {
+		const repairs = inboxRepairs(fm);
+		if (Object.keys(repairs).length === 0) return;
+		await this.plugin.app.fileManager.processFrontMatter(file, (data: Frontmatter) => Object.assign(data, repairs));
+		new Notice(STRINGS.notices.inboxRestoredProperties);
+	}
+
+	/** Waits for a sync restore; re-creates the Inbox if it does not come back. */
+	private restoreInboxLater(path: string): void {
+		window.setTimeout(() => {
+			const { app, settings } = this.plugin;
+			if (settings.inboxPath !== path || app.vault.getAbstractFileByPath(normalizePath(path))) return;
+			void createNote(app, path, { 'mtm-kind': 'matter', 'mtm-icon': 'inbox', 'mtm-state': 'active' }).then(() =>
+				new Notice(STRINGS.notices.inboxRecreated),
+			);
+		}, INBOX_RESTORE_DELAY);
+	}
+
+	private warnInboxDuplicates(): void {
+		const { app, settings } = this.plugin;
+		const duplicates = app.vault.getMarkdownFiles().filter((f) => isInboxDuplicate(f.path, settings.inboxPath));
+		if (duplicates.length) new Notice(STRINGS.notices.inboxDuplicates(duplicates.map((f) => f.path)));
+	}
+
+	// ——— Ribbon ———
+
+	/** Actions in the Inbox that are not closed (counted even when a board hides the Inbox). */
+	inboxOpenCount(): number {
+		const { app, settings } = this.plugin;
+		let n = 0;
+		for (const file of notesOfKind(app, 'action')) {
+			const e = effectiveAction(frontmatterOf(app, file), settings, resolverFor(app, file.path));
+			if (e.matterPath === settings.inboxPath && e.category !== 'closed') n++;
+		}
+		return n;
+	}
+
+	private renderRibbon(): void {
+		const el = this.ribbonEl;
+		if (!el) return;
+		el.querySelector('.mtm-ribbon-badge')?.remove();
+		const n = this.inboxOpenCount();
+		if (n > 0) el.createSpan({ cls: 'mtm-ribbon-badge', text: String(n) });
+	}
+}

@@ -2,18 +2,28 @@ import { Events, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian'
 import type { MattersSettings } from './settings';
 import { STRINGS } from './strings';
 import { migrateSettings } from './services/migrations';
+import { backlogStatus, defaultType } from './model/workflow';
 import { registerCommands } from './commands';
+import { Selection } from './selection';
 import { MattersSettingTab } from './ui/settingsTab';
 import { BoardPicker } from './ui/modals/boardPicker';
+import { NewMatterModal } from './ui/modals/newMatterModal';
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
 import { ensureDateTimeTypes } from './vault/internal';
+import { frontmatterOf } from './vault/notes';
+import { createAction } from './vault/actionWrites';
+import { createMatter } from './vault/matterWrites';
+import { Watchers } from './vault/watchers';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
 	/** "settings-changed" fires after every save and after settings arrive from sync. */
 	events = new Events();
+	selection = new Selection();
 	basesAvailable = false;
+	private watchers: Watchers | null = null;
+	private ribbonEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -22,9 +32,15 @@ export default class MattersPlugin extends Plugin {
 		this.basesAvailable = registerCollectionViews(this);
 		registerCommands(this);
 		this.addSettingTab(new MattersSettingTab(this.app, this));
-		this.addRibbonIcon('square-kanban', STRINGS.ribbon, () => void this.openBoard()).addClass('mtm-ribbon');
+		this.ribbonEl = this.addRibbonIcon('square-kanban', STRINGS.ribbon, () => void this.openBoard());
+		this.ribbonEl.addClass('mtm-ribbon');
 
 		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => void this.onRename(file.path, oldPath)));
+		this.registerEvent(
+			this.app.workspace.on('file-open', (file) => {
+				if (file && frontmatterOf(this.app, file)?.['mtm-kind'] === 'action') this.selection.set(file.path);
+			}),
+		);
 		this.app.workspace.onLayoutReady(() => this.onLayoutReady());
 	}
 
@@ -33,8 +49,16 @@ export default class MattersPlugin extends Plugin {
 			void this.openSetup();
 			return;
 		}
-		ensureDateTimeTypes(this.app);
+		this.onSetupDone();
 		if (!this.basesAvailable) new Notice(STRINGS.notices.basesDisabled);
+	}
+
+	/** Starts what only runs once setup is done (also called when setup completes). */
+	onSetupDone(): void {
+		ensureDateTimeTypes(this.app);
+		if (this.watchers || !this.ribbonEl) return;
+		this.watchers = new Watchers(this);
+		this.watchers.start(this.ribbonEl);
 	}
 
 	async loadSettings() {
@@ -92,5 +116,43 @@ export default class MattersPlugin extends Plugin {
 		const board = vault.getFileByPath(normalizePath(this.settings.boardPath)) ?? boards[0];
 		if (board) open(board);
 		else new Notice(STRINGS.notices.boardMissing(this.settings.boardPath));
+	}
+
+	/**
+	 * Creates an Action and opens it. Without a status or Matter it lands in the backlog of the Inbox.
+	 * Quick add will take over this entry point.
+	 */
+	async newAction(init: { statusId?: string; matterPath?: string; typeId?: string } = {}): Promise<void> {
+		const s = this.settings;
+		const statusId = init.statusId ?? backlogStatus(s.statuses)?.id ?? s.statuses[0]?.id ?? '';
+		const typeId = init.typeId ?? defaultType(s.types)?.id ?? s.types[0]?.id ?? '';
+		try {
+			const file = await createAction(this.app, s, {
+				title: STRINGS.untitledAction,
+				statusId,
+				typeId,
+				matterPath: init.matterPath ?? s.inboxPath,
+			});
+			this.selection.set(file.path);
+			await this.app.workspace.getLeaf('tab').openFile(file);
+		} catch (e) {
+			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+		}
+	}
+
+	newMatter(): void {
+		new NewMatterModal(this.app, async (result) => {
+			try {
+				await createMatter(this.app, this.settings, result);
+			} catch (e) {
+				new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+			}
+		}).open();
+	}
+
+	/** Opens a Matter. The Matter overview will take over this entry point. */
+	async openMatter(path: string): Promise<void> {
+		const file = this.app.vault.getFileByPath(normalizePath(path));
+		if (file) await this.app.workspace.getLeaf('tab').openFile(file);
 	}
 }

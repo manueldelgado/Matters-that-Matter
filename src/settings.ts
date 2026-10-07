@@ -68,7 +68,7 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 	inboxPath: 'MTM/Matters/Inbox.md',
 	boardPath: 'MTM/Boards/Matters.base',
 	defaultInboxPosition: 'top',
-	showDone: false,
+	showDone: true,
 	weekStart: 'monday',
 	dateLanguages: ['en', 'es'],
 };

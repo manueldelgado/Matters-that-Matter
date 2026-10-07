@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	formatCadence,
 	matterState,
 	moveLane,
 	moveLaneBy,
@@ -35,6 +36,11 @@ describe('review', () => {
 		expect(parseCadence('0d')).toBeNull();
 		expect(parseCadence('weekly')).toBeNull();
 		expect(parseCadence(7)).toBeNull();
+	});
+
+	it('formats cadences in the written form', () => {
+		expect(formatCadence({ n: 10, unit: 'd' })).toBe('10d');
+		expect(formatCadence(parseCadence(' 3M ')!)).toBe('3m');
 	});
 
 	it('is never due without a cadence', () => {

@@ -1,0 +1,92 @@
+// Builds Action items and Matter lanes from metadataCache.
+
+import { normalizePath, TFile, type App } from 'obsidian';
+import type { MattersSettings } from '../settings';
+import type { Ymd } from '../model/dates';
+import { matterState, parseCadence, parseLaneOrder, reviewInfo } from '../model/matters';
+import { toActionItem, type ActionItem } from '../services/actionItems';
+import { linkText, type ResolveLink } from '../services/effective';
+import type { MatterInfo } from '../services/boardModel';
+import { frontmatterOf, notesOfKind } from './notes';
+
+export const DEFAULT_MATTER_ICON = 'circle-dot';
+
+export function resolverFor(app: App, sourcePath: string): ResolveLink {
+	return (text) => {
+		const file = app.metadataCache.getFirstLinkpathDest(text, sourcePath);
+		if (!file) return null;
+		return { path: file.path, isMatter: frontmatterOf(app, file)?.['mtm-kind'] === 'matter' };
+	};
+}
+
+/** The file a frontmatter link value points to. */
+export function linkedFile(app: App, raw: unknown, sourcePath: string): TFile | null {
+	const text = linkText(raw);
+	return text ? app.metadataCache.getFirstLinkpathDest(text, sourcePath) : null;
+}
+
+/** Resolved outgoing body links to other notes, without the Matter and people. */
+export function linkedNotes(app: App, file: TFile, exclude: ReadonlySet<string>): TFile[] {
+	const cache = app.metadataCache.getFileCache(file);
+	const out = new Map<string, TFile>();
+	for (const link of cache?.links ?? []) {
+		const target = app.metadataCache.getFirstLinkpathDest(link.link.split('#')[0] ?? '', file.path);
+		if (target && target.extension === 'md' && target.path !== file.path && !exclude.has(target.path)) out.set(target.path, target);
+	}
+	return [...out.values()];
+}
+
+function peoplePaths(app: App, fm: Record<string, unknown>, sourcePath: string): Set<string> {
+	const raw = fm['mtm-people'];
+	const values: unknown[] = [...(Array.isArray(raw) ? (raw as unknown[]) : [raw]), fm['mtm-waiting-on']];
+	const out = new Set<string>();
+	for (const v of values) {
+		const f = linkedFile(app, v, sourcePath);
+		if (f) out.add(f.path);
+	}
+	return out;
+}
+
+export function actionItem(app: App, file: TFile, settings: MattersSettings): ActionItem {
+	const fm = frontmatterOf(app, file) ?? {};
+	const item = toActionItem(file.path, file.basename, fm, settings, resolverFor(app, file.path));
+	const exclude = peoplePaths(app, fm, file.path);
+	exclude.add(item.effective.matterPath);
+	item.linkedCount = linkedNotes(app, file, exclude).length;
+	return item;
+}
+
+/** Every Action in the vault (not only those in a Bases result). */
+export function allActionItems(app: App, settings: MattersSettings): ActionItem[] {
+	return notesOfKind(app, 'action').map((f) => actionItem(app, f, settings));
+}
+
+function matterInfo(app: App, file: TFile, settings: MattersSettings, today: Ymd): MatterInfo {
+	const fm = frontmatterOf(app, file) ?? {};
+	const isInbox = file.path === settings.inboxPath;
+	const icon = typeof fm['mtm-icon'] === 'string' && fm['mtm-icon'].trim() ? fm['mtm-icon'].trim() : DEFAULT_MATTER_ICON;
+	const state = isInbox ? 'active' : matterState(fm['mtm-state']);
+	const cadence = parseCadence(fm['mtm-review-every']);
+	return {
+		path: file.path,
+		name: file.basename,
+		laneOrder: parseLaneOrder(fm['mtm-lane-order']),
+		isInbox,
+		icon: isInbox && !fm['mtm-icon'] ? 'inbox' : icon,
+		state,
+		review: isInbox || !cadence ? null : reviewInfo(fm['mtm-review-every'], fm['mtm-last-reviewed'], today),
+	};
+}
+
+/** All Matter notes, plus the Inbox even when its note is missing or lost its mtm-kind. */
+export function allMatters(app: App, settings: MattersSettings, today: Ymd): MatterInfo[] {
+	const files = notesOfKind(app, 'matter');
+	const inboxFile = app.vault.getFileByPath(normalizePath(settings.inboxPath));
+	if (inboxFile && !files.includes(inboxFile)) files.push(inboxFile);
+	const matters = files.map((f) => matterInfo(app, f, settings, today));
+	if (!inboxFile) {
+		const name = settings.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? 'Inbox';
+		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null });
+	}
+	return matters;
+}

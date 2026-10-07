@@ -20,7 +20,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 
 - `src/main.ts`: plugin lifecycle and registration only. Feature logic lives in other modules.
 - `src/settings.ts`: settings types and defaults. `src/strings.ts`: all UI strings.
-- `src/commands.ts`: command palette entries.
+- `src/commands.ts`: command palette entries. `src/selection.ts`: the selected Action.
 - `src/model/`: pure rules (workflow flags, Matters, Actions, dates, titles, note body).
 - `src/services/`: pure services (effective values, completion dates, Inbox rules, settings migrations, IDs, fuzzy matching, quick-add parsing, setup planning).
 - `src/vault/`: reads and writes through the Obsidian API. Undocumented internals live only in `vault/internal.ts`, guarded.

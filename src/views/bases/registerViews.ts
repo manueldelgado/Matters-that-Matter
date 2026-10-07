@@ -1,10 +1,11 @@
 // Registers the board, list, calendar and timeline as custom Bases views.
-// The views themselves are placeholders until each one is built.
+// List, calendar and timeline are placeholders until each one is built.
 
 import { BasesView, type BasesAllOptions, type QueryController } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
 import { VIEW_TYPES, type CollectionView } from '../../services/baseFile';
+import { BoardView } from './board/boardView';
 
 const ICONS: Record<CollectionView, string> = {
 	board: 'square-kanban',
@@ -73,7 +74,8 @@ export function registerCollectionViews(plugin: MattersPlugin): boolean {
 		const registered = plugin.registerBasesView(type, {
 			name: STRINGS.views[key],
 			icon: ICONS[key],
-			factory: (controller, containerEl) => new PlaceholderView(controller, containerEl, type),
+			factory: (controller, containerEl) =>
+				key === 'board' ? new BoardView(controller, containerEl, plugin) : new PlaceholderView(controller, containerEl, type),
 			options: key === 'board' ? boardOptions : doneOptions,
 		});
 		ok &&= registered;

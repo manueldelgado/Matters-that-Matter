@@ -186,6 +186,7 @@ export class SetupView extends ItemView {
 				setupDone: true,
 			});
 			await this.plugin.saveSettings();
+			this.plugin.onSetupDone();
 			new Notice(STRINGS.notices.setupDone);
 			await this.plugin.openBoard();
 			this.leaf.detach();
