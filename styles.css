@@ -683,6 +683,5 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 .mtm-suggest-meta{flex:none;white-space:nowrap}
 .modal.mtm-quick-add{overflow:visible}
 .mtm-quick-add .mtm-qa-footer{border-radius:0 0 var(--modal-radius,12px) var(--modal-radius,12px)}
-/* ——— Pending rules ———
-   Appended last to plugin/styles.css. Use it for fixes and rules waiting for the next contract revision.
-   At each revision, fold these into matters.components.css (and CLASSES.md) and empty this file. Nothing pending for revision 4. */
+/* Tone popover: placed below its trigger; the plugin sets the coordinates. */
+.mtm-swatches.mod-popover{position:fixed;z-index:var(--layer-popover);left:var(--mtm-popover-x,0);top:var(--mtm-popover-y,0)}

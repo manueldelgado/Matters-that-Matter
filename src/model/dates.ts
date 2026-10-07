@@ -101,12 +101,13 @@ export function startsAfterDue(start: MtmDate | null, due: MtmDate | null): bool
 	return !!start && !!due && compareMtmDates(start, due) > 0;
 }
 
-/** "Today", "Tomorrow", a weekday within the next 6 days, otherwise "Tue 20 Oct" (with the year if not this year). */
+/** "Today", "Tomorrow", "Yesterday", a weekday within the next 6 days, otherwise "Tue 20 Oct" (with the year if not this year). */
 export function dayLabel(ymd: Ymd, today: Ymd): string {
 	const diff = daysBetween(today, ymd);
 	const { dates } = STRINGS;
 	if (diff === 0) return dates.today;
 	if (diff === 1) return dates.tomorrow;
+	if (diff === -1) return dates.yesterday;
 	const wd = weekday(ymd);
 	if (diff > 1 && diff <= 6) return dates.weekdays[wd] ?? '';
 	const [y, m = 1, d = 1] = ymd.split('-').map(Number);

@@ -124,9 +124,13 @@ describe('labels', () => {
 		expect(dayLabel('2026-10-15', today)).toBe('Thursday');
 	});
 
-	it('uses the short form beyond six days and in the past', () => {
+	it('uses Yesterday for the day before', () => {
+		expect(dayLabel('2026-10-08', today)).toBe('Yesterday');
+	});
+
+	it('uses the short form beyond six days and further in the past', () => {
 		expect(dayLabel('2026-10-16', today)).toBe('Fri 16 Oct');
-		expect(dayLabel('2026-10-08', today)).toBe('Thu 8 Oct');
+		expect(dayLabel('2026-10-07', today)).toBe('Wed 7 Oct');
 	});
 
 	it('adds the year outside the current year', () => {

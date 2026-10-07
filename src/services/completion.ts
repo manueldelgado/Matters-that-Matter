@@ -1,6 +1,6 @@
 // mtm-completed follows observed status transitions only; it is never backfilled.
 
-import type { StatusCategory } from '../settings';
+import type { StatusCategory, StatusDef } from '../settings';
 
 export type CompletionChange = 'set' | 'remove' | 'none';
 
@@ -17,6 +17,24 @@ export function completionChange(
 	if (next === 'closed' && previous !== 'closed') return hasCompleted ? 'none' : 'set';
 	if (previous === 'closed' && next !== 'closed') return hasCompleted ? 'remove' : 'none';
 	return 'none';
+}
+
+const hasValue = (raw: unknown) => raw !== undefined && raw !== null && !(typeof raw === 'string' && raw.trim() === '');
+
+/**
+ * Writes a status the plugin sets itself, with mtm-completed following the transition.
+ * `previous` is the category before the change (undefined when unknown: nothing changes).
+ */
+export function applyStatus(
+	fm: Record<string, unknown>,
+	next: StatusDef,
+	previous: StatusCategory | undefined,
+	today: string,
+): void {
+	fm['mtm-status'] = next.id;
+	const change = completionChange(previous, next.category, hasValue(fm['mtm-completed']));
+	if (change === 'set') fm['mtm-completed'] = today;
+	else if (change === 'remove') delete fm['mtm-completed'];
 }
 
 /** The last category seen for each Action path. */
