@@ -1,5 +1,5 @@
-/* Matters that Matter — Obsidian plugin styles. Implements style contract revision 4 (CLASSES.md).
-   Works with any theme: tokens fall back to Obsidian's own variables. */
+/* Matters that Matter — Obsidian plugin styles. Style revision 4.
+   Generated file: do not edit by hand. Works with any theme: tokens fall back to Obsidian's own variables. */
 .theme-light{
 --mtm-mint-ink:#186643;--mtm-mint-icon:#218A5B;--mtm-mint-strong:#2FAA72;--mtm-mint-dot:#52C790;--mtm-mint-edge:#AEEDCD;--mtm-mint-soft:#D5F6E5;--mtm-mint-faint:#EEFBF4;--mtm-mint-ring:#AEEDCD;--mtm-mint-bar-top:#AEEDCD;--mtm-mint-bar-bottom:#7FDDAF;--mtm-mint-bar-ink:#186643;
 --mtm-sky-ink:#1D5AA0;--mtm-sky-icon:#2B77CF;--mtm-sky-strong:#3F92EA;--mtm-sky-dot:#6AB0F5;--mtm-sky-edge:#C0DFFF;--mtm-sky-soft:#DDEEFF;--mtm-sky-faint:#F0F7FF;--mtm-sky-ring:#C0DFFF;--mtm-sky-bar-top:#C0DFFF;--mtm-sky-bar-bottom:#99CBFF;--mtm-sky-bar-ink:#1D5AA0;
@@ -54,7 +54,7 @@ body{--mtm-ink:var(--mtm-ink-ink);--mtm-icon:var(--mtm-ink-icon);--mtm-strong:va
 .mtm-tone-bubblegum{--mtm-ink:var(--mtm-bubblegum-ink);--mtm-icon:var(--mtm-bubblegum-icon);--mtm-strong:var(--mtm-bubblegum-strong);--mtm-dot:var(--mtm-bubblegum-dot);--mtm-edge:var(--mtm-bubblegum-edge);--mtm-soft:var(--mtm-bubblegum-soft);--mtm-faint:var(--mtm-bubblegum-faint);--mtm-ring:var(--mtm-bubblegum-ring);--mtm-bar-top:var(--mtm-bubblegum-bar-top);--mtm-bar-bottom:var(--mtm-bubblegum-bar-bottom);--mtm-bar-ink:var(--mtm-bubblegum-bar-ink)}
 .mtm-tone-ink{--mtm-ink:var(--mtm-ink-ink);--mtm-icon:var(--mtm-ink-icon);--mtm-strong:var(--mtm-ink-strong);--mtm-dot:var(--mtm-ink-dot);--mtm-edge:var(--mtm-ink-edge);--mtm-soft:var(--mtm-ink-soft);--mtm-faint:var(--mtm-ink-faint);--mtm-ring:var(--mtm-ink-ring);--mtm-bar-top:var(--mtm-ink-bar-top);--mtm-bar-bottom:var(--mtm-ink-bar-bottom);--mtm-bar-ink:var(--mtm-ink-bar-ink)}
 .mtm-status-later{--mtm-status:var(--mtm-st-later)}.mtm-status-next{--mtm-status:var(--mtm-st-next)}.mtm-status-doing{--mtm-status:var(--mtm-st-doing)}.mtm-status-waiting{--mtm-status:var(--mtm-st-waiting)}.mtm-status-done{--mtm-status:var(--mtm-st-done)}
-/* Round 2 tokens */
+/* State tokens: accent text, orphan, review, Inbox, danger, search match */
 .theme-light{--mtm-on-accent:#FFFFFF;--mtm-orphan-bg:#FFF4C7;--mtm-orphan-ink:#7F5E00;--mtm-orphan-edge:#FFEA94;--mtm-review-ok:#218A5B;--mtm-review-late:#C23F77;--mtm-inbox-stripe:rgba(63,146,234,.07);--mtm-danger:#C23F77;--mtm-danger-bg:#FFE0EE;--mtm-match:rgba(255,221,94,.55)}
 .theme-dark{--mtm-on-accent:#FFFFFF;--mtm-orphan-bg:rgba(255,221,94,.14);--mtm-orphan-ink:#FFDD5E;--mtm-orphan-edge:rgba(255,221,94,.3);--mtm-review-ok:#7FDDAF;--mtm-review-late:#FFA3C8;--mtm-inbox-stripe:rgba(153,203,255,.06);--mtm-danger:#FFA3C8;--mtm-danger-bg:rgba(255,163,200,.16);--mtm-match:rgba(255,221,94,.3)}
 /* User-defined statuses: the plugin adds mtm-status-<id> AND mtm-status-tone-<tone>; the tone class comes last, so it wins. */
@@ -389,7 +389,6 @@ body.is-phone .mtm-seg .mtm-seg-item:not(.clickable-icon){height:32px;font-size:
 .is-phone .mtm-inspector-title{font-size:1.6em}
 body.is-phone .mtm-type-option:not(.clickable-icon){height:40px}
 .is-phone .modal.mtm-quick-add{width:100%;max-width:100%;margin-top:auto;border-radius:24px 24px 0 0}
-/* ═══════════ Round 2 ═══════════ */
 /* ——— Collection views inside Bases (board, list, calendar, timeline are custom Bases views) ——— */
 .mtm-view>.mtm-scroll,.mtm-view>.mtm-board-scroll{flex:1 1 auto;min-height:0;overflow:auto}
 .mtm-view>.mtm-toolbar{flex:none}
@@ -667,7 +666,6 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 .mtm-tl-bar.mod-milestone .svg-icon{display:none}
 .mtm-tl-bar.mod-milestone.is-selected{box-shadow:none}
 .mtm-tl-bar.mod-milestone.is-selected::before{box-shadow:0 0 0 1px var(--mtm-strong),0 0 0 4px var(--mtm-ring)}
-/* ═══════════ Contract revision 3 ═══════════ */
 /* ——— Setup wizard: reconnect mode (values found in notes). Planned for v1.1 ——— */
 .mtm-found-list{display:flex;flex-direction:column;gap:6px}
 .mtm-found-row{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 6px 4px 10px;border:1px solid var(--mtm-hairline);border-radius:10px;background:var(--mtm-raised)}

@@ -4,6 +4,16 @@ An Obsidian plugin for personal work management. It adds a kanban board with swi
 
 > **Status:** in development. Not yet available in Obsidian's community plugins.
 
+## Development
+
+```bash
+npm install
+npm run dev    # watch build
+npm test
+```
+
+See [CLAUDE.md](CLAUDE.md) for conventions and the release process.
+
 ## Licence
 
 [MIT](LICENSE)
