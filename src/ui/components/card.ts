@@ -5,6 +5,7 @@ import { STRINGS } from '../../strings';
 import type { Priority } from '../../model/actions';
 import { dateLabel, isOverdue, toYmd, type MtmDate } from '../../model/dates';
 import { initials, type ActionItem } from '../../services/actionItems';
+import type { EffectiveAction } from '../../services/effective';
 import { appendIcon, tileEl, typeClasses } from './dom';
 
 export function dueEl(parent: HTMLElement, due: MtmDate, now: Date, closed: boolean, mod?: string): HTMLElement {
@@ -49,6 +50,24 @@ export function orphanBadge(parent: HTMLElement, field: OrphanField, value: stri
 		onDismiss();
 	});
 	return el;
+}
+
+/** The banner listing unrecognised values (inspector and Action notes), or null when there are none. */
+export function orphanBanner(effective: EffectiveAction, onDismiss: () => void): HTMLElement | null {
+	const s = STRINGS.inspector;
+	const { orphans, status, type } = effective;
+	const parts: string[] = [];
+	if (orphans.status !== undefined) parts.push(s.orphanStatus(orphans.status, status.label));
+	if (orphans.matter !== undefined) parts.push(s.orphanMatter(orphans.matter));
+	if (orphans.type !== undefined) parts.push(s.orphanType(orphans.type, type.label));
+	if (!parts.length) return null;
+	const banner = createDiv({ cls: 'mtm-orphan-banner' });
+	appendIcon(banner, 'triangle-alert');
+	const text = banner.createDiv({ cls: 'mtm-orphan-banner-text' });
+	text.createEl('b', { text: s.orphanTitle });
+	text.appendText(` ${parts.join(', ')}.`);
+	banner.createEl('button', { text: s.dismiss }).addEventListener('click', onDismiss);
+	return banner;
 }
 
 export interface CardContext {

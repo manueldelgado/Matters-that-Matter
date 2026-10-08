@@ -1,15 +1,13 @@
 // The list: a custom Bases view. Rows grouped by Matter in lane order; Bases decides which Actions are rows.
 
-import { Menu, type QueryController } from 'obsidian';
+import type { QueryController } from 'obsidian';
 import type MattersPlugin from '../../../main';
-import { STRINGS } from '../../../strings';
 import { toHm, toYmd } from '../../../model/dates';
-import { backlogStatus, doneStatus } from '../../../model/workflow';
 import type { ActionItem } from '../../../services/actionItems';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { buildBoard } from '../../../services/boardModel';
 import { buildList } from '../../../services/listModel';
-import { statusChip } from '../../../ui/components/dom';
+import { showStatusMenu } from '../../../ui/components/menus';
 import { moveAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
 import { renderEmpty } from '../board/boardRender';
@@ -78,32 +76,9 @@ export class ListView extends CollectionView {
 	/** The list's way to move an Action without dragging: every status, then Mark as done or Reopen. */
 	private statusMenu(item: ActionItem, chip: HTMLElement): void {
 		const { settings } = this.plugin;
-		const move = (statusId: string) =>
-			void this.write(item.path, (file) => moveAction(this.plugin.app, file, { statusId }, settings));
-		// The status dots carry each status's tone; a native menu would show plain text.
-		const menu = new Menu().setUseNativeMenu(false);
-		for (const status of settings.statuses) {
-			menu.addItem((i) => {
-				const title = createFragment((f) => statusChip(f.createSpan(), status));
-				i.setTitle(title)
-					.setChecked(status.id === item.effective.status.id)
-					.onClick(() => {
-						if (status.id !== item.effective.status.id) move(status.id);
-					});
-			});
-		}
-		menu.addSeparator();
-		const closed = item.category === 'closed';
-		const target = closed ? backlogStatus(settings.statuses) : doneStatus(settings.statuses);
-		menu.addItem((i) =>
-			i
-				.setTitle(closed ? STRINGS.list.reopen : STRINGS.list.markDone)
-				.setIcon(closed ? 'rotate-ccw' : 'circle-check')
-				.setDisabled(!target)
-				.onClick(() => target && move(target.id)),
+		showStatusMenu(chip, settings.statuses, { statusId: item.effective.status.id, category: item.category }, (statusId) =>
+			void this.write(item.path, (file) => moveAction(this.plugin.app, file, { statusId }, settings)),
 		);
-		const rect = chip.getBoundingClientRect();
-		menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 });
 	}
 
 	private handlers: ListHandlers = {

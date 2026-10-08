@@ -161,8 +161,6 @@ export const STRINGS = {
 		waiting: (n: number) => `${n} waiting`,
 		newAction: 'New Action',
 		changeStatus: 'Change status',
-		markDone: 'Mark as done',
-		reopen: 'Reopen',
 		linkedNotes: 'Linked notes',
 		noMatches: 'No Actions match this view’s filters.',
 	},
@@ -300,6 +298,23 @@ export const STRINGS = {
 		deleteBody: 'The note is deleted following your “Deleted files” setting in Files and links.',
 		markDone: 'Mark as done',
 		reopen: 'Reopen',
+	},
+
+	noteBanner: {
+		changeType: 'Change type',
+		changeStatus: 'Change status',
+		openMatter: 'Open the Matter overview',
+		markDone: 'Mark as done',
+		reopen: 'Reopen',
+		doneToday: 'Done today',
+		doneYesterday: 'Done yesterday',
+		doneOn: (day: string) => `Done ${day}`,
+		matter: 'Matter',
+		inbox: 'Inbox',
+		open: (n: number) => `${n} open`,
+		late: (n: number) => `${n} today or late`,
+		waiting: (n: number) => `${n} waiting`,
+		openOverview: 'Open overview',
 	},
 
 	newMatter: {

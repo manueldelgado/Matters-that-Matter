@@ -5,7 +5,7 @@ import { STRINGS } from '../../../strings';
 import { addDays, dayLabel, daysBetween, weekday, type Ymd } from '../../../model/dates';
 import type { WeekStart } from '../../../services/calendarModel';
 import type { TimelineGroup, TimelineRange, TimelineRow } from '../../../services/timelineModel';
-import { appendIcon, typeClasses } from '../../../ui/components/dom';
+import { appendIcon, pressable, typeClasses } from '../../../ui/components/dom';
 import { actionTooltip } from '../actionTooltip';
 
 export interface TimelineInput {
@@ -24,18 +24,6 @@ export interface TimelineHandlers {
 	openMatter: (path: string) => void;
 	select: (path: string) => void;
 	open: (path: string, e: MouseEvent | KeyboardEvent) => void;
-}
-
-function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEvent) => void): HTMLElement {
-	el.setAttrs({ role: 'button', tabindex: 0 });
-	el.addEventListener('click', onPress);
-	el.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onPress(e);
-		}
-	});
-	return el;
 }
 
 /** "28 Sep", with the year when it is not this year's. */

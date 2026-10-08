@@ -49,3 +49,16 @@ export function statusChip(parent: HTMLElement, status: StatusDef, withLabel = t
 	if (withLabel) el.appendText(status.label);
 	return el;
 }
+
+/** Makes an element act as a button: click, Enter or Space. */
+export function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEvent) => void): HTMLElement {
+	el.setAttrs({ role: 'button', tabindex: 0 });
+	el.addEventListener('click', onPress);
+	el.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onPress(e);
+		}
+	});
+	return el;
+}

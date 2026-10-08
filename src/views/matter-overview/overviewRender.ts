@@ -10,7 +10,7 @@ import type { MatterInfo } from '../../services/boardModel';
 import { reviewState, type OverviewModel } from '../../services/overviewModel';
 import { avatarEl, renderCard } from '../../ui/components/card';
 import { cadenceFields } from '../../ui/components/cadenceFields';
-import { appendIcon, statusClasses, tileEl } from '../../ui/components/dom';
+import { appendIcon, pressable, statusClasses, tileEl } from '../../ui/components/dom';
 
 export interface OverviewData {
 	matter: MatterInfo;
@@ -54,18 +54,6 @@ function longDate(ymd: Ymd, today: Ymd): string {
 	const [y, m = 1, d = 1] = ymd.split('-').map(Number);
 	const label = `${d} ${STRINGS.dates.months[m - 1] ?? ''}`;
 	return ymd.slice(0, 4) === today.slice(0, 4) ? label : `${label} ${y}`;
-}
-
-function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEvent) => void): HTMLElement {
-	el.setAttrs({ role: 'button', tabindex: 0 });
-	el.addEventListener('click', onPress);
-	el.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onPress(e);
-		}
-	});
-	return el;
 }
 
 export function renderOverview(parent: HTMLElement, d: OverviewData, h: OverviewHandlers): void {

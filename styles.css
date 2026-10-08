@@ -853,3 +853,39 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-fix-to{display:inline-flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text-normal)}
 .mtm-fix-to .mtm-tile{width:18px;height:18px;border-radius:5px}
 .mtm-fix-to .mtm-tile .svg-icon,.mtm-fix-to .mtm-matter-icon .svg-icon{width:13px;height:13px}
+/* Action note banner: wraps instead of squeezing; the type line and tile open the type menu, the pill the status menu. */
+.mtm-note-banner{flex-wrap:wrap;row-gap:10px}
+.mtm-note-banner-text{flex:1 1 180px}
+.mtm-note-banner>.mtm-tile{cursor:pointer}
+.mtm-note-banner-type{display:inline-flex;align-items:center;gap:2px;align-self:flex-start;cursor:pointer}
+.mtm-note-banner-type .svg-icon{width:12px;height:12px;opacity:.6}
+.mtm-note-banner-type:hover{color:var(--mtm-strong)}
+.mtm-note-banner-matter .mtm-matter-icon .svg-icon{width:15px;height:15px}
+.mtm-note-banner-matter .internal-link{cursor:pointer}
+.mtm-note-banner-end{display:flex;flex:1 1 auto;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px 6px}
+.mtm-note-banner-meta{display:flex;align-items:center;gap:10px;margin-right:4px}
+.mtm-note-banner-actions{display:flex;align-items:center;gap:6px}
+.mtm-note-banner-meta .mtm-waiting{font-size:12px;font-weight:600}
+.mtm-status-pill>.svg-icon{width:13px;height:13px;margin-left:-2px;color:var(--text-faint)}
+/* Mark as done / Reopen: the same element in both states. */
+.mtm-note-banner-done.clickable-icon{width:30px;height:30px;padding:0;justify-content:center;border-radius:999px;color:var(--text-faint)}
+.mtm-note-banner-done.clickable-icon:hover{color:var(--mtm-strong);background:var(--mtm-soft)}
+.mtm-note-banner-done.is-done{color:var(--mtm-strong)}
+.mtm-note-banner-done .svg-icon{width:18px;height:18px}
+/* Banners show in reading view and Live Preview, not in source mode. */
+.markdown-source-view:not(.is-live-preview) [data-mtm-banner]{display:none}
+/* Done: any status in category closed, not only the status with ID "done". */
+.mtm-action-note.mtm-is-done .inline-title{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--mtm-dot);text-decoration-thickness:2px}
+.mtm-action-note.mtm-is-done .mtm-note-banner>.mtm-tile{opacity:.7}
+.nav-file-title.mtm-nav-action.mtm-is-done .nav-file-title-content{color:var(--text-faint);text-decoration:line-through}
+/* Matter note banner: state, review, counts and Open overview. */
+.mtm-note-banner.mod-matter{background:var(--mtm-raised);border-color:var(--mtm-hairline)}
+.mtm-note-banner.mod-matter>.mtm-tile{cursor:default}
+.mtm-note-banner.mod-matter .mtm-note-banner-type{color:var(--text-muted);cursor:default}
+.mtm-note-banner-stats{display:flex;align-items:center;gap:12px;margin-right:6px;font-size:12px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.mtm-note-banner-stats .mod-late{color:var(--mtm-due-overdue)}
+.mtm-note-banner-stats .mod-waiting{color:var(--mtm-waiting-ink)}
+.mtm-note-banner-end>button{display:inline-flex;align-items:center;gap:6px}
+.mtm-note-banner-end>button .svg-icon{width:14px;height:14px}
+/* Type menu items: tile and label. */
+.mtm-menu-type{display:inline-flex;align-items:center;gap:8px}

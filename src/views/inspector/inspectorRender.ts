@@ -10,7 +10,7 @@ import { orderLanes } from '../../model/matters';
 import type { MatterInfo } from '../../services/boardModel';
 import type { ActionDetails, PersonRef } from '../../vault/actionDetails';
 import { appendIcon, iconEl, tileEl, typeClasses } from '../../ui/components/dom';
-import { avatarEl } from '../../ui/components/card';
+import { avatarEl, orphanBanner } from '../../ui/components/card';
 
 export type DateField = 'start' | 'due';
 
@@ -126,7 +126,8 @@ export function renderInspector(root: HTMLElement, d: ActionDetails, settings: M
 	appendIcon(pressable(band.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': s.openNote } }), (e) => h.openNote(e)), 'file-symlink');
 	appendIcon(pressable(band.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': s.close } }), () => h.close()), 'x');
 
-	renderOrphanBanner(inspector, d, h);
+	const orphan = orphanBanner(d.item.effective, () => h.dismiss());
+	if (orphan) inspector.appendChild(orphan);
 
 	const body = inspector.createDiv({ cls: 'mtm-inspector-body' });
 	renderHead(body, d, h);
@@ -173,22 +174,6 @@ export function renderInspector(root: HTMLElement, d: ActionDetails, settings: M
 		done.appendText(s.markDone);
 		done.addEventListener('click', () => h.markDone());
 	}
-}
-
-function renderOrphanBanner(inspector: HTMLElement, d: ActionDetails, h: InspectorHandlers): void {
-	const s = STRINGS.inspector;
-	const { orphans, status, type } = d.item.effective;
-	const parts: string[] = [];
-	if (orphans.status !== undefined) parts.push(s.orphanStatus(orphans.status, status.label));
-	if (orphans.matter !== undefined) parts.push(s.orphanMatter(orphans.matter));
-	if (orphans.type !== undefined) parts.push(s.orphanType(orphans.type, type.label));
-	if (!parts.length) return;
-	const banner = inspector.createDiv({ cls: 'mtm-orphan-banner' });
-	appendIcon(banner, 'triangle-alert');
-	const text = banner.createDiv({ cls: 'mtm-orphan-banner-text' });
-	text.createEl('b', { text: s.orphanTitle });
-	text.appendText(` ${parts.join(', ')}.`);
-	banner.createEl('button', { text: s.dismiss }).addEventListener('click', () => h.dismiss());
 }
 
 function renderHead(body: HTMLElement, d: ActionDetails, h: InspectorHandlers): void {

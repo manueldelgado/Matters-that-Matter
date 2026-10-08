@@ -5,7 +5,7 @@ import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
 import type { ListGroup } from '../../../services/listModel';
 import { avatarEl, dueEl, orphanBadge, priorityEl } from '../../../ui/components/card';
-import { appendIcon, statusChip, tileEl, typeClasses } from '../../../ui/components/dom';
+import { appendIcon, pressable, statusChip, tileEl, typeClasses } from '../../../ui/components/dom';
 
 export interface ListHandlers {
 	openMatter: (path: string) => void;
@@ -21,18 +21,6 @@ export interface ListInput {
 	groups: ListGroup[];
 	selected: string | null;
 	now: Date;
-}
-
-function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEvent) => void): HTMLElement {
-	el.setAttrs({ role: 'button', tabindex: 0 });
-	el.addEventListener('click', onPress);
-	el.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onPress(e);
-		}
-	});
-	return el;
 }
 
 export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers): HTMLElement {

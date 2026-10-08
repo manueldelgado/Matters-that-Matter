@@ -20,6 +20,7 @@ import { effectiveAction } from './services/effective';
 import { resolverFor } from './vault/index';
 import { createMatter } from './vault/matterWrites';
 import { Watchers } from './vault/watchers';
+import { NoteDecorations } from './views/notes/noteDecorations';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
@@ -71,6 +72,7 @@ export default class MattersPlugin extends Plugin {
 		if (this.watchers || !this.ribbonEl) return;
 		this.watchers = new Watchers(this);
 		this.watchers.start(this.ribbonEl);
+		new NoteDecorations(this).start();
 	}
 
 	async loadSettings() {

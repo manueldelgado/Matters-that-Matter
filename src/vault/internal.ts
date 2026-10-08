@@ -68,3 +68,27 @@ export function refreshViewTitle(view: View): void {
 		console.warn('Matters that Matter: could not refresh the view title', e);
 	}
 }
+
+/**
+ * The title element of a file's entry in every open file explorer. The explorer has no API: its items are read
+ * from the view's `fileItems`, else found by `data-path`. Returns nothing if neither works.
+ */
+export function explorerTitleEls(app: App, path: string): HTMLElement[] {
+	const out: HTMLElement[] = [];
+	try {
+		for (const leaf of app.workspace.getLeavesOfType('file-explorer')) {
+			const items = (leaf.view as unknown as Record<string, unknown>).fileItems;
+			const item = typeof items === 'object' && items !== null ? (items as Record<string, unknown>)[path] : undefined;
+			const self = typeof item === 'object' && item !== null ? (item as Record<string, unknown>).selfEl : undefined;
+			if (self instanceof HTMLElement) {
+				out.push(self);
+				continue;
+			}
+			const found = leaf.view.containerEl.querySelector(`.nav-file-title[data-path="${CSS.escape(path)}"]`);
+			if (found instanceof HTMLElement) out.push(found);
+		}
+	} catch (e) {
+		console.warn('Matters that Matter: could not read the file explorer', e);
+	}
+	return out;
+}
