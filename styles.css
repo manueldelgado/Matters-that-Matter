@@ -1013,3 +1013,22 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-type-summary .mtm-token .mtm-tile{width:20px;height:20px;border-radius:6px}
 .mtm-type-summary .mtm-token .mtm-tile .svg-icon{width:12px;height:12px}
 .mtm-type-summary .mtm-default-badge{margin-left:2px}
+/* Person notes (V6): what's open with them, in the Matter overview's cards; a quiet dashed line when nothing is open. */
+.mtm-person-banner{container-type:inline-size;display:flex;flex-direction:column;gap:12px;margin:4px 0 18px;padding:14px 16px 16px;border:1px solid var(--mtm-hairline);border-radius:var(--mtm-radius-panel);background:var(--mtm-raised);box-shadow:var(--mtm-card-shadow);font-family:var(--font-interface)}
+.mtm-person-banner-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+@container (max-width:440px){.mtm-person-banner-head>button{flex-basis:100%;justify-content:center}}
+.mtm-person-banner-text{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
+.mtm-person-banner-eyebrow{font-size:11px;font-weight:700;color:var(--text-faint)}
+.mtm-person-banner-stats{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.mtm-person-banner-stats .mod-waiting{color:var(--mtm-waiting-ink)}
+.mtm-person-banner-stats .mod-late{color:var(--mtm-due-overdue)}
+.mtm-person-banner-head>button{display:inline-flex;align-items:center;gap:6px}
+.mtm-person-banner-head>button .svg-icon{width:14px;height:14px}
+.mtm-person-banner-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 16px}
+.mtm-person-banner .mtm-section-title{margin-bottom:6px}
+.mtm-person-banner .mtm-stack{gap:6px}
+.mtm-card-matter:has(>.mtm-matter-icon){display:flex;align-items:center;gap:5px}
+.mtm-card-matter>.mtm-matter-icon .svg-icon{width:12px;height:12px}
+.is-phone .mtm-person-banner{padding:12px}
+.mtm-person-banner.mod-quiet{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;box-shadow:none;background:transparent;border-style:dashed;font-size:12.5px;color:var(--text-muted)}
+.mtm-person-banner.mod-quiet>.svg-icon{flex:none;width:15px;height:15px;color:var(--text-faint)}

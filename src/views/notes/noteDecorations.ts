@@ -1,4 +1,4 @@
-// Action and Matter notes outside the views: classes and a banner on open notes, classes on file explorer entries.
+// Action, Matter and person notes outside the views: classes and a banner on open notes, classes on file explorer entries.
 // Obsidian has no API for either; the banner goes after the inline title (reading view and editor), and explorer
 // entries come from `vault/internal.ts`. Both degrade to nothing if the DOM changes.
 
@@ -16,10 +16,12 @@ import { showNoNextActionMenu, showStatusMenu, showTypeMenu } from '../../ui/com
 import { lacksNextAction, nextStepStatus } from '../../services/nextAction';
 import { dismissOrphan, moveAction } from '../../vault/actionWrites';
 import { setMatterState } from '../../vault/matterWrites';
-import { actionItem, allActionItems, linkedFile, matterInfo } from '../../vault/index';
+import { actionItem, allActionItems, linkedFile, matterInfo, peopleIndex } from '../../vault/index';
 import { explorerTitleEls } from '../../vault/internal';
 import { frontmatterOf, notesOfKind } from '../../vault/notes';
 import { BANNER_ATTR, renderActionBanner, renderMatterBanner } from './noteBanner';
+import { renderPersonBanner } from './personBanner';
+import { personModel, personToken, type PersonEntry } from '../../services/personModel';
 
 /** Vault changes come in bursts (a move writes several notes); decorate once they settle. */
 const REFRESH_DELAY = 150;
@@ -44,6 +46,7 @@ export class NoteDecorations {
 			}),
 		);
 		this.plugin.registerEvent(app.workspace.on('file-open', () => this.refreshNotesSoon()));
+		this.plugin.registerEvent(this.plugin.selection.on('changed', () => this.markSelection()));
 		this.plugin.registerEvent(
 			app.metadataCache.on('changed', (file) => {
 				this.decorateEntry(file);
@@ -117,9 +120,12 @@ export class NoteDecorations {
 
 	private refreshNotes(force: boolean): void {
 		const now = new Date();
+		// Built at most once per refresh, and only when some open note is neither an Action nor a Matter.
+		let people: Map<string, PersonEntry[]> | null = null;
+		const peopleNow = () => (people ??= peopleIndex(this.plugin.app, this.plugin.settings));
 		for (const view of this.markdownViews()) {
 			try {
-				this.decorateView(view, now, force);
+				this.decorateView(view, now, force, peopleNow);
 			} catch (e) {
 				console.error('Matters that Matter: could not decorate a note', e);
 			}
@@ -132,19 +138,27 @@ export class NoteDecorations {
 		this.signatures.delete(view);
 	}
 
-	private decorateView(view: MarkdownView, now: Date, force: boolean): void {
+	private decorateView(view: MarkdownView, now: Date, force: boolean, people: () => Map<string, PersonEntry[]>): void {
 		const { app } = this.plugin;
 		const file = view.file;
 		if (file && !app.metadataCache.getFileCache(file)) return;
-		if (file && frontmatterOf(app, file)?.['mtm-kind'] === 'action') this.decorateAction(view, file, now, force);
-		else if (file && this.plugin.isMatter(file)) this.decorateMatter(view, file, now, force);
+		if (!file) {
+			if (this.signatures.has(view)) this.strip(view);
+			return;
+		}
+		// isMatter narrows its argument, so its result is kept in a plain boolean.
+		const isMatter: boolean = this.plugin.isMatter(file);
+		const entries = !isMatter && frontmatterOf(app, file)?.['mtm-kind'] !== 'action' ? people().get(file.path) : undefined;
+		if (frontmatterOf(app, file)?.['mtm-kind'] === 'action') this.decorateAction(view, file, now, force);
+		else if (isMatter) this.decorateMatter(view, file, now, force);
+		else if (entries) this.decoratePerson(view, file, entries, now, force);
 		else if (this.signatures.has(view)) this.strip(view);
 	}
 
 	/** Re-renders only when what the banner shows changed, or when Obsidian dropped the banner. */
 	private unchanged(view: MarkdownView, signature: string, force: boolean): boolean {
 		if (force || this.signatures.get(view) !== signature) return false;
-		const present = view.contentEl.querySelectorAll(`[${BANNER_ATTR}].mtm-note-banner`).length;
+		const present = view.contentEl.querySelectorAll(`[${BANNER_ATTR}]:is(.mtm-note-banner, .mtm-person-banner)`).length;
 		return present === anchors(view.contentEl).length;
 	}
 
@@ -228,6 +242,65 @@ export class NoteDecorations {
 				},
 			),
 		]);
+	}
+
+	/** Any note an Action names as a person: what's open with them. No properties are written. */
+	private decoratePerson(view: MarkdownView, file: TFile, entries: readonly PersonEntry[], now: Date, force: boolean): void {
+		const { app, settings } = this.plugin;
+		const today = toYmd(now);
+		const model = personModel(entries, now);
+		const matters = new Map<string, { name: string; icon: string }>();
+		const matterOf = (path: string) => {
+			let m = matters.get(path);
+			if (!m) {
+				const matterFile = app.vault.getFileByPath(path);
+				const info = matterFile ? matterInfo(app, matterFile, settings, today) : null;
+				m = { name: info?.name ?? path.split('/').pop()?.replace(/\.md$/i, '') ?? path, icon: info?.icon ?? 'inbox' };
+				matters.set(path, m);
+			}
+			return m;
+		};
+		const cards = [...model.waiting, ...model.withThem];
+		const signature = JSON.stringify([
+			file.path,
+			file.basename,
+			today,
+			model.done,
+			model.lastDone,
+			model.late,
+			model.waiting.map((i) => i.path),
+			cards.map((i) => [i.path, i.title, i.effective, i.priority, i.due, i.waitingOn, i.waitingSince, i.linkedCount, matterOf(i.effective.matterPath)]),
+		]);
+		if (this.unchanged(view, signature, force)) return;
+		this.signatures.set(view, signature);
+
+		this.place(view, [], () => [
+			renderPersonBanner(
+				{ name: file.basename, model, matterOf, selected: this.plugin.selection.path, now },
+				{
+					newAction: () => this.plugin.quickAdd({ text: personToken(file.basename) }),
+					select: (path) => void this.plugin.selectAction(path),
+					open: (path, e) => {
+						const target = app.vault.getFileByPath(path);
+						if (!target) return;
+						this.plugin.selection.set(path);
+						void app.workspace.getLeaf(Keymap.isModEvent(e) || 'tab').openFile(target);
+					},
+					dismiss: (item) => {
+						const target = app.vault.getFileByPath(item.path);
+						if (target) void this.run(() => dismissOrphan(app, target, settings));
+					},
+				},
+			),
+		]);
+	}
+
+	/** Cards in banners follow the selection, like the views'. */
+	private markSelection(): void {
+		const selected = this.plugin.selection.path;
+		for (const view of this.markdownViews()) {
+			view.contentEl.querySelectorAll<HTMLElement>(`[${BANNER_ATTR}] [data-path]`).forEach((el) => el.toggleClass('is-selected', el.dataset.path === selected));
+		}
 	}
 
 	// ——— Handlers ———

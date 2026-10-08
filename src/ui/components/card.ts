@@ -1,6 +1,6 @@
 // Action card and the atoms it shares with other views (due label, priority, avatar, orphan badge).
 
-import { setTooltip } from 'obsidian';
+import { setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { waitAge, type Priority, type WaitAge } from '../../model/actions';
 import { dateLabel, dayLabel, isOverdue, toYmd, type MtmDate } from '../../model/dates';
@@ -88,6 +88,8 @@ export interface CardContext {
 	selected: boolean;
 	/** Matter name, shown only outside the board. */
 	matterName?: string;
+	/** The Matter's icon, before its name. */
+	matterIcon?: string;
 	onDismiss(item: ActionItem): void;
 }
 
@@ -128,6 +130,10 @@ export function renderCard(parent: HTMLElement, item: ActionItem, ctx: CardConte
 		const value = item.effective.orphans[field];
 		if (value !== undefined) orphanBadge(card, field, value, true, () => ctx.onDismiss(item));
 	}
-	if (ctx.matterName) card.createDiv({ cls: 'mtm-card-matter', text: ctx.matterName });
+	if (ctx.matterName) {
+		const matter = card.createDiv({ cls: 'mtm-card-matter' });
+		if (ctx.matterIcon) setIcon(matter.createSpan({ cls: 'mtm-matter-icon' }), ctx.matterIcon);
+		matter.appendText(ctx.matterName);
+	}
 	return card;
 }

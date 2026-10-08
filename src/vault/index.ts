@@ -1,6 +1,7 @@
 // Builds Action items and Matter lanes from metadataCache.
 
 import { normalizePath, TFile, type App } from 'obsidian';
+import type { PersonEntry } from '../services/personModel';
 import type { MattersSettings } from '../settings';
 import type { Ymd } from '../model/dates';
 import { matterState, parseCadence, parseLaneOrder, parseOutcome, reviewInfo } from '../model/matters';
@@ -55,6 +56,27 @@ export function actionItem(app: App, file: TFile, settings: MattersSettings): Ac
 	exclude.add(item.effective.matterPath);
 	item.linkedCount = linkedNotes(app, file, exclude).length;
 	return item;
+}
+
+/**
+ * Reverse index of people: for every note an Action names in mtm-waiting-on or mtm-people,
+ * the Actions that name it and whether they wait on it. People are ordinary notes; nothing is written.
+ */
+export function peopleIndex(app: App, settings: MattersSettings): Map<string, PersonEntry[]> {
+	const index = new Map<string, PersonEntry[]>();
+	for (const file of notesOfKind(app, 'action')) {
+		const fm = frontmatterOf(app, file) ?? {};
+		const people = peoplePaths(app, fm, file.path);
+		if (!people.size) continue;
+		const item = actionItem(app, file, settings);
+		const waitingOn = linkedFile(app, fm['mtm-waiting-on'], file.path)?.path ?? null;
+		for (const path of people) {
+			const list = index.get(path) ?? [];
+			list.push({ item, waiting: path === waitingOn });
+			index.set(path, list);
+		}
+	}
+	return index;
 }
 
 /** Every Action in the vault (not only those in a Bases result). */

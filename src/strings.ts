@@ -125,6 +125,22 @@ export const STRINGS = {
 		newMatter: 'New Matter',
 	},
 
+	/** The banner on notes that Actions name as a person. */
+	person: {
+		eyebrow: 'In your Actions',
+		waitingOn: (first: string) => `Waiting on ${first}`,
+		withThem: (first: string) => `With ${first}`,
+		waitingCount: (first: string, n: number) => `Waiting on ${first}: ${n}`,
+		withCount: (first: string, n: number) => `With ${first}: ${n}`,
+		late: (n: number) => `${n} today or late`,
+		done: (n: number) => `${n} done`,
+		oldestFirst: 'oldest first',
+		newAction: (first: string) => `New Action with ${first}`,
+		showMore: (n: number) => `Show ${n} more`,
+		nothingOpen: (first: string, done: number, last: string | null) =>
+			`Nothing open with ${first}. ${plural(done, 'done Action', 'done Actions')}${last ? `, the last on ${last}` : ''}.`,
+	},
+
 	/** An active Matter with nothing in motion. The UI never says "stalled". */
 	nextAction: {
 		hint: 'No next Action',

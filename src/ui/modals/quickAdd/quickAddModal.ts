@@ -53,6 +53,8 @@ export interface QuickAddInit {
 	sphereId?: string | null;
 	/** Type of the list group the modal was opened from. */
 	typeId?: string;
+	/** Text to start with, such as a person token ("@Marco "). */
+	text?: string;
 }
 
 export class QuickAddModal extends Modal {
@@ -66,6 +68,7 @@ export class QuickAddModal extends Modal {
 	private contextSphere: string | null;
 	private pickedType: string | null = null;
 	private readonly contextType: string | null;
+	private readonly initialText: string;
 	private ignoredDates: string[] = [];
 	/** Start of a token whose suggestions were closed with Escape. */
 	private dismissedAt: number | null = null;
@@ -99,6 +102,7 @@ export class QuickAddModal extends Modal {
 		this.contextSphere = init.sphereId ?? null;
 		this.contextType = init.typeId ?? null;
 		this.pickedType = this.contextType;
+		this.initialText = init.text ?? '';
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], 'Escape', () => {
@@ -154,8 +158,10 @@ export class QuickAddModal extends Modal {
 		});
 		this.input.addEventListener('keydown', (e) => this.onKeyDown(e));
 
+		this.input.value = this.initialText;
 		this.refresh();
 		this.input.focus();
+		this.input.setSelectionRange(this.initialText.length, this.initialText.length);
 	}
 
 	onClose(): void {
