@@ -5,6 +5,11 @@ import type { App, View } from 'obsidian';
 
 type Fn = (...args: unknown[]) => unknown;
 
+/** A cross-window check for an unknown value read from Obsidian's internals. */
+function isHTMLElement(value: unknown): value is HTMLElement {
+	return typeof value === 'object' && value !== null && typeof (value as Node).instanceOf === 'function' && (value as Node).instanceOf(HTMLElement);
+}
+
 function method(owner: unknown, name: string): Fn | null {
 	if (typeof owner !== 'object' || owner === null) return null;
 	const fn = (owner as Record<string, unknown>)[name];
@@ -63,7 +68,7 @@ export function refreshViewTitle(view: View): void {
 	try {
 		method(view.leaf, 'updateHeader')?.();
 		const title = (view as unknown as Record<string, unknown>).titleEl;
-		if (title instanceof HTMLElement) title.setText(view.getDisplayText());
+		if (isHTMLElement(title)) title.setText(view.getDisplayText());
 	} catch (e) {
 		console.warn('Matters that Matter: could not refresh the view title', e);
 	}
@@ -80,12 +85,12 @@ export function explorerTitleEls(app: App, path: string): HTMLElement[] {
 			const items = (leaf.view as unknown as Record<string, unknown>).fileItems;
 			const item = typeof items === 'object' && items !== null ? (items as Record<string, unknown>)[path] : undefined;
 			const self = typeof item === 'object' && item !== null ? (item as Record<string, unknown>).selfEl : undefined;
-			if (self instanceof HTMLElement) {
+			if (isHTMLElement(self)) {
 				out.push(self);
 				continue;
 			}
 			const found = leaf.view.containerEl.querySelector(`.nav-file-title[data-path="${CSS.escape(path)}"]`);
-			if (found instanceof HTMLElement) out.push(found);
+			if (found?.instanceOf(HTMLElement)) out.push(found);
 		}
 	} catch (e) {
 		console.warn('Matters that Matter: could not read the file explorer', e);

@@ -50,6 +50,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - An `ItemView`'s header title isn't refreshed after `setState`; call `refreshViewTitle` (`vault/internal.ts`).
 - Since Obsidian 1.13 a modal's close button is `.modal-header-button`, absolutely placed in `.modal`; `.modal-close-button` no longer exists.
 - Menus whose items carry colour or icons that matter use `menu.setUseNativeMenu(false)`: macOS native menus show plain text only.
+- There is no public submenu API: a "Move to …" item opens a second `Menu` at the same position.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies

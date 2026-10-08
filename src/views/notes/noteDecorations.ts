@@ -238,7 +238,7 @@ export class NoteDecorations {
 	/** The Matter's overview; Ctrl/Cmd-click opens its note instead. */
 	private openMatter(file: TFile, item: ActionItem, e: MouseEvent | KeyboardEvent): void {
 		const path = item.effective.matterPath;
-		if (e instanceof MouseEvent && Keymap.isModEvent(e)) {
+		if (e.instanceOf(MouseEvent) && Keymap.isModEvent(e)) {
 			const target = this.plugin.app.vault.getFileByPath(path);
 			if (target) void this.plugin.app.workspace.getLeaf(Keymap.isModEvent(e)).openFile(target);
 			return;

@@ -225,7 +225,7 @@ export abstract class CollectionView extends BasesView {
 		const file = this.plugin.app.vault.getFileByPath(path);
 		if (!file) return;
 		this.plugin.selection.set(path);
-		const pane = e instanceof MouseEvent ? Keymap.isModEvent(e) : false;
+		const pane = e.instanceOf(MouseEvent) ? Keymap.isModEvent(e) : false;
 		void this.plugin.app.workspace.getLeaf(pane || 'tab').openFile(file);
 	}
 
