@@ -27,6 +27,17 @@ export function registerCommands(plugin: MattersPlugin): void {
 	});
 
 	plugin.addCommand({
+		id: 'mark-as-done',
+		name: STRINGS.commands.markDone,
+		checkCallback: (checking) => {
+			const file = plugin.settings.setupDone ? plugin.currentAction() : null;
+			if (!file || plugin.isClosed(file)) return false;
+			if (!checking) void plugin.markDone(file);
+			return true;
+		},
+	});
+
+	plugin.addCommand({
 		id: 'remove-sample-content',
 		name: STRINGS.commands.removeSample,
 		callback: () => removeSampleContent(plugin),

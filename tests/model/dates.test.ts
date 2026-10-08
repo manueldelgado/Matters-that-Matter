@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	addDays,
+	fromInputs,
 	addMonths,
 	compareMtmDates,
 	dateLabel,
@@ -140,5 +141,18 @@ describe('labels', () => {
 	it('adds the time for timed values', () => {
 		expect(dateLabel({ date: '2026-10-10', time: '10:00' }, today)).toBe('Tomorrow 10:00');
 		expect(dateLabel({ date: '2026-10-10' }, today)).toBe('Tomorrow');
+	});
+});
+
+describe('fromInputs', () => {
+	it('builds all-day and timed values', () => {
+		expect(fromInputs('2026-10-15', '')).toEqual({ date: '2026-10-15' });
+		expect(fromInputs('2026-10-15', '09:30')).toEqual({ date: '2026-10-15', time: '09:30' });
+	});
+
+	it('gives null without a valid date, and ignores an invalid time', () => {
+		expect(fromInputs('', '09:30')).toBeNull();
+		expect(fromInputs('2026-02-30', '')).toBeNull();
+		expect(fromInputs('2026-10-15', '25:00')).toEqual({ date: '2026-10-15' });
 	});
 });

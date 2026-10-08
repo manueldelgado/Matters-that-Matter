@@ -94,3 +94,41 @@ export function setTaskChecked(content: string, line: number, checked: boolean):
 	lines[line] = current.slice(0, pos) + (checked ? 'x' : ' ') + current.slice(pos + 1);
 	return lines.join('\n');
 }
+
+export interface ChecklistItem {
+	/** Line number in the whole file. */
+	line: number;
+	checked: boolean;
+	text: string;
+}
+
+const TASK_TEXT_RE = /^\s*(?:[-*+]|\d+[.)])\s+\[(.)\]\s?(.*)$/;
+
+/** The task on a line, or null. Any mark other than a space counts as checked, as Obsidian renders it. */
+export function parseTask(line: string): { checked: boolean; text: string } | null {
+	const m = TASK_TEXT_RE.exec(line);
+	if (!m) return null;
+	return { checked: m[1] !== ' ', text: (m[2] ?? '').trim() };
+}
+
+/** Checklist items on the given lines (from metadataCache list items), or on every task line. */
+export function checklistItems(content: string, lines: readonly number[] = taskLines(content)): ChecklistItem[] {
+	const all = content.split('\n');
+	const out: ChecklistItem[] = [];
+	for (const line of lines) {
+		const task = parseTask(all[line] ?? '');
+		if (task) out.push({ line, ...task });
+	}
+	return out;
+}
+
+/**
+ * Ticks or unticks a checklist item. The line may be stale (the note changed since it was read),
+ * so it must still hold a task with the same text; otherwise the first task with that text is used.
+ */
+export function toggleTask(content: string, line: number, text: string, checked: boolean): string {
+	const lines = content.split('\n');
+	const matches = (i: number) => parseTask(lines[i] ?? '')?.text === text;
+	const target = matches(line) ? line : taskLines(content).find(matches);
+	return target === undefined ? content : setTaskChecked(content, target, checked);
+}

@@ -120,3 +120,14 @@ export function dateLabel(d: MtmDate, today: Ymd): string {
 	const day = dayLabel(d.date, today);
 	return d.time ? `${day} ${d.time}` : day;
 }
+
+/**
+ * A date from the inspector's inputs: 'YYYY-MM-DD' and optional 'HH:mm'.
+ * An empty or invalid date gives null; an empty or invalid time gives an all-day value.
+ */
+export function fromInputs(date: string, time: string): MtmDate | null {
+	const day = parseMtmDate(date);
+	if (!day || day.time) return null;
+	const timed = time.trim() ? parseMtmDate(`${day.date}T${time.trim()}`) : null;
+	return timed ?? day;
+}

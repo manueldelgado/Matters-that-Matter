@@ -270,7 +270,7 @@ export class BoardView extends BasesView {
 			const file = this.plugin.app.vault.getFileByPath(normalizePath(path));
 			if (file) void markReviewed(this.plugin.app, file);
 		},
-		select: (path) => this.plugin.selection.set(path),
+		select: (path) => void this.plugin.selectAction(path),
 		open: (path, e) => {
 			const file = this.plugin.app.vault.getFileByPath(path);
 			if (!file) return;

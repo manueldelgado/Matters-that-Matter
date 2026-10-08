@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDetails, insertTask, setDetails, setTaskChecked, splitFrontmatter, taskLines } from '../../src/model/body';
+import { checklistItems, getDetails, insertTask, parseTask, setDetails, setTaskChecked, splitFrontmatter, taskLines, toggleTask } from '../../src/model/body';
 
 const fm = '---\nmtm-kind: action\nmtm-status: next\n---\n';
 
@@ -81,5 +81,43 @@ describe('checklist', () => {
 		expect(setTaskChecked(note, 4, true)).toBe(`${fm}- [x] One\n  * [x] Two\n`);
 		expect(setTaskChecked(note, 5, false)).toBe(`${fm}- [ ] One\n  * [ ] Two\n`);
 		expect(setTaskChecked(note, 0, true)).toBe(note);
+	});
+});
+
+describe('checklist', () => {
+	const note = `${fm}Intro\n\n- [ ] Ask for the quote\n- [x] Measure\n  - [/] Half done\n- plain item\n\`\`\`\n- [ ] in code\n\`\`\`\n`;
+
+	it('parses tasks, treating any mark but a space as checked', () => {
+		expect(parseTask('- [ ] Ask')).toEqual({ checked: false, text: 'Ask' });
+		expect(parseTask('1. [X] Done')).toEqual({ checked: true, text: 'Done' });
+		expect(parseTask('- plain')).toBeNull();
+	});
+
+	it('lists the checklist items outside code blocks', () => {
+		expect(checklistItems(note)).toEqual([
+			{ line: 6, checked: false, text: 'Ask for the quote' },
+			{ line: 7, checked: true, text: 'Measure' },
+			{ line: 8, checked: true, text: 'Half done' },
+		]);
+	});
+
+	it('reads only the lines given by the metadata cache', () => {
+		expect(checklistItems(note, [7, 9])).toEqual([{ line: 7, checked: true, text: 'Measure' }]);
+	});
+
+	it('toggles the item on its line', () => {
+		const out = toggleTask(note, 6, 'Ask for the quote', true);
+		expect(out.split('\n')[6]).toBe('- [x] Ask for the quote');
+		expect(out.split('\n').filter((l, i) => i !== 6)).toEqual(note.split('\n').filter((l, i) => i !== 6));
+	});
+
+	it('finds the item by its text when the line is stale', () => {
+		const shifted = note.replace('Intro\n', 'Intro\nMore intro\n');
+		const out = toggleTask(shifted, 6, 'Ask for the quote', true);
+		expect(out.split('\n')[7]).toBe('- [x] Ask for the quote');
+	});
+
+	it('leaves the note alone when the item is gone', () => {
+		expect(toggleTask(note, 6, 'Something else', true)).toBe(note);
 	});
 });

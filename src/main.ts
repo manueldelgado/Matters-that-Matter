@@ -1,8 +1,8 @@
-import { Events, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import { Events, FileView, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import type { MattersSettings } from './settings';
 import { STRINGS } from './strings';
 import { migrateSettings } from './services/migrations';
-import { backlogStatus, defaultType } from './model/workflow';
+import { backlogStatus, defaultType, doneStatus } from './model/workflow';
 import { registerCommands } from './commands';
 import { Selection } from './selection';
 import { MattersSettingTab } from './ui/settingsTab';
@@ -10,9 +10,12 @@ import { BoardPicker } from './ui/modals/boardPicker';
 import { NewMatterModal } from './ui/modals/newMatterModal';
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
+import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
 import { ensureDateTimeTypes } from './vault/internal';
 import { frontmatterOf } from './vault/notes';
-import { createAction } from './vault/actionWrites';
+import { createAction, editAction } from './vault/actionWrites';
+import { effectiveAction } from './services/effective';
+import { resolverFor } from './vault/index';
 import { createMatter } from './vault/matterWrites';
 import { Watchers } from './vault/watchers';
 
@@ -29,6 +32,7 @@ export default class MattersPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.registerView(VIEW_SETUP, (leaf) => new SetupView(leaf, this));
+		this.registerView(VIEW_INSPECTOR, (leaf) => new InspectorView(leaf, this));
 		this.basesAvailable = registerCollectionViews(this);
 		registerCommands(this);
 		this.addSettingTab(new MattersSettingTab(this.app, this));
@@ -36,6 +40,11 @@ export default class MattersPlugin extends Plugin {
 		this.ribbonEl.addClass('mtm-ribbon');
 
 		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => void this.onRename(file.path, oldPath)));
+		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				if (file.path === this.selection.path) this.selection.set(null);
+			}),
+		);
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				if (file && frontmatterOf(this.app, file)?.['mtm-kind'] === 'action') this.selection.set(file.path);
@@ -101,6 +110,16 @@ export default class MattersPlugin extends Plugin {
 		await workspace.revealLeaf(leaf);
 	}
 
+	/** Whether a board (`boardPath` or any base in the boards folder) is open in some tab. */
+	isBoardOpen(): boolean {
+		const folder = normalizePath(this.settings.folders.boards) + '/';
+		const board = normalizePath(this.settings.boardPath);
+		return this.app.workspace.getLeavesOfType('bases').some((leaf) => {
+			const path = leaf.view instanceof FileView ? leaf.view.file?.path : undefined;
+			return !!path && (path === board || path.startsWith(folder));
+		});
+	}
+
 	/** Opens the board file, or a picker when the boards folder holds several. */
 	async openBoard(): Promise<void> {
 		const { vault, workspace } = this.app;
@@ -148,6 +167,38 @@ export default class MattersPlugin extends Plugin {
 				new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
 			}
 		}).open();
+	}
+
+	/** Selects an Action and shows it in the inspector, opening the inspector if needed. */
+	async selectAction(path: string): Promise<void> {
+		this.selection.set(path);
+		await this.app.workspace.ensureSideLeaf(VIEW_INSPECTOR, 'right', { active: false, reveal: true });
+	}
+
+	private isAction(file: TFile | null): file is TFile {
+		return !!file && frontmatterOf(this.app, file)?.['mtm-kind'] === 'action';
+	}
+
+	/** The note in the active editor if it is an Action, otherwise the Action selected in the inspector. */
+	currentAction(): TFile | null {
+		const active = this.app.workspace.activeEditor?.file ?? null;
+		if (this.isAction(active)) return active;
+		const selected = this.selection.path ? this.app.vault.getFileByPath(this.selection.path) : null;
+		return this.isAction(selected) ? selected : null;
+	}
+
+	isClosed(file: TFile): boolean {
+		return effectiveAction(frontmatterOf(this.app, file), this.settings, resolverFor(this.app, file.path)).category === 'closed';
+	}
+
+	async markDone(file: TFile): Promise<void> {
+		const done = doneStatus(this.settings.statuses);
+		if (!done) return;
+		try {
+			await editAction(this.app, file, this.settings, { statusId: done.id });
+		} catch (e) {
+			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+		}
 	}
 
 	/** Opens a Matter. The Matter overview will take over this entry point. */

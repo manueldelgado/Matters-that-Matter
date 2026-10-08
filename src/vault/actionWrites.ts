@@ -4,11 +4,13 @@
 import { normalizePath, TFile, type App } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { toYmd } from '../model/dates';
+import { insertTask, setDetails, toggleTask } from '../model/body';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
+import { applyFieldEdit, type FieldEdit } from '../services/actionEdit';
 import { applyStatus } from '../services/completion';
-import { effectiveAction } from '../services/effective';
+import { effectiveAction, linkText } from '../services/effective';
 import { STRINGS } from '../strings';
-import { resolverFor } from './index';
+import { linkedFile, resolverFor } from './index';
 import { createNote, ensureFolder, frontmatterOf, linkTo, type Frontmatter } from './notes';
 
 export interface ActionTarget {
@@ -24,18 +26,28 @@ function matterLink(app: App, matterPath: string, sourcePath: string): string {
 	return `[[${matterPath.split('/').pop()?.replace(/\.md$/i, '') ?? matterPath}]]`;
 }
 
-/** Moves an Action to another status, Matter or type; the other two fields are written as they are shown. */
-export async function moveAction(app: App, file: TFile, target: ActionTarget, settings: MattersSettings): Promise<void> {
+/**
+ * Edits an Action's frontmatter. Status, Matter and type are always written (the target's, or as they are shown),
+ * so every edit also clears orphan badges; other fields change only when `fields` names them.
+ */
+export async function editAction(app: App, file: TFile, settings: MattersSettings, target: ActionTarget, fields: FieldEdit = {}): Promise<void> {
 	const current = effectiveAction(frontmatterOf(app, file), settings, resolverFor(app, file.path));
 	const status = settings.statuses.find((s) => s.id === (target.statusId ?? current.status.id)) ?? current.status;
 	const typeId = target.typeId ?? current.type.id;
 	const matterPath = target.matterPath ?? current.matterPath;
 	const today = toYmd(new Date());
+	const keyOf = (raw: unknown) => linkedFile(app, raw, file.path)?.path ?? linkText(raw);
 	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
 		fm['mtm-matter'] = matterLink(app, matterPath, file.path);
+		applyFieldEdit(fm, fields, keyOf);
 	});
+}
+
+/** Moves an Action to another status, Matter or type; the other two fields are written as they are shown. */
+export async function moveAction(app: App, file: TFile, target: ActionTarget, settings: MattersSettings): Promise<void> {
+	await editAction(app, file, settings, target);
 }
 
 /** Dismissing an orphan badge writes the values the Action is shown with. */
@@ -68,4 +80,36 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 	};
 	if (status?.category === 'closed') fm['mtm-completed'] = toYmd(new Date());
 	return createNote(app, path, fm);
+}
+
+// ——— Body edits: only the targeted lines change ———
+
+export async function writeDetails(app: App, file: TFile, details: string): Promise<void> {
+	await app.vault.process(file, (content) => setDetails(content, details));
+}
+
+export async function setChecklistItem(app: App, file: TFile, line: number, text: string, checked: boolean): Promise<void> {
+	await app.vault.process(file, (content) => toggleTask(content, line, text, checked));
+}
+
+export async function addChecklistItem(app: App, file: TFile, text: string): Promise<void> {
+	if (!text.trim()) return;
+	await app.vault.process(file, (content) => insertTask(content, text));
+}
+
+/**
+ * Renames an Action after its title (links update through the file manager).
+ * Returns false when the title is empty or unchanged once sanitised.
+ */
+export async function renameAction(app: App, file: TFile, rawTitle: string): Promise<boolean> {
+	const base = sanitiseTitle(rawTitle);
+	if (!base || base === file.basename) return false;
+	const folder = file.parent?.path ?? '';
+	const pathFor = (t: string) => normalizePath(folder && folder !== '/' ? `${folder}/${t}.md` : `${t}.md`);
+	const title = uniqueTitle(base, (t) => {
+		const existing = app.vault.getAbstractFileByPath(pathFor(t));
+		return existing !== null && existing !== file;
+	});
+	await app.fileManager.renameFile(file, pathFor(title));
+	return true;
 }
