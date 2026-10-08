@@ -12,6 +12,7 @@ import { QuickAddModal, type QuickAddInit } from './ui/modals/quickAdd/quickAddM
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
 import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
+import { MatterOverviewView, VIEW_MATTER_OVERVIEW } from './views/matter-overview/overviewView';
 import { ensureDateTimeTypes } from './vault/internal';
 import { frontmatterOf } from './vault/notes';
 import { editAction } from './vault/actionWrites';
@@ -34,6 +35,7 @@ export default class MattersPlugin extends Plugin {
 
 		this.registerView(VIEW_SETUP, (leaf) => new SetupView(leaf, this));
 		this.registerView(VIEW_INSPECTOR, (leaf) => new InspectorView(leaf, this));
+		this.registerView(VIEW_MATTER_OVERVIEW, (leaf) => new MatterOverviewView(leaf, this));
 		this.basesAvailable = registerCollectionViews(this);
 		registerCommands(this);
 		this.addSettingTab(new MattersSettingTab(this.app, this));
@@ -186,9 +188,33 @@ export default class MattersPlugin extends Plugin {
 		}
 	}
 
-	/** Opens a Matter. The Matter overview will take over this entry point. */
+	/** Opens a Matter's overview, reusing a tab that already shows it. */
 	async openMatter(path: string): Promise<void> {
-		const file = this.app.vault.getFileByPath(normalizePath(path));
-		if (file) await this.app.workspace.getLeaf('tab').openFile(file);
+		const { workspace, vault } = this.app;
+		if (!vault.getFileByPath(normalizePath(path))) {
+			new Notice(STRINGS.overview.missing);
+			return;
+		}
+		const existing = workspace.getLeavesOfType(VIEW_MATTER_OVERVIEW).find((leaf) => leaf.view instanceof MatterOverviewView && leaf.view.path === path);
+		if (existing) {
+			await workspace.revealLeaf(existing);
+			return;
+		}
+		const leaf = workspace.getLeaf('tab');
+		await leaf.setViewState({ type: VIEW_MATTER_OVERVIEW, state: { matter: path }, active: true });
+		await workspace.revealLeaf(leaf);
+	}
+
+	isMatter(file: TFile | null): file is TFile {
+		return !!file && (file.path === this.settings.inboxPath || frontmatterOf(this.app, file)?.['mtm-kind'] === 'matter');
+	}
+
+	/** The Matter note in the active editor, otherwise the Matter of the active overview. */
+	currentMatter(): TFile | null {
+		const active = this.app.workspace.activeEditor?.file ?? null;
+		if (this.isMatter(active)) return active;
+		const view = this.app.workspace.getActiveViewOfType(MatterOverviewView);
+		const file = view?.path ? this.app.vault.getFileByPath(view.path) : null;
+		return this.isMatter(file) ? file : null;
 	}
 }

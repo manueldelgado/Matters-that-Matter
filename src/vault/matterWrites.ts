@@ -4,7 +4,7 @@ import { normalizePath, type App, type TFile } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { toYmd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
-import type { LaneOrderWrite, MatterState } from '../model/matters';
+import { formatCadence, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
 import { STRINGS } from '../strings';
 import { createNote, ensureFolder, maxLaneOrder, type Frontmatter } from './notes';
 
@@ -27,6 +27,20 @@ export async function markReviewed(app: App, file: TFile): Promise<void> {
 export async function setMatterState(app: App, file: TFile, state: MatterState): Promise<void> {
 	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
 		fm['mtm-state'] = state;
+	});
+}
+
+/** Writes the canonical cadence, or removes it ("Never"); mtm-last-reviewed is left alone. */
+export async function setReviewCadence(app: App, file: TFile, cadence: Cadence | null): Promise<void> {
+	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		if (cadence) fm['mtm-review-every'] = formatCadence(cadence);
+		else delete fm['mtm-review-every'];
+	});
+}
+
+export async function setMatterIcon(app: App, file: TFile, icon: string): Promise<void> {
+	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		fm['mtm-icon'] = icon;
 	});
 }
 

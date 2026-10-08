@@ -61,7 +61,7 @@ export function allActionItems(app: App, settings: MattersSettings): ActionItem[
 	return notesOfKind(app, 'action').map((f) => actionItem(app, f, settings));
 }
 
-function matterInfo(app: App, file: TFile, settings: MattersSettings, today: Ymd): MatterInfo {
+export function matterInfo(app: App, file: TFile, settings: MattersSettings, today: Ymd): MatterInfo {
 	const fm = frontmatterOf(app, file) ?? {};
 	const isInbox = file.path === settings.inboxPath;
 	const icon = typeof fm['mtm-icon'] === 'string' && fm['mtm-icon'].trim() ? fm['mtm-icon'].trim() : DEFAULT_MATTER_ICON;
@@ -89,4 +89,37 @@ export function allMatters(app: App, settings: MattersSettings, today: Ymd): Mat
 		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null });
 	}
 	return matters;
+}
+
+/** People in the Actions' mtm-people and mtm-waiting-on, most involved first. */
+export function peopleOf(app: App, actionPaths: readonly string[]): TFile[] {
+	const counts = new Map<TFile, number>();
+	for (const path of actionPaths) {
+		const file = app.vault.getFileByPath(path);
+		const fm = file ? frontmatterOf(app, file) : undefined;
+		if (!file || !fm) continue;
+		for (const p of peoplePaths(app, fm, path)) {
+			const person = app.vault.getFileByPath(p);
+			if (person) counts.set(person, (counts.get(person) ?? 0) + 1);
+		}
+	}
+	return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].basename.localeCompare(b[0].basename)).map(([f]) => f);
+}
+
+/** Notes that link to `target`, except Actions (they show as cards), most recently changed first. */
+export function backlinksTo(app: App, target: TFile): TFile[] {
+	const out: TFile[] = [];
+	for (const [source, links] of Object.entries(app.metadataCache.resolvedLinks)) {
+		if (source === target.path || !links[target.path]) continue;
+		const file = app.vault.getFileByPath(source);
+		if (file && frontmatterOf(app, file)?.['mtm-kind'] !== 'action') out.push(file);
+	}
+	return out.sort((a, b) => b.stat.mtime - a.stat.mtime);
+}
+
+/** The note's body: the text after the frontmatter. */
+export async function noteBody(app: App, file: TFile): Promise<string> {
+	const text = await app.vault.cachedRead(file);
+	const end = app.metadataCache.getFileCache(file)?.frontmatterPosition?.end.offset;
+	return end === undefined ? text : text.slice(end).replace(/^\r?\n/, '');
 }

@@ -1,7 +1,7 @@
 // Undocumented Obsidian internals, isolated and guarded. Every function degrades to a no-op
 // or null when the internal shape changes.
 
-import type { App } from 'obsidian';
+import type { App, View } from 'obsidian';
 
 type Fn = (...args: unknown[]) => unknown;
 
@@ -52,5 +52,19 @@ export function openSettingsTab(app: App, tabId: string): boolean {
 		return true;
 	} catch {
 		return false;
+	}
+}
+
+/**
+ * Refreshes a view's tab and header title after its state changes (an ItemView's header title is set only
+ * when the view loads). No-op if the internals change.
+ */
+export function refreshViewTitle(view: View): void {
+	try {
+		method(view.leaf, 'updateHeader')?.();
+		const title = (view as unknown as Record<string, unknown>).titleEl;
+		if (title instanceof HTMLElement) title.setText(view.getDisplayText());
+	} catch (e) {
+		console.warn('Matters that Matter: could not refresh the view title', e);
 	}
 }

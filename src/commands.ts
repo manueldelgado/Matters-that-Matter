@@ -6,6 +6,7 @@ import { STRINGS } from './strings';
 import { ConfirmModal } from './ui/modals/confirmModal';
 import { SAMPLE_FOLDER } from './services/setupPlan';
 import { frontmatterOf } from './vault/notes';
+import { markReviewed } from './vault/matterWrites';
 
 export function registerCommands(plugin: MattersPlugin): void {
 	plugin.addCommand({
@@ -43,6 +44,33 @@ export function registerCommands(plugin: MattersPlugin): void {
 			const file = plugin.settings.setupDone ? plugin.currentAction() : null;
 			if (!file || plugin.isClosed(file)) return false;
 			if (!checking) void plugin.markDone(file);
+			return true;
+		},
+	});
+
+	plugin.addCommand({
+		id: 'open-matter-overview',
+		name: STRINGS.commands.openOverview,
+		checkCallback: (checking) => {
+			const file = plugin.settings.setupDone ? plugin.app.workspace.activeEditor?.file ?? null : null;
+			if (!plugin.isMatter(file)) return false;
+			if (!checking) void plugin.openMatter(file.path);
+			return true;
+		},
+	});
+
+	plugin.addCommand({
+		id: 'mark-as-reviewed',
+		name: STRINGS.commands.markReviewed,
+		checkCallback: (checking) => {
+			const file = plugin.settings.setupDone ? plugin.currentMatter() : null;
+			// The Inbox is not reviewed.
+			if (!file || file.path === plugin.settings.inboxPath) return false;
+			if (!checking) {
+				void markReviewed(plugin.app, file).catch((e) => {
+					new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+				});
+			}
 			return true;
 		},
 	});

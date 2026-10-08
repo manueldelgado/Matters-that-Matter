@@ -745,3 +745,26 @@ body .mtm-quick-add .mtm-qa-field > input.mtm-qa-input{width:100%}
 body:not(.is-phone) .modal.mtm-modal > .modal-header-button{top:29px;right:16px}
 /* Heads that start with a 40px tile (delete status/type) have a taller title row. */
 body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .modal-header-button{top:37px}
+/* Matter overview: the about section is the note body rendered read-only (lists, headings), then "Open note". */
+.mtm-overview-about.markdown-rendered{font-size:15px}
+.mtm-overview-about.markdown-rendered>:first-child{margin-top:0}
+.mtm-overview-about.markdown-rendered>:last-child{margin-bottom:0}
+.mtm-overview-about.markdown-rendered :is(p,ul,ol){margin:0 0 .5em}
+.mtm-overview-about.mod-empty{font-size:13px;font-style:italic;color:var(--text-faint)}
+.mtm-overview-about-open{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;font-weight:600;color:var(--text-faint);cursor:pointer}
+.mtm-overview-about-open:hover,.mtm-overview-about-open:focus-visible{color:var(--text-normal)}
+.mtm-overview-about-open .svg-icon{width:13px;height:13px}
+/* Matter overview: review cadence (label + dropdown, custom fields after it); the title tile opens the icon picker. */
+.mtm-overview-cadence{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-faint)}
+.mtm-overview-cadence select{height:26px;font-size:12px}
+.mtm-overview-controls .mtm-cadence-custom{font-size:12px}
+.mtm-overview-title-row>.mtm-tile{cursor:pointer}
+.mtm-overview-title-row>.mtm-tile:hover,.mtm-overview-title-row>.mtm-tile:focus-visible{box-shadow:var(--mtm-card-shadow-hover),inset 0 0 0 1px var(--mtm-line)}
+/* Matter overview stats: a late or never-done review in the late colour; the progress label spreads its two parts. */
+.mtm-stat.mod-review.is-overdue .mtm-stat-value{color:var(--mtm-review-late)}
+.mtm-stat.mod-grow .mtm-stat-label>:first-child{flex:1}
+/* Matter overview sections: the status chip as the title, "Show all N done", and the full-width invitation without Actions. */
+.mtm-section-title>.mtm-status{font-size:13px;font-weight:700;color:var(--text-normal)}
+.mtm-section-more{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:var(--text-faint);cursor:pointer}
+.mtm-section-more:hover,.mtm-section-more:focus-visible{color:var(--text-normal)}
+.mtm-empty.mod-overview{align-items:center;padding:32px 20px;border:1px dashed var(--mtm-line);border-radius:14px}
