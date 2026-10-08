@@ -3,7 +3,7 @@
 import { normalizePath, TFile, type App } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import type { Ymd } from '../model/dates';
-import { matterState, parseCadence, parseLaneOrder, reviewInfo } from '../model/matters';
+import { matterState, parseCadence, parseLaneOrder, parseOutcome, reviewInfo } from '../model/matters';
 import { toActionItem, type ActionItem } from '../services/actionItems';
 import { linkText, type ResolveLink } from '../services/effective';
 import type { MatterInfo } from '../services/boardModel';
@@ -79,6 +79,7 @@ export function matterInfo(app: App, file: TFile, settings: MattersSettings, tod
 		review: isInbox || !cadence ? null : reviewInfo(fm['mtm-review-every'], fm['mtm-last-reviewed'], today),
 		sphere: sphere.id,
 		sphereOrphan: sphere.orphan,
+		outcome: isInbox ? null : parseOutcome(fm['mtm-outcome']),
 	};
 }
 
@@ -90,7 +91,7 @@ export function allMatters(app: App, settings: MattersSettings, today: Ymd): Mat
 	const matters = files.map((f) => matterInfo(app, f, settings, today));
 	if (!inboxFile) {
 		const name = settings.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? 'Inbox';
-		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null, sphere: null, sphereOrphan: null });
+		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null, sphere: null, sphereOrphan: null, outcome: null });
 	}
 	return matters;
 }

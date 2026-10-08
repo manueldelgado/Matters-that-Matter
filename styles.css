@@ -56,7 +56,7 @@ body{--mtm-ink:var(--mtm-ink-ink);--mtm-icon:var(--mtm-ink-icon);--mtm-strong:va
 .mtm-status-later{--mtm-status:var(--mtm-st-later)}.mtm-status-next{--mtm-status:var(--mtm-st-next)}.mtm-status-doing{--mtm-status:var(--mtm-st-doing)}.mtm-status-waiting{--mtm-status:var(--mtm-st-waiting)}.mtm-status-done{--mtm-status:var(--mtm-st-done)}
 /* State tokens: accent text, orphan, review, Inbox, danger, search match */
 .theme-light{--mtm-on-accent:#FFFFFF;--mtm-orphan-bg:#FFF4C7;--mtm-orphan-ink:#7F5E00;--mtm-orphan-edge:#FFEA94;--mtm-review-ok:#218A5B;--mtm-review-late:#C23F77;--mtm-inbox-stripe:rgba(63,146,234,.07);--mtm-danger:#C23F77;--mtm-danger-bg:#FFE0EE;--mtm-match:rgba(255,221,94,.55)}
-.theme-dark{--mtm-on-accent:#FFFFFF;--mtm-orphan-bg:rgba(255,221,94,.14);--mtm-orphan-ink:#FFDD5E;--mtm-orphan-edge:rgba(255,221,94,.3);--mtm-review-ok:#7FDDAF;--mtm-review-late:#FFA3C8;--mtm-inbox-stripe:rgba(153,203,255,.06);--mtm-danger:#FFA3C8;--mtm-danger-bg:rgba(255,163,200,.16);--mtm-match:rgba(255,221,94,.3)}
+.theme-dark{--mtm-on-accent:#FFFFFF;--mtm-orphan-bg:rgba(255,221,94,.14);--mtm-orphan-ink:#FFDD5E;--mtm-orphan-edge:rgba(255,221,94,.3);--mtm-review-ok:#7FDDAF;--mtm-review-late:#FFB57A;--mtm-inbox-stripe:rgba(153,203,255,.06);--mtm-danger:#FFA3C8;--mtm-danger-bg:rgba(255,163,200,.16);--mtm-match:rgba(255,221,94,.3)}
 /* User-defined statuses: the plugin adds mtm-status-<id> AND mtm-status-tone-<tone>; the tone class comes last, so it wins. */
 .mtm-status-tone-mint{--mtm-status:var(--mtm-mint-dot)}.mtm-status-tone-sky{--mtm-status:var(--mtm-sky-dot)}.mtm-status-tone-butter{--mtm-status:var(--mtm-butter-dot)}.mtm-status-tone-lavender{--mtm-status:var(--mtm-lavender-dot)}.mtm-status-tone-peach{--mtm-status:var(--mtm-peach-dot)}.mtm-status-tone-bubblegum{--mtm-status:var(--mtm-bubblegum-dot)}.mtm-status-tone-ink{--mtm-status:var(--mtm-ink-dot)}
 /* ——— Base tokens (any theme). Themes tune these with body.theme-light / body.theme-dark selectors. ——— */
@@ -937,3 +937,36 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-sphere-chip .svg-icon{width:13px;height:13px}
 .mtm-sphere-chip:hover{color:var(--text-normal)}
 .mtm-sphere-chip.mod-none{color:var(--text-faint)}
+/* Waiting since (V5): the age of a wait, short on cards ("10d"), long elsewhere ("10 days"); long waits in the review-late colour, never the overdue red. */
+.mtm-waiting-age{font-size:11px;font-weight:700;color:var(--mtm-waiting-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mtm-link-chip+.mtm-waiting-age,.mtm-table-meta .mtm-waiting-age{margin-left:6px;font-weight:600;color:var(--text-faint)}
+.mtm-waiting-age.is-long,.mtm-link-chip+.mtm-waiting-age.is-long,.mtm-table-meta .mtm-waiting-age.is-long{color:var(--mtm-review-late)}
+/* The list shows the long age after the chip, the short one in two-line rows. */
+.mtm-waiting-age.mod-short{display:none}
+@container (max-width:600px){.mtm-table-meta .mtm-waiting-age.mod-long{display:none}.mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:2px}}
+/* Inspector: the date under the Waiting on chip, editable, with the age. */
+.mtm-waiting-since{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-faint)}
+.mtm-waiting-since>.svg-icon{width:13px;height:13px}
+body .mtm-waiting-since input[type=date]{height:24px;padding:0 6px;font-size:12px}
+.mtm-waiting-since .mtm-waiting-age{margin-left:2px;font-size:12px;font-weight:600}
+/* Note banner: name, then age. */
+.mtm-note-banner-meta .mtm-waiting .mtm-waiting-age{margin-left:2px;font-size:12px;font-weight:600;opacity:.8}
+.mtm-note-banner-meta .mtm-waiting .mtm-waiting-age.is-long{opacity:1}
+/* Properties: mtm-waiting-since is muted like mtm-completed (the plugin sets it). */
+.mtm-action-note .metadata-property[data-property-key="mtm-waiting-since"]{opacity:.6}
+.mtm-action-note .metadata-property[data-property-key="mtm-waiting-since"] :is(input,.metadata-input-text){color:var(--text-muted)}
+/* Outcome (V7): under the overview title, a flag, a small label and the sentence in the display face, edited in place; empty: a dashed invitation. */
+.mtm-outcome{display:flex;align-items:baseline;gap:8px;max-width:640px;padding:8px 12px;border-left:3px solid var(--mtm-line);border-radius:0 10px 10px 0;background:var(--mtm-raised)}
+.mtm-outcome>.svg-icon{flex:none;align-self:center;width:15px;height:15px;color:var(--text-faint)}
+.mtm-outcome-label{flex:none;font-size:11px;font-weight:700;color:var(--text-faint)}
+.mtm-outcome-text{flex:1;min-width:0;outline:none;font-family:var(--mtm-font-display);font-size:17px;font-weight:400;line-height:1.35;color:var(--text-normal);text-wrap:pretty;cursor:text}
+.mtm-outcome-text:focus{box-shadow:0 1px 0 var(--interactive-accent)}
+.mtm-outcome .clickable-icon{align-self:center;opacity:0}
+.mtm-outcome:hover .clickable-icon,.mtm-outcome .clickable-icon:focus-visible{opacity:1}
+.mtm-outcome.mod-empty{border-left-style:dashed;background:transparent}
+.mtm-outcome.mod-empty .mtm-outcome-text{font-family:var(--font-interface);font-size:13px;font-style:italic;color:var(--text-faint)}
+/* Matter note banner: the outcome as a second line. */
+.mtm-note-banner-outcome{display:flex;align-items:flex-start;gap:5px;font-size:12.5px;line-height:1.4;color:var(--text-muted)}
+.mtm-note-banner-outcome .svg-icon{flex:none;width:12px;height:12px;margin-top:2px;color:var(--text-faint)}
+/* A long outcome keeps a readable width: the counts and button wrap below it instead. */
+.mtm-note-banner-text:has(>.mtm-note-banner-outcome){flex:1 1 280px;min-width:min(100%,280px)}

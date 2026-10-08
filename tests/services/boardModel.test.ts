@@ -19,6 +19,7 @@ const matter = (name: string, extra: Partial<MatterInfo> = {}): MatterInfo => ({
 	review: null,
 	sphere: null,
 	sphereOrphan: null,
+	outcome: null,
 	...extra,
 });
 

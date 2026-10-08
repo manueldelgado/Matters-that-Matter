@@ -1,4 +1,4 @@
-// Vault-wide behaviour that runs once setup is done: completion dates on observed status changes,
+// Vault-wide behaviour that runs once setup is done: completion and waiting-since dates on observed changes,
 // Inbox protection and the ribbon counter.
 
 import { debounce, normalizePath, Notice, TFile, type CachedMetadata } from 'obsidian';
@@ -6,15 +6,18 @@ import type MattersPlugin from '../main';
 import { STRINGS } from '../strings';
 import { toYmd } from '../model/dates';
 import { hasCompletedValue, StatusCache } from '../services/completion';
+import { linkText } from '../services/effective';
+import { WaitingCache } from '../services/waitingSince';
 import { effectiveAction } from '../services/effective';
 import { inboxRepairs, isInboxDuplicate } from '../services/inboxGuard';
-import { resolverFor } from './index';
+import { linkedFile, resolverFor } from './index';
 import { createNote, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
 
 const INBOX_RESTORE_DELAY = 4000;
 
 export class Watchers {
 	private statuses = new StatusCache();
+	private waiting = new WaitingCache();
 	private ribbonEl: HTMLElement | null = null;
 	private updateRibbon = debounce(() => this.renderRibbon(), 300, true);
 
@@ -32,6 +35,7 @@ export class Watchers {
 		this.plugin.registerEvent(
 			app.vault.on('delete', (file) => {
 				this.statuses.forget(file.path);
+				this.waiting.forget(file.path);
 				if (file.path === this.plugin.settings.inboxPath) this.restoreInboxLater(file.path);
 				this.updateRibbon();
 			}),
@@ -39,6 +43,7 @@ export class Watchers {
 		this.plugin.registerEvent(
 			app.vault.on('rename', (file, oldPath) => {
 				this.statuses.rename(oldPath, file.path);
+				this.waiting.rename(oldPath, file.path);
 				this.plugin.selection.rename(oldPath, file.path);
 				this.updateRibbon();
 			}),
@@ -54,11 +59,19 @@ export class Watchers {
 	private seedStatuses(): void {
 		const { app, settings } = this.plugin;
 		this.statuses.clear();
+		this.waiting.clear();
 		for (const file of notesOfKind(app, 'action')) {
 			const fm = frontmatterOf(app, file);
 			const effective = effectiveAction(fm, settings, resolverFor(app, file.path));
 			this.statuses.seed(file.path, fm?.['mtm-status'], effective.category);
+			this.waiting.seed(file.path, this.personKey(file, fm?.['mtm-waiting-on']), fm?.['mtm-waiting-since']);
 		}
+	}
+
+	/** Identifies the waiting-on person: the resolved path, or the link text; null when absent. */
+	private personKey(file: TFile, raw: unknown): string | null {
+		if (!hasCompletedValue(raw)) return null;
+		return linkedFile(this.plugin.app, raw, file.path)?.path ?? linkText(raw);
 	}
 
 	private async onChanged(file: TFile, cache: CachedMetadata): Promise<void> {
@@ -68,13 +81,20 @@ export class Watchers {
 
 		if (fm?.['mtm-kind'] !== 'action') {
 			this.statuses.forget(file.path);
+			this.waiting.forget(file.path);
 		} else {
 			const effective = effectiveAction(fm, settings, resolverFor(app, file.path));
+			const today = toYmd(new Date());
 			const change = this.statuses.observe(file.path, fm['mtm-status'], effective.category, hasCompletedValue(fm['mtm-completed']));
-			if (change !== 'none') {
+			const since: unknown = fm['mtm-waiting-since'];
+			let sinceChange = this.waiting.observe(file.path, this.personKey(file, fm['mtm-waiting-on']), since, hasCompletedValue(since));
+			if (sinceChange === 'set' && since === today) sinceChange = 'none';
+			if (change !== 'none' || sinceChange !== 'none') {
 				await app.fileManager.processFrontMatter(file, (data: Frontmatter) => {
-					if (change === 'set') data['mtm-completed'] = toYmd(new Date());
-					else delete data['mtm-completed'];
+					if (change === 'set') data['mtm-completed'] = today;
+					else if (change === 'remove') delete data['mtm-completed'];
+					if (sinceChange === 'set') data['mtm-waiting-since'] = today;
+					else if (sinceChange === 'remove') delete data['mtm-waiting-since'];
 				});
 			}
 		}

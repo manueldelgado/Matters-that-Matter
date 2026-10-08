@@ -224,6 +224,7 @@ export class InspectorView extends ItemView {
 				this.edit({}, { waitingOn: { link: linkTo(this.app, person, file.path), key: person.path } }),
 			),
 		clearWaitingOn: () => this.edit({}, { waitingOn: null }),
+		setWaitingSince: (day) => this.edit({}, { waitingSince: day }),
 		addPerson: () =>
 			this.pickPerson([this.details?.waitingOn?.key, ...(this.details?.people.map((p) => p.key) ?? [])], (person, file) =>
 				this.edit({}, { addPerson: { link: linkTo(this.app, person, file.path), key: person.path } }),

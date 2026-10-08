@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	parseOutcome,
 	formatCadence,
 	matterState,
 	moveLane,
@@ -118,5 +119,15 @@ describe('lanes', () => {
 
 	it('never moves the Inbox', () => {
 		expect(moveLane(orderLanes(lanes, 'top'), 'M/Inbox.md', 3)).toEqual([]);
+	});
+});
+
+describe('parseOutcome', () => {
+	it('keeps one line of text, or nothing', () => {
+		expect(parseOutcome('  A kitchen we cook in.  ')).toBe('A kitchen we cook in.');
+		expect(parseOutcome('Two\nlines')).toBe('Two lines');
+		expect(parseOutcome('   ')).toBeNull();
+		expect(parseOutcome(3)).toBeNull();
+		expect(parseOutcome(undefined)).toBeNull();
 	});
 });

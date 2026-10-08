@@ -5,6 +5,7 @@
 import { debounce, Keymap, MarkdownView, Notice, TFile } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
+import { waitAge } from '../../model/actions';
 import { toYmd } from '../../model/dates';
 import { backlogStatus } from '../../model/workflow';
 import type { ActionItem } from '../../services/actionItems';
@@ -168,13 +169,14 @@ export class NoteDecorations {
 		const date = bannerDate(item, now, today);
 		const classes = actionNoteClasses(item, now);
 
-		const signature = JSON.stringify([file.path, classes, item.effective, item.priority, date, waitingOn, matter.name, matter.icon]);
+		const waitAgeNow = item.waitingSince ? waitAge(item.waitingSince, today) : null;
+		const signature = JSON.stringify([file.path, classes, item.effective, item.priority, date, waitingOn, waitAgeNow, matter.name, matter.icon]);
 		if (this.unchanged(view, signature, force)) return;
 		this.signatures.set(view, signature);
 
 		this.place(view, classes, () =>
 			renderActionBanner(
-				{ item, matter: { name: matter.name, icon: matter.icon }, date, waitingOn },
+				{ item, matter: { name: matter.name, icon: matter.icon }, date, waitingOn, waitAge: waitAgeNow },
 				{
 					typeMenu: (anchor) => showTypeMenu(anchor, settings.types, item.effective.type.id, (typeId) => this.write(file, { typeId })),
 					statusMenu: (anchor) =>

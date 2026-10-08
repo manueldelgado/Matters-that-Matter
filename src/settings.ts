@@ -50,7 +50,7 @@ export interface MattersSettings {
 }
 
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 2,
+	schemaVersion: 3,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',

@@ -6,7 +6,9 @@ import type { ActionItem } from '../../../services/actionItems';
 import type { ListGroup, ListLayout, ListSection } from '../../../services/listModel';
 import { NO_SPHERE } from '../../../services/spheres';
 import { NO_SPHERE_ICON } from '../collectionView';
-import { avatarEl, dueEl, orphanBadge, priorityEl } from '../../../ui/components/card';
+import { avatarEl, dueEl, orphanBadge, priorityEl, waitAgeEl, waitingTitle } from '../../../ui/components/card';
+import { waitAge } from '../../../model/actions';
+import { toYmd } from '../../../model/dates';
 import { appendIcon, pressable, statusChip, tileEl, typeClasses } from '../../../ui/components/dom';
 
 export interface ListHandlers {
@@ -136,6 +138,14 @@ function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: Li
 		avatarEl(waiting, name, 'mod-sm');
 		waiting.createSpan({ cls: 'mtm-table-waiting-name', text: name });
 		waiting.appendText(' ');
+
+		setTooltip(waiting, waitingTitle(item.waitingOn, item.waitingSince, input.now));
+		if (item.waitingSince) {
+			// Long after the chip in the table; short in two-line rows (CSS shows one).
+			const age = waitAge(item.waitingSince, toYmd(input.now));
+			waitAgeEl(waitingCell, age, false, 'mod-long');
+			waitAgeEl(waitingCell, age, true, 'mod-short');
+		}
 	}
 
 	const count = row.createSpan({ cls: 'mtm-table-num', text: item.linkedCount ? String(item.linkedCount) : '' });

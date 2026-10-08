@@ -76,6 +76,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 	toggle.addEventListener('click', () => h.toggleLane(m.path));
 	setIcon(row.createSpan({ cls: 'mtm-matter-icon' }), m.icon);
 	const title = row.createSpan({ cls: 'mtm-lane-title', text: m.name });
+	if (m.outcome) setTooltip(title, `${STRINGS.overview.outcome}: ${m.outcome}`);
 	title.addEventListener('click', () => h.openMatter(m.path));
 	if (!m.isInbox) {
 		const menu = row.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': b.laneMenu } });

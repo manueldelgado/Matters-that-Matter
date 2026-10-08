@@ -1,8 +1,8 @@
-// "New Matter": name, icon, Sphere (when there are any) and review cadence.
+// "New Matter": name, icon, an optional outcome, Sphere (when there are any) and review cadence.
 
 import { Modal, type App } from 'obsidian';
 import type { SphereDef } from '../../settings';
-import { formatCadence, parseCadence } from '../../model/matters';
+import { formatCadence, parseCadence, parseOutcome } from '../../model/matters';
 import { STRINGS } from '../../strings';
 import { DEFAULT_MATTER_ICON } from '../../vault/index';
 import { cadenceFields, type CadenceFields } from '../components/cadenceFields';
@@ -14,6 +14,7 @@ export interface NewMatterResult {
 	icon: string;
 	reviewEvery: string | null;
 	sphereId: string | null;
+	outcome: string | null;
 }
 
 export interface NewMatterContext {
@@ -65,6 +66,11 @@ export class NewMatterModal extends Modal {
 		);
 		const input = row.createEl('input', { type: 'text', value: this.initialName, attr: { 'aria-label': t.name, placeholder: t.placeholder } });
 
+		const outcomeField = body.createDiv({ cls: 'mtm-field' });
+		outcomeField.createDiv({ cls: 'mtm-label', text: t.outcome }).createSpan({ cls: 'mtm-label-aside', text: t.optional });
+		const outcome = outcomeField.createEl('input', { type: 'text', attr: { 'aria-label': t.outcome, placeholder: t.outcomePlaceholder } });
+		outcomeField.createSpan({ cls: 'mtm-field-hint', text: t.outcomeHint });
+
 		if (this.context.spheres.length) this.renderSpheres(body);
 
 		const reviewField = body.createDiv({ cls: 'mtm-field' });
@@ -104,13 +110,14 @@ export class NewMatterModal extends Modal {
 				reviewEvery = formatCadence(cadence);
 			}
 			create.disabled = true;
-			void Promise.resolve(this.onCreate({ name, icon: this.icon, reviewEvery, sphereId: this.sphereId })).finally(() => this.close());
+			void Promise.resolve(this.onCreate({ name, icon: this.icon, reviewEvery, sphereId: this.sphereId, outcome: parseOutcome(outcome.value) })).finally(() => this.close());
 		};
 		create.addEventListener('click', submit);
 		const onEnter = (e: KeyboardEvent) => {
 			if (e.key === 'Enter' && !e.isComposing && (e.target as HTMLElement | null)?.tagName === 'INPUT') submit();
 		};
 		input.addEventListener('keydown', onEnter);
+		outcome.addEventListener('keydown', onEnter);
 		reviewField.addEventListener('keydown', onEnter);
 		input.focus();
 	}

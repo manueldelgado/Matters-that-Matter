@@ -2,8 +2,8 @@
 
 import { setTooltip } from 'obsidian';
 import { STRINGS } from '../../strings';
-import type { Priority } from '../../model/actions';
-import { dateLabel, isOverdue, toYmd, type MtmDate } from '../../model/dates';
+import { waitAge, type Priority, type WaitAge } from '../../model/actions';
+import { dateLabel, dayLabel, isOverdue, toYmd, type MtmDate } from '../../model/dates';
 import { initials, type ActionItem } from '../../services/actionItems';
 import type { EffectiveAction } from '../../services/effective';
 import { appendIcon, tileEl, typeClasses } from './dom';
@@ -25,6 +25,19 @@ export function priorityEl(parent: HTMLElement, priority: Priority, withLabel = 
 	for (let i = 0; i < 3; i++) bars.createSpan({ cls: 'mtm-priority-bar' });
 	if (withLabel) el.createSpan({ cls: 'mtm-priority-label', text: label });
 	return el;
+}
+
+/** How long an Action has been waiting, short ("10d") or long ("10 days"); highlighted from two weeks. */
+export function waitAgeEl(parent: HTMLElement, age: WaitAge, short: boolean, mod?: string): HTMLElement {
+	return parent.createSpan({ cls: ['mtm-waiting-age', ...(age.isLong ? ['is-long'] : []), ...(mod ? [mod] : [])], text: short ? age.short : age.long });
+}
+
+/** The waiting tooltip: with the date and age when known. */
+export function waitingTitle(name: string, since: string | null, now: Date): string {
+	const display = name.split('/').pop() ?? name;
+	if (!since) return STRINGS.card.waitingOn(display);
+	const today = toYmd(now);
+	return STRINGS.card.waitingSince(display, dayLabel(since, today), waitAge(since, today).long);
 }
 
 export function avatarEl(parent: HTMLElement, name: string, mod?: string): HTMLElement {
@@ -104,9 +117,10 @@ export function renderCard(parent: HTMLElement, item: ActionItem, ctx: CardConte
 		}
 		if (item.waitingOn) {
 			const waiting = meta.createSpan({ cls: 'mtm-waiting' });
-			setTooltip(waiting, STRINGS.card.waitingOn(item.waitingOn.split('/').pop() ?? item.waitingOn));
+			setTooltip(waiting, waitingTitle(item.waitingOn, item.waitingSince, ctx.now));
 			appendIcon(waiting, 'clock');
 			avatarEl(waiting, item.waitingOn);
+			if (item.waitingSince) waitAgeEl(waiting, waitAge(item.waitingSince, toYmd(ctx.now)), true);
 		}
 	}
 

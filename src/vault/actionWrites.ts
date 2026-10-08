@@ -42,7 +42,7 @@ export async function editAction(app: App, file: TFile, settings: MattersSetting
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
 		fm['mtm-matter'] = matterLink(app, matterPath, file.path);
-		applyFieldEdit(fm, fields, keyOf);
+		applyFieldEdit(fm, fields, keyOf, today);
 	});
 }
 

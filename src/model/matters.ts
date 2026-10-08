@@ -10,6 +10,13 @@ export function matterState(raw: unknown): MatterState {
 }
 
 /** Dormant and closed Matters start collapsed. */
+/** mtm-outcome as one line of plain text; null when absent or blank. Also cleans what the user types. */
+export function parseOutcome(raw: unknown): string | null {
+	if (typeof raw !== 'string') return null;
+	const line = raw.replace(/\s+/g, ' ').trim();
+	return line || null;
+}
+
 export function startsCollapsed(state: MatterState): boolean {
 	return state !== 'active';
 }

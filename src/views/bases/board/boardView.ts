@@ -75,7 +75,7 @@ export class BoardView extends CollectionView {
 			settings.spheres,
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
 			this.matters,
-			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn, a.linkedCount]),
+			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
 		]);
 		if (!force && signature === this.signature) return;
 		this.signature = signature;

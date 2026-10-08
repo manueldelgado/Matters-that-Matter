@@ -3,14 +3,14 @@
 import { setTooltip, type TFile, type UserEvent } from 'obsidian';
 import type { MattersSettings, TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
-import type { Priority } from '../../model/actions';
+import { waitAge, type Priority } from '../../model/actions';
 import type { ChecklistItem } from '../../model/body';
-import { fromInputs, startsAfterDue, type MtmDate } from '../../model/dates';
+import { fromInputs, parseMtmDate, startsAfterDue, toYmd, type MtmDate } from '../../model/dates';
 import { orderLanes } from '../../model/matters';
 import type { MatterInfo } from '../../services/boardModel';
 import type { ActionDetails, PersonRef } from '../../vault/actionDetails';
 import { appendIcon, iconEl, tileEl, typeClasses } from '../../ui/components/dom';
-import { avatarEl, orphanBanner } from '../../ui/components/card';
+import { avatarEl, orphanBanner, waitAgeEl } from '../../ui/components/card';
 
 export type DateField = 'start' | 'due';
 
@@ -29,6 +29,8 @@ export interface InspectorHandlers {
 	setDate(field: DateField, value: MtmDate | null): void;
 	pickWaitingOn(): void;
 	clearWaitingOn(): void;
+	/** 'YYYY-MM-DD', or null to remove the date. */
+	setWaitingSince(day: string | null): void;
 	addPerson(): void;
 	removePerson(key: string): void;
 	detailsInput(text: string): void;
@@ -296,13 +298,31 @@ function chipAdd(parent: HTMLElement, icon: string, label: string, onPress: () =
 
 function renderPeople(body: HTMLElement, d: ActionDetails, h: InspectorHandlers): void {
 	const s = STRINGS.inspector;
-	const waiting = section(body, s.waitingOn).createDiv({ cls: 'mtm-link-chips' });
+	const waitingSection = section(body, s.waitingOn);
+	const waiting = waitingSection.createDiv({ cls: 'mtm-link-chips' });
 	if (d.waitingOn) personChip(waiting, d.waitingOn, true, h, () => h.clearWaitingOn());
 	chipAdd(waiting, 'plus', d.waitingOn ? s.change : s.someone, () => h.pickWaitingOn());
+	if (d.waitingOn) renderWaitingSince(waitingSection, d.waitingSince, h);
 
 	const people = section(body, s.people).createDiv({ cls: 'mtm-link-chips' });
 	for (const person of d.people) personChip(people, person, false, h, () => h.removePerson(person.key));
 	chipAdd(people, 'user-plus', s.addPerson, () => h.addPerson());
+}
+
+/** "Since" and an editable date, for a wait that started before it was recorded; the age follows. */
+function renderWaitingSince(parent: HTMLElement, since: string | null, h: InspectorHandlers): void {
+	const s = STRINGS.inspector;
+	const row = parent.createDiv({ cls: 'mtm-waiting-since' });
+	appendIcon(row, 'clock');
+	row.createSpan({ text: s.waitingSince });
+	const input = row.createEl('input', { type: 'date', attr: { 'aria-label': s.waitingSinceLabel } });
+	input.value = since ?? '';
+	input.addEventListener('change', () => {
+		const day = parseMtmDate(input.value);
+		if (input.value === '') h.setWaitingSince(null);
+		else if (day && !day.time) h.setWaitingSince(day.date);
+	});
+	if (since) waitAgeEl(row, waitAge(since, toYmd(new Date())), false);
 }
 
 function renderChecklist(body: HTMLElement, items: ChecklistItem[], h: InspectorHandlers): void {

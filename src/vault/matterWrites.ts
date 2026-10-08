@@ -4,7 +4,7 @@ import { normalizePath, type App, type TFile } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { toYmd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
-import { formatCadence, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
+import { formatCadence, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
 import { STRINGS } from '../strings';
 import { createNote, ensureFolder, maxLaneOrder, type Frontmatter } from './notes';
 
@@ -52,11 +52,21 @@ export async function setMatterSphere(app: App, file: TFile, sphereId: string | 
 	});
 }
 
+/** Writes the outcome as one line, or removes it when blank. */
+export async function setMatterOutcome(app: App, file: TFile, text: string | null): Promise<void> {
+	const outcome = parseOutcome(text);
+	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		if (outcome) fm['mtm-outcome'] = outcome;
+		else delete fm['mtm-outcome'];
+	});
+}
+
 export interface NewMatter {
 	name: string;
 	icon: string;
 	reviewEvery: string | null;
 	sphereId?: string | null;
+	outcome?: string | null;
 }
 
 /** Creates an active Matter in the Matters folder, after the last lane. */
@@ -73,5 +83,7 @@ export async function createMatter(app: App, settings: MattersSettings, init: Ne
 	};
 	if (init.reviewEvery) fm['mtm-review-every'] = init.reviewEvery;
 	if (init.sphereId) fm['mtm-sphere'] = init.sphereId;
+	const outcome = parseOutcome(init.outcome);
+	if (outcome) fm['mtm-outcome'] = outcome;
 	return createNote(app, `${folder}/${title}.md`, fm);
 }

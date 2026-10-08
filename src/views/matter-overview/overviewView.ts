@@ -9,7 +9,7 @@ import { overviewModel } from '../../services/overviewModel';
 import { IconPickerModal } from '../../ui/modals/iconPickerModal';
 import { dismissOrphan } from '../../vault/actionWrites';
 import { allActionItems, backlinksTo, DEFAULT_MATTER_ICON, matterInfo, noteBody, peopleOf } from '../../vault/index';
-import { markReviewed, setMatterIcon, setMatterSphere, setMatterState, setReviewCadence } from '../../vault/matterWrites';
+import { markReviewed, setMatterIcon, setMatterOutcome, setMatterSphere, setMatterState, setReviewCadence } from '../../vault/matterWrites';
 import { showSphereMenu } from '../../ui/components/menus';
 import { refreshViewTitle } from '../../vault/internal';
 import { frontmatterOf } from '../../vault/notes';
@@ -233,6 +233,7 @@ export class MatterOverviewView extends ItemView {
 			this.customCadence = false;
 			void this.write((f) => setReviewCadence(this.app, f, cadence));
 		},
+		setOutcome: (text: string) => void this.write((f) => setMatterOutcome(this.app, f, text)),
 		chooseCustom: () => {
 			this.customCadence = true;
 			void this.refresh();

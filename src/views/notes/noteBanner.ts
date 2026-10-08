@@ -6,6 +6,7 @@ import type { MatterInfo } from '../../services/boardModel';
 import type { ActionItem } from '../../services/actionItems';
 import type { BannerDate } from '../../services/noteDecor';
 import type { OverviewStats, ReviewState } from '../../services/overviewModel';
+import type { WaitAge } from '../../model/actions';
 import { avatarEl, orphanBanner, priorityEl } from '../../ui/components/card';
 import { appendIcon, iconEl, pressable, statusClasses, tileEl, typeClasses } from '../../ui/components/dom';
 
@@ -18,6 +19,8 @@ export interface ActionBannerInput {
 	date: BannerDate | null;
 	/** Name of the person in mtm-waiting-on, when waiting. */
 	waitingOn: string | null;
+	/** How long, when mtm-waiting-since is set. */
+	waitAge: WaitAge | null;
 }
 
 export interface ActionBannerHandlers {
@@ -65,6 +68,10 @@ export function renderActionBanner(input: ActionBannerInput, h: ActionBannerHand
 		appendIcon(waiting, 'clock');
 		avatarEl(waiting, input.waitingOn);
 		waiting.appendText(input.waitingOn.split(/\s+/)[0] ?? '');
+		if (input.waitAge) {
+			waiting.createSpan({ cls: ['mtm-waiting-age', ...(input.waitAge.isLong ? ['is-long'] : [])], text: `· ${input.waitAge.long}` });
+			setTooltip(waiting, `${STRINGS.card.waitingOn(input.waitingOn)} · ${input.waitAge.long}`);
+		}
 	}
 	if (!meta.hasChildNodes()) meta.remove();
 
@@ -110,6 +117,12 @@ export function renderMatterBanner(input: MatterBannerInput, openOverview: () =>
 		cls: 'mtm-note-banner-type',
 		text: matter.isInbox ? s.inbox : [s.matter, ...(input.sphere ? [input.sphere] : []), STRINGS.overview.states[matter.state]].join(' · '),
 	});
+	if (matter.outcome) {
+		const outcome = text.createSpan({ cls: 'mtm-note-banner-outcome' });
+		appendIcon(outcome, 'flag');
+		outcome.appendText(matter.outcome);
+		setTooltip(outcome, STRINGS.overview.outcome);
+	}
 	if (review) {
 		const el = text.createSpan({ cls: ['mtm-review', `is-${review.state}`] });
 		appendIcon(el, review.state === 'ontime' ? 'circle-check' : review.state === 'overdue' ? 'alarm-clock' : 'circle-dashed');

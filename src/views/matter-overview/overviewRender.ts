@@ -41,6 +41,8 @@ export interface OverviewHandlers {
 	setState: (state: MatterState) => void;
 	markReviewed: () => void;
 	setCadence: (cadence: Cadence | null) => void;
+	/** The edited outcome; blank removes it. */
+	setOutcome: (text: string) => void;
 	chooseCustom: () => void;
 	select: (path: string) => void;
 	open: (path: string, e: MouseEvent | KeyboardEvent) => void;
@@ -110,6 +112,8 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 	row.createEl('button', { text: o.showOnBoard }).addEventListener('click', () => h.showOnBoard());
 	row.createEl('button', { cls: 'mod-cta', text: o.newAction }).addEventListener('click', () => h.newAction());
 
+	if (!matter.isInbox) renderOutcome(header, matter.outcome, h);
+
 	if (d.body !== null) {
 		const about = header.createDiv();
 		const text = d.body.trim();
@@ -121,6 +125,51 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 	}
 
 	if (!matter.isInbox) renderControls(header, d, h);
+}
+
+/** The outcome under the title, edited in place (Enter or blur saves, Esc cancels); a dashed invitation when unset. */
+function renderOutcome(header: HTMLElement, outcome: string | null, h: OverviewHandlers): void {
+	const o = STRINGS.overview;
+	const box = header.createDiv({ cls: ['mtm-outcome', ...(outcome ? [] : ['mod-empty'])] });
+	appendIcon(box, 'flag');
+	box.createSpan({ cls: 'mtm-outcome-label', text: o.outcome });
+	const text = box.createSpan({
+		cls: 'mtm-outcome-text',
+		text: outcome ?? o.outcomeEmpty,
+		attr: { contenteditable: 'plaintext-only', spellcheck: 'true', role: 'textbox' },
+	});
+	let cancelled = false;
+	text.addEventListener('focus', () => {
+		if (outcome) return;
+		// The invitation gives way to an empty line.
+		text.setText('');
+		box.removeClass('mod-empty');
+	});
+	text.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			text.blur();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			cancelled = true;
+			text.blur();
+		}
+	});
+	text.addEventListener('blur', () => {
+		const value = text.innerText.replace(/\s+/g, ' ').trim();
+		if (cancelled || value === (outcome ?? '')) {
+			cancelled = false;
+			text.setText(outcome ?? o.outcomeEmpty);
+			box.toggleClass('mod-empty', !outcome);
+			return;
+		}
+		h.setOutcome(value);
+	});
+	if (outcome) {
+		const edit = box.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': o.editOutcome } });
+		appendIcon(edit, 'pencil');
+		pressable(edit, () => text.focus());
+	}
 }
 
 function renderControls(header: HTMLElement, d: OverviewData, h: OverviewHandlers): void {

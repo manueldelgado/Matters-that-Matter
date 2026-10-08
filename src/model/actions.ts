@@ -1,6 +1,7 @@
 // Action rules: priority, derived values, card order and done visibility.
 
 import type { StatusCategory } from '../settings';
+import { STRINGS } from '../strings';
 import { compareMtmDates, daysBetween, parseMtmDate, toYmd, type MtmDate, type Ymd } from './dates';
 
 export type Priority = 1 | 2 | 3;
@@ -26,6 +27,25 @@ export function isWaiting(waitingOn: unknown, category: StatusCategory): boolean
 /** Due today or overdue, and not closed. */
 export function isToday(due: MtmDate | null, category: StatusCategory, now: Date): boolean {
 	return category !== 'closed' && !!due && due.date <= toYmd(now);
+}
+
+/** Waits of this many days or more are highlighted (never in the overdue red). */
+export const LONG_WAIT_DAYS = 14;
+
+export interface WaitAge {
+	days: number;
+	/** "today", "10 days", "3 weeks", "2 months". */
+	long: string;
+	/** "today", "10d", "3w", "2mo". */
+	short: string;
+	isLong: boolean;
+}
+
+/** Days under two weeks, then whole weeks under about two months, then whole months. A future date counts as today. */
+export function waitAge(since: Ymd, today: Ymd): WaitAge {
+	const days = Math.max(0, daysBetween(since, today));
+	const [unit, n] = days === 0 ? (['today', 0] as const) : days < LONG_WAIT_DAYS ? (['days', days] as const) : days < 60 ? (['weeks', Math.floor(days / 7)] as const) : (['months', Math.floor(days / 30)] as const);
+	return { days, long: STRINGS.waitAge.long(unit, n), short: STRINGS.waitAge.short(unit, n), isLong: days >= LONG_WAIT_DAYS };
 }
 
 export interface CardKey {

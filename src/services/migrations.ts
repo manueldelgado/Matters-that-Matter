@@ -3,7 +3,7 @@
 import { DEFAULT_SETTINGS, type MattersSettings, type SphereDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
-export const CURRENT_SCHEMA = 2;
+export const CURRENT_SCHEMA = 3;
 
 type Data = Record<string, unknown>;
 
@@ -11,6 +11,8 @@ type Data = Record<string, unknown>;
 const STEPS: Record<number, (data: Data) => Data> = {
 	// 2: Spheres group Matters; none until the user adds some.
 	1: (data) => ({ ...data, spheres: [] }),
+	// 3: new properties mtm-waiting-since (Actions) and mtm-outcome (Matters); nothing to convert.
+	2: (data) => data,
 };
 
 const isObject = (v: unknown): v is Data => typeof v === 'object' && v !== null && !Array.isArray(v);

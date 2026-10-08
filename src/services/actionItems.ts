@@ -16,6 +16,8 @@ export interface ActionItem {
 	completed: unknown;
 	/** Link text of mtm-waiting-on, when set and the Action is not closed. */
 	waitingOn: string | null;
+	/** mtm-waiting-since as a day, when waiting and the date is valid. */
+	waitingSince: string | null;
 	/** Resolved body links to other notes (filled in by the vault layer). */
 	linkedCount: number;
 }
@@ -41,6 +43,7 @@ export function toActionItem(
 		due: parseMtmDate(raw['mtm-due']),
 		completed: raw['mtm-completed'],
 		waitingOn: waiting,
+		waitingSince: waiting ? (parseMtmDate(raw['mtm-waiting-since'])?.date ?? null) : null,
 		linkedCount,
 	};
 }

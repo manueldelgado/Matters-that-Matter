@@ -3,7 +3,7 @@
 import { TFile, type App } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { checklistItems, getDetails, type ChecklistItem } from '../model/body';
-import { toYmd } from '../model/dates';
+import { parseMtmDate, toYmd } from '../model/dates';
 import type { ActionItem } from '../services/actionItems';
 import { peopleList } from '../services/actionEdit';
 import { linkText } from '../services/effective';
@@ -26,6 +26,8 @@ export interface ActionDetails {
 	matter: MatterInfo | undefined;
 	matters: MatterInfo[];
 	waitingOn: PersonRef | null;
+	/** mtm-waiting-since as a day, while someone is waited on. */
+	waitingSince: string | null;
 	/** People without the waiting-on person, who shows in their own section. */
 	people: PersonRef[];
 	details: string;
@@ -77,6 +79,7 @@ export async function readActionDetails(app: App, file: TFile, settings: Matters
 		matter: matters.find((m) => m.path === item.effective.matterPath),
 		matters,
 		waitingOn,
+		waitingSince: waitingOn ? (parseMtmDate(fm['mtm-waiting-since'])?.date ?? null) : null,
 		people,
 		details: getDetails(content),
 		checklist: checklistItems(content, taskLines),

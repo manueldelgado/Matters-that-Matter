@@ -219,6 +219,9 @@ export const STRINGS = {
 
 	overview: {
 		title: 'Matter',
+		outcome: 'Outcome',
+		outcomeEmpty: 'What does done look like? Or, if it never ends, what do you want to keep up?',
+		editOutcome: 'Edit outcome',
 		matter: 'Matter',
 		since: (date: string) => `Since ${date}`,
 		inboxEyebrow: 'Where quick add lands when no Matter is given',
@@ -258,11 +261,20 @@ export const STRINGS = {
 	card: {
 		linkedNotes: 'Linked notes',
 		waitingOn: (name: string) => `Waiting on ${name}`,
+		waitingSince: (name: string, since: string, age: string) => `Waiting on ${name} since ${since} (${age})`,
 		priority: { 1: 'High', 2: 'Medium', 3: 'Low' } as Record<1 | 2 | 3, string>,
 		priorityTitle: (label: string) => `${label} priority`,
 		orphanLabels: { status: 'Status', matter: 'Matter', type: 'Type', sphere: 'Sphere' },
 		orphanTitle: (field: string, value: string) => `Unrecognised ${field} “${value}”`,
 		dismiss: 'Dismiss',
+	},
+
+	/** How long an Action has been waiting: days under two weeks, then weeks, then months. */
+	waitAge: {
+		long: (unit: 'today' | 'days' | 'weeks' | 'months', n: number) =>
+			unit === 'today' ? 'today' : unit === 'days' ? plural(n, 'day', 'days') : unit === 'weeks' ? plural(n, 'week', 'weeks') : plural(n, 'month', 'months'),
+		short: (unit: 'today' | 'days' | 'weeks' | 'months', n: number) =>
+			unit === 'today' ? 'today' : unit === 'days' ? `${n}d` : unit === 'weeks' ? `${n}w` : `${n}mo`,
 	},
 
 	inspector: {
@@ -289,6 +301,8 @@ export const STRINGS = {
 		startAfterDue: 'Start is after due.',
 		startAfterDueText: 'The Action keeps both dates; it is placed by the due date only.',
 		waitingOn: 'Waiting on',
+		waitingSince: 'Since',
+		waitingSinceLabel: 'Waiting since',
 		someone: 'Someone',
 		change: 'Change',
 		people: 'People',
@@ -342,6 +356,10 @@ export const STRINGS = {
 		reviewHint: 'The board shows when a review is due.',
 		sphere: 'Sphere',
 		noSphere: 'None',
+		outcome: 'Outcome',
+		optional: 'Optional',
+		outcomePlaceholder: 'What does done look like?',
+		outcomeHint: 'One line. For a Matter that never ends, the standard you want to keep.',
 		create: 'Create Matter',
 	},
 

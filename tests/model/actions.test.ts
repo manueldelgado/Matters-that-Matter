@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	compareCards,
+	waitAge,
 	isShownByDone,
 	isToday,
 	isWaiting,
@@ -121,5 +122,20 @@ describe('isShownByDone', () => {
 
 	it('hides closed Actions without mtm-completed inside a window', () => {
 		expect(isShownByDone('closed', undefined, true, 30, today)).toBe(false);
+	});
+});
+
+describe('waitAge', () => {
+	it('counts days under two weeks, then weeks, then months', () => {
+		expect(waitAge('2026-10-08', '2026-10-08')).toMatchObject({ days: 0, long: 'today', short: 'today', isLong: false });
+		expect(waitAge('2026-10-07', '2026-10-08')).toMatchObject({ long: '1 day', short: '1d' });
+		expect(waitAge('2026-09-28', '2026-10-08')).toMatchObject({ days: 10, long: '10 days', short: '10d', isLong: false });
+		expect(waitAge('2026-09-24', '2026-10-08')).toMatchObject({ days: 14, long: '2 weeks', short: '2w', isLong: true });
+		expect(waitAge('2026-09-15', '2026-10-08')).toMatchObject({ long: '3 weeks', short: '3w' });
+		expect(waitAge('2026-08-01', '2026-10-08')).toMatchObject({ long: '2 months', short: '2mo' });
+	});
+
+	it('treats a future date as today', () => {
+		expect(waitAge('2026-10-20', '2026-10-08').long).toBe('today');
 	});
 });

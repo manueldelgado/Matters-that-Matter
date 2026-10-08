@@ -16,6 +16,8 @@ export interface MatterInfo extends Lane {
 	sphere: string | null;
 	/** An `mtm-sphere` value that names no Sphere in settings. */
 	sphereOrphan: string | null;
+	/** What done looks like (mtm-outcome); null when unset and always for the Inbox. */
+	outcome: string | null;
 }
 
 export interface BoardOptions {
