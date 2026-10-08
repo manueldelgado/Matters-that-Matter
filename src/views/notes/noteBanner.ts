@@ -9,6 +9,7 @@ import type { OverviewStats, ReviewState } from '../../services/overviewModel';
 import type { WaitAge } from '../../model/actions';
 import { avatarEl, orphanBanner, priorityEl } from '../../ui/components/card';
 import { appendIcon, iconEl, pressable, statusClasses, tileEl, typeClasses } from '../../ui/components/dom';
+import { noNextActionHint } from '../../ui/components/nextAction';
 
 /** Marks the elements the decorator inserted, so it can find and remove them. */
 export const BANNER_ATTR = 'data-mtm-banner';
@@ -103,10 +104,17 @@ export interface MatterBannerInput {
 	sphere: string | null;
 	stats: OverviewStats;
 	review: { state: ReviewState; label: string } | null;
+	noNextAction: boolean;
 }
 
 /** The Matter banner: state, review and counts, with a way into the overview. */
-export function renderMatterBanner(input: MatterBannerInput, openOverview: () => void): HTMLElement {
+export interface MatterBannerHandlers {
+	openOverview(): void;
+	/** The "No next Action" hint's menu. */
+	noNextActionMenu(anchor: HTMLElement): void;
+}
+
+export function renderMatterBanner(input: MatterBannerInput, h: MatterBannerHandlers): HTMLElement {
 	const s = STRINGS.noteBanner;
 	const { matter, stats, review } = input;
 	const banner = createDiv({ cls: ['mtm-note-banner', 'mod-matter'], attr: { [BANNER_ATTR]: '' } });
@@ -134,9 +142,10 @@ export function renderMatterBanner(input: MatterBannerInput, openOverview: () =>
 	counts.createSpan({ text: s.open(stats.open) });
 	if (stats.today) counts.createSpan({ cls: 'mod-late', text: s.late(stats.today) });
 	if (stats.waiting) counts.createSpan({ cls: 'mod-waiting', text: s.waiting(stats.waiting) });
+	if (input.noNextAction) noNextActionHint(counts, (el) => h.noNextActionMenu(el));
 	const button = end.createEl('button');
 	appendIcon(button, 'layout-dashboard');
 	button.appendText(s.openOverview);
-	button.addEventListener('click', openOverview);
+	button.addEventListener('click', () => h.openOverview());
 	return banner;
 }

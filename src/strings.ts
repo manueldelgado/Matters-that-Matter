@@ -116,6 +116,19 @@ export const STRINGS = {
 		newMatter: 'New Matter',
 	},
 
+	/** An active Matter with nothing in motion. The UI never says "stalled". */
+	nextAction: {
+		hint: 'No next Action',
+		hintTitle: 'No next Action: add one or mark the Matter as dormant',
+		ghost: 'What’s the next step?',
+		newIn: (matter: string) => `New Action in ${matter}`,
+		markDormant: 'Mark as dormant',
+		openOverview: 'Open Matter overview',
+		noticeTitle: 'No next Action.',
+		notice: (backlog: string) => `Everything here is in ${backlog} or done, so nothing says what to do next. Add the next small step, or mark the Matter as dormant if it can wait.`,
+		noticeNoBacklog: 'Everything here is done, so nothing says what to do next. Add the next small step, or mark the Matter as dormant if it can wait.',
+	},
+
 	spheres: {
 		label: 'Spheres',
 		none: 'No Sphere',

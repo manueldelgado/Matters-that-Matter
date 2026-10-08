@@ -2,6 +2,7 @@
 
 import { Keymap, setIcon, setTooltip, type TFile } from 'obsidian';
 import type { MattersSettings } from '../../settings';
+import { backlogStatus } from '../../model/workflow';
 import { STRINGS } from '../../strings';
 import { dayLabel, toYmd, type Ymd } from '../../model/dates';
 import { parseCadence, type Cadence, type MatterState } from '../../model/matters';
@@ -28,6 +29,8 @@ export interface OverviewData {
 	showAllDone: boolean;
 	/** The cadence dropdown shows Custom (chosen, not yet committed). */
 	customCadence: boolean;
+	/** An active Matter with nothing in motion. */
+	noNextAction: boolean;
 }
 
 export interface OverviewHandlers {
@@ -36,6 +39,8 @@ export interface OverviewHandlers {
 	changeSphere: (anchor: HTMLElement) => void;
 	showOnBoard: () => void;
 	newAction: () => void;
+	/** Quick add in this Matter, starting in the next-step status. */
+	newNextAction: () => void;
 	openNote: (e: MouseEvent | KeyboardEvent) => void;
 	renderAbout: (el: HTMLElement, markdown: string) => void;
 	setState: (state: MatterState) => void;
@@ -269,8 +274,26 @@ function renderStats(header: HTMLElement, d: OverviewData): void {
 	bar.createDiv({ cls: 'mtm-progress-fill' });
 }
 
+/** A calm notice above the Actions when nothing is in motion, with its two ways out. */
+function renderNoNextAction(col: HTMLElement, d: OverviewData, h: OverviewHandlers): void {
+	const s = STRINGS.nextAction;
+	const notice = col.createDiv({ cls: ['mtm-notice', 'mod-stalled'] });
+	appendIcon(notice, 'signpost');
+	const text = notice.createDiv();
+	text.createEl('b', { text: s.noticeTitle });
+	const backlog = backlogStatus(d.settings.statuses);
+	text.appendText(` ${backlog ? s.notice(backlog.label) : s.noticeNoBacklog}`);
+	const actions = text.createDiv({ cls: 'mtm-notice-actions' });
+	actions.createEl('button', { cls: 'mod-cta', text: STRINGS.overview.newAction }).addEventListener('click', () => h.newNextAction());
+	const dormant = actions.createEl('button');
+	appendIcon(dormant, 'moon');
+	dormant.appendText(s.markDormant);
+	dormant.addEventListener('click', () => h.setState('dormant'));
+}
+
 function renderSections(col: HTMLElement, d: OverviewData, h: OverviewHandlers): void {
 	const o = STRINGS.overview;
+	if (d.noNextAction) renderNoNextAction(col, d, h);
 	for (const section of d.model.sections) {
 		const block = col.createDiv();
 		const title = block.createDiv({ cls: 'mtm-section-title' });

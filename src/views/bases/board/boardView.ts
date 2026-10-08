@@ -7,7 +7,8 @@ import { toHm, toYmd } from '../../../model/dates';
 import { moveLane } from '../../../model/matters';
 import { buildBoard, orderMatters, type BoardBand, type BoardLane, type BoardModel, type BoardOptions, type MatterInfo } from '../../../services/boardModel';
 import { focusedSphere, NO_SPHERE } from '../../../services/spheres';
-import { showSphereMenu } from '../../../ui/components/menus';
+import { showNoNextActionMenu, showSphereMenu } from '../../../ui/components/menus';
+import { nextStepStatus } from '../../../services/nextAction';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { allMatters } from '../../../vault/index';
 import { moveAction } from '../../../vault/actionWrites';
@@ -91,7 +92,7 @@ export class BoardView extends CollectionView {
 
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
-		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now };
+		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null };
 		renderToolbar(view, { ...input, spheres: this.chips, openCount: model.empty ? null : model.openCount }, this.handlers);
 		if (model.empty) {
 			renderEmpty(view, this.handlers);
@@ -283,6 +284,15 @@ export class BoardView extends CollectionView {
 		newMatter: () => this.plugin.newMatter(this.focus()),
 		openMatter: (path) => void this.plugin.openMatter(path),
 		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),
+		noNextActionMenu: (lane, anchor) => {
+			const m = lane.matter;
+			showNoNextActionMenu(anchor, {
+				matterName: m.name,
+				newAction: () => this.plugin.quickAdd({ statusId: nextStepStatus(this.plugin.settings.statuses)?.id, matterPath: m.path, sphereId: this.focus() }),
+				markDormant: () => void this.write(m.path, (f) => setMatterState(this.plugin.app, f, 'dormant')),
+				openOverview: () => void this.plugin.openMatter(m.path),
+			});
+		},
 		markReviewed: (path) => {
 			const file = this.plugin.app.vault.getFileByPath(normalizePath(path));
 			if (file) void markReviewed(this.plugin.app, file);

@@ -8,6 +8,7 @@ import type { Cadence, MatterState } from '../../model/matters';
 import { overviewModel } from '../../services/overviewModel';
 import { IconPickerModal } from '../../ui/modals/iconPickerModal';
 import { dismissOrphan } from '../../vault/actionWrites';
+import { lacksNextAction, nextStepStatus } from '../../services/nextAction';
 import { allActionItems, backlinksTo, DEFAULT_MATTER_ICON, matterInfo, noteBody, peopleOf } from '../../vault/index';
 import { markReviewed, setMatterIcon, setMatterOutcome, setMatterSphere, setMatterState, setReviewCadence } from '../../vault/matterWrites';
 import { showSphereMenu } from '../../ui/components/menus';
@@ -165,6 +166,7 @@ export class MatterOverviewView extends ItemView {
 				selected: plugin.selection.path,
 				showAllDone: this.showAllDone,
 				customCadence: this.customCadence,
+				noNextAction: lacksNextAction(matter, items),
 			},
 			this.handlers,
 		);
@@ -209,6 +211,9 @@ export class MatterOverviewView extends ItemView {
 		showOnBoard: () => void this.plugin.openBoard(),
 		newAction: () => {
 			if (this.path) this.plugin.quickAdd({ matterPath: this.path });
+		},
+		newNextAction: () => {
+			if (this.path) this.plugin.quickAdd({ matterPath: this.path, statusId: nextStepStatus(this.plugin.settings.statuses)?.id });
 		},
 		openNote: (e) => {
 			const file = this.file();

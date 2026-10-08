@@ -12,8 +12,10 @@ import type { ActionItem } from '../../services/actionItems';
 import { actionNoteClasses, bannerDate, DECOR_PREFIXES, explorerClasses } from '../../services/noteDecor';
 import { overviewModel, reviewState } from '../../services/overviewModel';
 import { swapClasses } from '../../ui/components/dom';
-import { showStatusMenu, showTypeMenu } from '../../ui/components/menus';
+import { showNoNextActionMenu, showStatusMenu, showTypeMenu } from '../../ui/components/menus';
+import { lacksNextAction, nextStepStatus } from '../../services/nextAction';
 import { dismissOrphan, moveAction } from '../../vault/actionWrites';
+import { setMatterState } from '../../vault/matterWrites';
 import { actionItem, allActionItems, linkedFile, matterInfo } from '../../vault/index';
 import { explorerTitleEls } from '../../vault/internal';
 import { frontmatterOf, notesOfKind } from '../../vault/notes';
@@ -206,11 +208,26 @@ export class NoteDecorations {
 		}
 
 		const sphere = settings.spheres.find((x) => x.id === matter.sphere)?.label ?? null;
-		const signature = JSON.stringify([file.path, matter, stats, review, sphere]);
+		const noNextAction = lacksNextAction(matter, items);
+		const signature = JSON.stringify([file.path, matter, stats, review, sphere, noNextAction]);
 		if (this.unchanged(view, signature, force)) return;
 		this.signatures.set(view, signature);
 
-		this.place(view, ['mtm-matter-note'], () => [renderMatterBanner({ matter, sphere, stats, review }, () => void this.plugin.openMatter(file.path))]);
+		this.place(view, ['mtm-matter-note'], () => [
+			renderMatterBanner(
+				{ matter, sphere, stats, review, noNextAction },
+				{
+					openOverview: () => void this.plugin.openMatter(file.path),
+					noNextActionMenu: (anchor) =>
+						showNoNextActionMenu(anchor, {
+							matterName: matter.name,
+							newAction: () => this.plugin.quickAdd({ matterPath: file.path, statusId: nextStepStatus(settings.statuses)?.id }),
+							markDormant: () => void setMatterState(app, file, 'dormant'),
+							openOverview: () => void this.plugin.openMatter(file.path),
+						}),
+				},
+			),
+		]);
 	}
 
 	// ——— Handlers ———

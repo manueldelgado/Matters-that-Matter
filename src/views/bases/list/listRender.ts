@@ -3,6 +3,7 @@
 import { Keymap, setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
+import type { BoardLane } from '../../../services/boardModel';
 import type { ListGroup, ListLayout, ListSection } from '../../../services/listModel';
 import { NO_SPHERE } from '../../../services/spheres';
 import { NO_SPHERE_ICON } from '../collectionView';
@@ -10,10 +11,13 @@ import { avatarEl, dueEl, orphanBadge, priorityEl, waitAgeEl, waitingTitle } fro
 import { waitAge } from '../../../model/actions';
 import { toYmd } from '../../../model/dates';
 import { appendIcon, pressable, statusChip, tileEl, typeClasses } from '../../../ui/components/dom';
+import { nextStepGhost, noNextActionHint } from '../../../ui/components/nextAction';
 
 export interface ListHandlers {
 	openMatter: (path: string) => void;
-	newAction: (matterPath: string) => void;
+	newAction: (matterPath: string, statusId?: string) => void;
+	/** The "No next Action" hint's menu. */
+	noNextActionMenu: (lane: BoardLane, anchor: HTMLElement) => void;
 	/** Opens the status menu under the chip. */
 	statusMenu: (item: ActionItem, chip: HTMLElement) => void;
 	select: (path: string) => void;
@@ -26,6 +30,8 @@ export interface ListInput {
 	layout: ListLayout;
 	selected: string | null;
 	now: Date;
+	/** The status for a Matter's next step, or null. */
+	nextStepId: string | null;
 }
 
 export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers): HTMLElement {
@@ -40,6 +46,8 @@ export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers)
 	for (const label of STRINGS.list.columns) head.createSpan({ text: label });
 	const renderGroup = (group: ListGroup, inSphere = false) => {
 		renderGroupHeader(table, group, h, inSphere);
+		const nextStepId = input.nextStepId;
+		if (group.lane.noNextAction && nextStepId) nextStepGhost(table, () => h.newAction(group.lane.matter.path, nextStepId), 'mod-row');
 		for (const item of group.rows) renderRow(table, item, input, h);
 	};
 	if (!layout.sections) {
@@ -79,6 +87,7 @@ function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers
 	pressable(header.createSpan({ cls: 'mtm-table-group-title', text: matter.name }), () => h.openMatter(matter.path));
 	const meta = matter.isInbox ? l.notFiled : [l.open(openCount), ...(waitingCount ? [l.waiting(waitingCount)] : [])].join(' · ');
 	header.createSpan({ cls: 'mtm-table-group-meta', text: meta });
+	if (group.lane.noNextAction) noNextActionHint(header, (el) => h.noNextActionMenu(group.lane, el));
 	if (matter.state !== 'active') {
 		const badge = header.createSpan({ cls: ['mtm-lane-state', `mod-${matter.state}`] });
 		appendIcon(badge, matter.state === 'dormant' ? 'moon' : 'archive');

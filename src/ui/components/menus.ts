@@ -97,3 +97,23 @@ export function showSphereMenu(
 	});
 	showUnder(menu, anchor);
 }
+
+export interface NoNextActionMenu {
+	matterName: string;
+	newAction(): void;
+	markDormant(): void;
+	openOverview(): void;
+}
+
+/** The "No next Action" hint's menu: the two ways out, then the overview. */
+export function showNoNextActionMenu(anchor: HTMLElement, m: NoNextActionMenu): void {
+	const s = STRINGS.nextAction;
+	const menu = new Menu();
+	menu.addItem((i) => i.setTitle(s.newIn(m.matterName)).setIcon('plus').onClick(() => m.newAction()));
+	menu.addItem((i) => i.setTitle(s.markDormant).setIcon('moon').onClick(() => m.markDormant()));
+	menu.addSeparator();
+	menu.addItem((i) => i.setTitle(s.openOverview).setIcon('layout-dashboard').onClick(() => m.openOverview()));
+	anchor.addClass('is-active');
+	menu.onHide(() => anchor.removeClass('is-active'));
+	showUnder(menu, anchor);
+}

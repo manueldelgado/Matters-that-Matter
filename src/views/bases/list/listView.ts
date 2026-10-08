@@ -8,9 +8,11 @@ import { VIEW_TYPES } from '../../../services/baseFile';
 import { buildBoard } from '../../../services/boardModel';
 import { buildListLayout } from '../../../services/listModel';
 import { focusedSphere } from '../../../services/spheres';
-import { showStatusMenu } from '../../../ui/components/menus';
+import { nextStepStatus } from '../../../services/nextAction';
+import { showNoNextActionMenu, showStatusMenu } from '../../../ui/components/menus';
 import { moveAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
+import { setMatterState } from '../../../vault/matterWrites';
 import { renderEmpty } from '../board/boardRender';
 import { CollectionView } from '../collectionView';
 import { renderToolbar } from '../toolbar';
@@ -80,7 +82,11 @@ export class ListView extends CollectionView {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd({ sphereId: focus }), newMatter: () => this.plugin.newMatter(focus) });
 			return;
 		}
-		const scrollEl = renderList(view, { layout: buildListLayout(board), selected: this.plugin.selection.path, now }, this.handlers);
+		const scrollEl = renderList(
+			view,
+			{ layout: buildListLayout(board), selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(settings.statuses)?.id ?? null },
+			this.handlers,
+		);
 		if (scroll) {
 			scrollEl.scrollLeft = scroll.left;
 			scrollEl.scrollTop = scroll.top;
@@ -97,7 +103,16 @@ export class ListView extends CollectionView {
 
 	private handlers: ListHandlers = {
 		openMatter: (path) => void this.plugin.openMatter(path),
-		newAction: (matterPath) => this.plugin.quickAdd({ matterPath }),
+		newAction: (matterPath, statusId) => this.plugin.quickAdd({ matterPath, statusId }),
+		noNextActionMenu: (lane, anchor) => {
+			const m = lane.matter;
+			showNoNextActionMenu(anchor, {
+				matterName: m.name,
+				newAction: () => this.plugin.quickAdd({ matterPath: m.path, statusId: nextStepStatus(this.plugin.settings.statuses)?.id }),
+				markDormant: () => void this.write(m.path, (f) => setMatterState(this.plugin.app, f, 'dormant')),
+				openOverview: () => void this.plugin.openMatter(m.path),
+			});
+		},
 		statusMenu: (item, chip) => this.statusMenu(item, chip),
 		select: (path) => this.select(path),
 		open: (path, e) => this.open(path, e),

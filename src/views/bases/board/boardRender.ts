@@ -8,6 +8,7 @@ import type { BoardBand, BoardLane, BoardModel } from '../../../services/boardMo
 import { NO_SPHERE } from '../../../services/spheres';
 import { appendIcon, statusClasses, tileEl, typeClasses } from '../../../ui/components/dom';
 import { orphanBadge, renderCard } from '../../../ui/components/card';
+import { nextStepGhost, noNextActionHint } from '../../../ui/components/nextAction';
 import { NO_SPHERE_ICON } from '../collectionView';
 
 export interface BoardHandlers {
@@ -19,6 +20,8 @@ export interface BoardHandlers {
 	toggleLane(path: string): void;
 	openMatter(path: string): void;
 	laneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void;
+	/** The "No next Action" hint's menu. */
+	noNextActionMenu(lane: BoardLane, anchor: HTMLElement): void;
 	markReviewed(path: string): void;
 	/** Collapses or expands a Sphere band (NO_SPHERE for "No Sphere"). */
 	toggleBand(key: string): void;
@@ -37,6 +40,8 @@ export interface RenderInput {
 	showDone: boolean;
 	selected: string | null;
 	now: Date;
+	/** The column for a lane's next step (first open status after the backlog), or null. */
+	nextStepId: string | null;
 }
 
 export function renderEmpty(view: HTMLElement, h: Pick<BoardHandlers, 'newAction' | 'newMatter'>): void {
@@ -62,7 +67,13 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 	const b = STRINGS.board;
 	const reviewDue = !!m.review?.due && m.state === 'active';
 	const header = board.createDiv({
-		cls: ['mtm-lane-header', ...laneMods(lane), ...(lane.collapsed ? ['is-collapsed'] : []), ...(reviewDue ? ['is-review-due'] : [])],
+		cls: [
+			'mtm-lane-header',
+			...laneMods(lane),
+			...(lane.collapsed ? ['is-collapsed'] : []),
+			...(reviewDue ? ['is-review-due'] : []),
+			...(lane.noNextAction ? ['is-stalled'] : []),
+		],
 		attr: { 'data-lane': m.path, ...(m.isInbox ? {} : { 'data-sphere': m.sphere ?? NO_SPHERE }) },
 	});
 
@@ -95,6 +106,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 			appendIcon(badge, m.state === 'dormant' ? 'moon' : 'archive');
 			badge.appendText(m.state === 'dormant' ? b.dormant : b.closed);
 		}
+		if (lane.noNextAction) noNextActionHint(meta, (el) => h.noNextActionMenu(lane, el));
 		if (m.sphereOrphan !== null) orphanBadge(meta, 'sphere', m.sphereOrphan, true, () => h.dismissSphere(m.path));
 		const r = m.review;
 		if (r && m.state === 'active') {
@@ -151,7 +163,9 @@ function renderCell(board: HTMLElement, lane: BoardLane, column: StatusDef, inpu
 			}
 		});
 	}
-	if (!closedColumn && lane.matter.state !== 'closed') {
+	if (lane.noNextAction && column.id === input.nextStepId) {
+		nextStepGhost(cell, () => h.newAction(column.id, lane.matter.path));
+	} else if (!closedColumn && lane.matter.state !== 'closed') {
 		const add = cell.createDiv({ cls: 'mtm-cell-add', attr: { tabindex: 0, role: 'button' } });
 		appendIcon(add, 'plus');
 		add.appendText(STRINGS.board.addAction);

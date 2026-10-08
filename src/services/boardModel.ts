@@ -5,6 +5,7 @@ import { compareCards, isShownByDone } from '../model/actions';
 import { orderLanes, startsCollapsed, type InboxPosition, type Lane, type MatterState, type ReviewInfo } from '../model/matters';
 import type { Ymd } from '../model/dates';
 import type { ActionItem } from './actionItems';
+import { lacksNextAction } from './nextAction';
 import { groupBySphere, NO_SPHERE, sphereCounts, sphereKeys, sphereShown, type SphereCounts } from './spheres';
 
 export interface MatterInfo extends Lane {
@@ -53,6 +54,8 @@ export interface BoardLane {
 	cells: Map<string, ActionItem[]>;
 	openCount: number;
 	waitingCount: number;
+	/** An active Matter with nothing in motion (judged on all its Actions, before type chips and Show done). */
+	noNextAction: boolean;
 }
 
 export interface BoardModel {
@@ -99,6 +102,13 @@ export function buildBoard(
 			isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today),
 	);
 
+	const allByMatter = new Map<string, ActionItem[]>();
+	for (const a of actions) {
+		const list = allByMatter.get(a.effective.matterPath) ?? [];
+		list.push(a);
+		allByMatter.set(a.effective.matterPath, list);
+	}
+
 	const byMatter = new Map<string, ActionItem[]>();
 	for (const a of visible) {
 		const list = byMatter.get(a.effective.matterPath) ?? [];
@@ -130,6 +140,7 @@ export function buildBoard(
 			cells,
 			openCount: open.length,
 			waitingCount: open.filter((a) => a.waitingOn !== null).length,
+			noNextAction: lacksNextAction(matter, allByMatter.get(matter.path) ?? []),
 		});
 	}
 
