@@ -1,12 +1,16 @@
 // Command palette entries. No default hotkeys.
 
-import { Notice, TFolder } from 'obsidian';
+import { normalizePath, Notice, TFolder } from 'obsidian';
 import type MattersPlugin from './main';
 import { STRINGS } from './strings';
 import { ConfirmModal } from './ui/modals/confirmModal';
 import { SAMPLE_FOLDER } from './services/setupPlan';
 import { frontmatterOf } from './vault/notes';
 import { markReviewed } from './vault/matterWrites';
+import { dismissOrphan } from './vault/actionWrites';
+import { allActionItems } from './vault/index';
+import { orphanSummary } from './services/orphanSummary';
+import { FixOrphansModal } from './ui/modals/fixOrphansModal';
 
 export function registerCommands(plugin: MattersPlugin): void {
 	plugin.addCommand({
@@ -76,6 +80,16 @@ export function registerCommands(plugin: MattersPlugin): void {
 	});
 
 	plugin.addCommand({
+		id: 'fix-orphaned-actions',
+		name: STRINGS.commands.fixOrphans,
+		checkCallback: (checking) => {
+			if (!plugin.settings.setupDone) return false;
+			if (!checking) fixOrphanedActions(plugin);
+			return true;
+		},
+	});
+
+	plugin.addCommand({
 		id: 'remove-sample-content',
 		name: STRINGS.commands.removeSample,
 		callback: () => removeSampleContent(plugin),
@@ -100,5 +114,33 @@ function removeSampleContent(plugin: MattersPlugin): void {
 			if (folder instanceof TFolder && folder.children.length === 0) await app.fileManager.trashFile(folder);
 			new Notice(STRINGS.notices.sampleRemoved(files.length));
 		},
+	}).open();
+}
+
+/** Writes the fallback values to every orphaned Action, after a confirmation listing what changes. */
+function fixOrphanedActions(plugin: MattersPlugin): void {
+	const { app, settings } = plugin;
+	const summary = orphanSummary(allActionItems(app, settings));
+	if (!summary.items.length) {
+		new Notice(STRINGS.fixOrphans.none);
+		return;
+	}
+	const inbox = app.vault.getFileByPath(normalizePath(settings.inboxPath));
+	const inboxName = inbox?.basename ?? settings.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? settings.inboxPath;
+	new FixOrphansModal(app, summary, inboxName, async () => {
+		let fixed = 0;
+		let failed = 0;
+		for (const item of summary.items) {
+			const file = app.vault.getFileByPath(item.path);
+			if (!file) continue;
+			try {
+				await dismissOrphan(app, file, settings);
+				fixed++;
+			} catch (e) {
+				failed++;
+				console.error('Matters that Matter: could not fix', item.path, e);
+			}
+		}
+		new Notice(failed ? `${STRINGS.fixOrphans.fixed(fixed)} ${STRINGS.fixOrphans.failed(failed)}` : STRINGS.fixOrphans.fixed(fixed));
 	}).open();
 }

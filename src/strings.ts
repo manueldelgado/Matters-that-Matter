@@ -52,6 +52,7 @@ export const STRINGS = {
 	commands: {
 		quickAdd: 'Quick add',
 		openOverview: 'Open Matter overview',
+		fixOrphans: 'Fix orphaned Actions',
 		markReviewed: 'Mark as reviewed',
 		newMatter: 'New Matter',
 		runSetup: 'Run setup',
@@ -188,6 +189,17 @@ export const STRINGS = {
 		dateSep: ' · ',
 		noDated: 'No Actions with dates in this view. Give an Action a start or due date to see it here.',
 		weekdayLetters: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+	},
+
+	fixOrphans: {
+		title: (n: number) => (n === 1 ? 'Fix 1 orphaned Action?' : `Fix ${n} orphaned Actions?`),
+		body: 'Some Actions have a status, type or Matter that isn’t set up. Each gets the value it’s already shown with:',
+		hint: 'Bases filters and other plugins will see the new values. To keep a value instead, add a status or type with that name in settings, or create the Matter.',
+		confirm: (n: number) => (n === 1 ? 'Fix 1 Action' : `Fix ${n} Actions`),
+		count: (n: number) => (n === 1 ? '1 Action' : `${n} Actions`),
+		fixed: (n: number) => (n === 1 ? 'Fixed 1 Action.' : `Fixed ${n} Actions.`),
+		failed: (n: number) => `${n} could not be updated; see the console for details.`,
+		none: 'No orphaned Actions: every status, type and Matter is set up.',
 	},
 
 	overview: {

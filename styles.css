@@ -845,3 +845,11 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-tl-ghost{position:absolute;top:5px;left:calc(var(--mtm-start,0) * var(--mtm-day-width) + 2px);width:calc(var(--mtm-span,1) * var(--mtm-day-width) - 4px);height:22px;box-sizing:border-box;border:1.5px dashed var(--mtm-strong);border-radius:7px;pointer-events:none}
 /* Timeline when narrow: slimmer labels and days. */
 @container (max-width:600px){.mtm-timeline{--mtm-tl-label:120px;--mtm-day-width:24px}.mtm-tl-label{padding-left:12px}.mtm-tl-nav{padding:8px 12px}.mtm-tl-range{font-size:16px}}
+/* Fix orphaned Actions: one row per unrecognised value: its badge → the value it gets, and how many Actions. */
+.mtm-fix-row{gap:8px}
+.mtm-fix-row .mtm-orphan{flex:none}
+.mtm-fix-arrow{display:inline-flex;flex:none;color:var(--text-faint)}
+.mtm-fix-arrow .svg-icon{width:14px;height:14px}
+.mtm-fix-to{display:inline-flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text-normal)}
+.mtm-fix-to .mtm-tile{width:18px;height:18px;border-radius:5px}
+.mtm-fix-to .mtm-tile .svg-icon,.mtm-fix-to .mtm-matter-icon .svg-icon{width:13px;height:13px}
