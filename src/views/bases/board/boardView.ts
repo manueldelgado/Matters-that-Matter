@@ -117,7 +117,7 @@ export class BoardView extends CollectionView {
 	}
 
 	/** The single Sphere this board is focused on, for new Matters made from it. */
-	private focus(): string | null {
+	private sphereFocus(): string | null {
 		const options = this.options();
 		return focusedSphere(options.spheresOff, this.model?.sphereKeys ?? []);
 	}
@@ -280,16 +280,16 @@ export class BoardView extends CollectionView {
 			this.setConfigSoon(LANES_KEY, Object.keys(toggles).length ? toggles : null);
 			this.refresh(true);
 		},
-		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath, sphereId: this.focus() }),
-		newMatter: () => this.plugin.newMatter(this.focus()),
+		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath, sphereId: this.sphereFocus() }),
+		newMatter: () => this.plugin.newMatter(this.sphereFocus()),
 		openMatter: (path) => void this.plugin.openMatter(path),
 		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),
-		processInbox: () => this.plugin.processInbox(this.focus()),
+		processInbox: () => this.plugin.processInbox(this.sphereFocus()),
 		noNextActionMenu: (lane, anchor) => {
 			const m = lane.matter;
 			showNoNextActionMenu(anchor, {
 				matterName: m.name,
-				newAction: () => this.plugin.quickAdd({ statusId: nextStepStatus(this.plugin.settings.statuses)?.id, matterPath: m.path, sphereId: this.focus() }),
+				newAction: () => this.plugin.quickAdd({ statusId: nextStepStatus(this.plugin.settings.statuses)?.id, matterPath: m.path, sphereId: this.sphereFocus() }),
 				markDormant: () => void this.write(m.path, (f) => setMatterState(this.plugin.app, f, 'dormant')),
 				openOverview: () => void this.plugin.openMatter(m.path),
 			});

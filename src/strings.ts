@@ -130,8 +130,8 @@ export const STRINGS = {
 	process: {
 		title: 'Process Inbox',
 		count: (n: number, total: number) => `${n} of ${total}`,
-		captured: (day: string, ago: string) => `Captured ${day} · ${ago}`,
-		ago: (days: number) => (days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`),
+		/** "Captured today", "Captured yesterday", "Captured Sat 3 Oct · 5 days ago". */
+		captured: (day: string, days: number) => (days <= 0 ? 'Captured today' : days === 1 ? 'Captured yesterday' : `Captured ${day} · ${days} days ago`),
 		openNote: 'Open note',
 		titleLabel: 'Title',
 		question: 'Is there something to do?',

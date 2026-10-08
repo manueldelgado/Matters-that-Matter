@@ -22,7 +22,7 @@ import { renderList, type ListHandlers } from './listRender';
 export class ListView extends CollectionView {
 	readonly type = VIEW_TYPES.list;
 	/** The Sphere the list is focused on, for new Matters typed in quick add. */
-	private focus: string | null = null;
+	private sphereFocus: string | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
 		super(controller, containerEl, plugin);
@@ -65,7 +65,7 @@ export class ListView extends CollectionView {
 			now,
 		);
 		const focus = focusedSphere(options.spheresOff, board.sphereKeys);
-		this.focus = focus;
+		this.sphereFocus = focus;
 		const previous = this.containerEl.querySelector('.mtm-scroll');
 		const scroll = previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
 
@@ -128,7 +128,7 @@ export class ListView extends CollectionView {
 	private handlers: ListHandlers = {
 		openMatter: (path) => void this.plugin.openMatter(path),
 		newAction: (matterPath, statusId) => this.plugin.quickAdd({ matterPath, statusId }),
-		newTypedAction: (typeId) => this.plugin.quickAdd({ typeId, sphereId: this.focus }),
+		newTypedAction: (typeId) => this.plugin.quickAdd({ typeId, sphereId: this.sphereFocus }),
 		noNextActionMenu: (lane, anchor) => {
 			const m = lane.matter;
 			showNoNextActionMenu(anchor, {

@@ -290,7 +290,7 @@ export class ProcessInboxModal extends Modal {
 		const captured = toYmd(new Date(file.stat.ctime));
 		const meta = main.createDiv({ cls: 'mtm-process-meta' });
 		appendIcon(meta, 'inbox');
-		meta.createSpan({ text: p.captured(dayLabel(captured, today), p.ago(daysBetween(captured, today))) });
+		meta.createSpan({ text: p.captured(dayLabel(captured, today), daysBetween(captured, today)) });
 		if (item.due) {
 			const due = meta.createSpan({ cls: 'mtm-token mod-date' });
 			appendIcon(due, 'calendar');

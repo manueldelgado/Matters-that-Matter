@@ -1,6 +1,5 @@
 // Process Inbox: the pieces of the modal. DOM only; the modal keeps the state and makes the writes.
 
-import { setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
 import { decisionIcon, type Decision, type TallyLine } from '../../../services/processInbox';
@@ -186,5 +185,4 @@ export function renderEnd(
 	const close = actions.createEl('button', { cls: input.left ? 'mod-cta' : undefined, text: p.close });
 	close.addEventListener('click', () => h.close());
 	end.createSpan({ cls: 'mtm-field-hint', text: p.zeroHint });
-	setTooltip(board, STRINGS.commands.openBoard);
 }
