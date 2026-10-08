@@ -5,11 +5,11 @@ import type MattersPlugin from '../../main';
 import { DEFAULT_SETTINGS } from '../../settings';
 import { STRINGS } from '../../strings';
 import { boardBaseContent } from '../../services/baseFile';
-import { matchPreset } from '../../services/presets';
+import { matchPreset, workflowLosses, type WorkflowLosses } from '../../services/presets';
 import { planSetup, type SetupPlan } from '../../services/setupPlan';
 import { appendIcon } from '../../ui/components/dom';
 import { alwaysUpdateLinks, ensureDateTimeTypes, openSettingsTab } from '../../vault/internal';
-import { exists, frontmatterOf, maxLaneOrder } from '../../vault/notes';
+import { exists, frontmatterOf, maxLaneOrder, notesOfKind } from '../../vault/notes';
 import { executePlan } from '../../vault/setupRunner';
 import { renderLocation, renderMatters, renderSummary, renderWorkflow, ruleMatches, type SetupState } from './setupSteps';
 
@@ -54,6 +54,7 @@ export class SetupView extends ItemView {
 		return {
 			folders: { ...settings.folders },
 			statuses,
+			types: structuredClone(settings.types),
 			preset: matchPreset(statuses),
 			newMatters: '',
 			adoptPicked: new Set(),
@@ -80,7 +81,7 @@ export class SetupView extends ItemView {
 			{
 				folders: this.state.folders,
 				statuses: this.state.statuses,
-				types: settings.types,
+				types: this.state.types,
 				newMatters: this.state.newMatters,
 				adopt: [...adopt],
 				sample: this.state.sample,
@@ -98,6 +99,17 @@ export class SetupView extends ItemView {
 				maxLaneOrder: maxLaneOrder(app),
 			},
 		);
+	}
+
+	/** What running setup again would leave unrecognised on existing Actions. */
+	private losses(): WorkflowLosses {
+		const { app } = this;
+		const settings = this.plugin.settings;
+		const actions = notesOfKind(app, 'action').map((file) => {
+			const fm = frontmatterOf(app, file);
+			return { status: fm?.['mtm-status'], type: fm?.['mtm-type'] };
+		});
+		return workflowLosses(actions, settings, { statuses: this.state.statuses, types: this.state.types });
 	}
 
 	private go(step: number): void {
@@ -151,6 +163,14 @@ export class SetupView extends ItemView {
 					linksOff: alwaysUpdateLinks(this.app) === false,
 					basesOff: !this.plugin.basesAvailable,
 					openFilesAndLinks: () => openSettingsTab(this.app, 'file'),
+					losses: this.losses(),
+					keepWorkflow: () => {
+						const settings = this.plugin.settings;
+						this.state.statuses = structuredClone(settings.statuses);
+						this.state.types = structuredClone(settings.types);
+						this.state.preset = matchPreset(this.state.statuses);
+						this.render();
+					},
 				},
 				() => this.render(),
 			);
@@ -181,6 +201,7 @@ export class SetupView extends ItemView {
 			Object.assign(this.plugin.settings, {
 				folders: { ...this.state.folders },
 				statuses: this.state.statuses,
+				types: this.state.types,
 				inboxPath: plan.inboxPath,
 				boardPath: plan.boardPath,
 				setupDone: true,

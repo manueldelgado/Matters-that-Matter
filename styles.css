@@ -1003,3 +1003,13 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-table-group.mod-type .mod-waiting{color:var(--mtm-waiting-ink)}
 /* Two-line rows: the Matter follows the status. */
 @container (max-width:600px){.mtm-table.mod-by-type{min-width:0}.mtm-table-row>.mtm-table-meta .mtm-table-matter{order:1;max-width:140px}.mtm-table-row>.mtm-table-meta>:not(.mtm-status):not(.mtm-table-matter){order:2}}
+/* Setup presets (V3): four presets two by two; a preset that brings types shows them as small tiles; the types line, read-only. */
+.mtm-presets.mod-pairs{grid-template-columns:repeat(auto-fill,minmax(max(190px,calc(50% - 5px)),1fr))}
+.mtm-preset-types{display:flex;flex-wrap:wrap;gap:4px}
+.mtm-preset-types .mtm-tile{width:20px;height:20px;border-radius:6px}
+.mtm-preset-types .mtm-tile .svg-icon{width:12px;height:12px}
+.mtm-type-summary{display:flex;flex-wrap:wrap;gap:6px}
+.mtm-type-summary .mtm-token{height:26px;padding:0 10px 0 4px}
+.mtm-type-summary .mtm-token .mtm-tile{width:20px;height:20px;border-radius:6px}
+.mtm-type-summary .mtm-token .mtm-tile .svg-icon{width:12px;height:12px}
+.mtm-type-summary .mtm-default-badge{margin-left:2px}

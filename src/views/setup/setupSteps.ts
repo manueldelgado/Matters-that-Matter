@@ -1,17 +1,19 @@
 // The four steps of the setup wizard. Each renders into the card body and edits the shared state.
 
 import { getAllTags, normalizePath, prepareFuzzySearch, TFile, TFolder, type App } from 'obsidian';
-import type { StatusDef } from '../../settings';
+import type { StatusDef, TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
-import { presetStatuses, matchPreset, type PresetId } from '../../services/presets';
+import { areContexts, matchPreset, PRESET_IDS, presetStatuses, presetTypes, type PresetId, type WorkflowLosses } from '../../services/presets';
 import type { Folders, SetupPlan } from '../../services/setupPlan';
-import { appendIcon, statusChip } from '../../ui/components/dom';
+import { appendIcon, statusChip, tileEl, typeClasses } from '../../ui/components/dom';
 import { StatusEditor } from '../../ui/components/statusEditor';
 import { frontmatterOf } from '../../vault/notes';
 
 export interface SetupState {
 	folders: Folders;
 	statuses: StatusDef[];
+	/** The types the workflow brings: the current ones until a preset is chosen. */
+	types: TypeDef[];
 	preset: PresetId;
 	newMatters: string;
 	adoptPicked: Set<string>;
@@ -52,14 +54,31 @@ export function renderLocation(app: App, body: HTMLElement, state: SetupState): 
 
 // ——— 2. Workflow ———
 
+/** The types the workflow brings, read-only: setup has no type step. */
+function renderTypeSummary(parent: HTMLElement, types: readonly TypeDef[]): void {
+	const w = STRINGS.setup.workflow;
+	parent.empty();
+	parent.createDiv({ cls: 'mtm-label', text: w.types }).createSpan({ cls: 'mtm-label-aside', text: w.typesAside });
+	const row = parent.createDiv({ cls: 'mtm-type-summary' });
+	for (const type of types) {
+		const token = row.createSpan({ cls: ['mtm-token', ...typeClasses(type)] });
+		tileEl(token, type.icon);
+		token.appendText(type.label);
+		if (type.default) token.createSpan({ cls: 'mtm-default-badge', text: STRINGS.editors.default });
+	}
+	const first = types[0];
+	const hint = areContexts(types) ? w.contextsHint(first?.id ?? '', types[2]?.id ?? '') : first ? w.typesHint(first.id) : null;
+	if (hint) parent.createSpan({ cls: 'mtm-field-hint', text: hint });
+}
+
 export function renderWorkflow(body: HTMLElement, state: SetupState): void {
 	const w = STRINGS.setup.workflow;
-	const presets = body.createDiv({ cls: 'mtm-presets' });
+	const presets = body.createDiv({ cls: ['mtm-presets', 'mod-pairs'] });
 	const renderPresets = () => {
 		presets.empty();
-		for (const id of ['default', 'simple', 'custom'] as PresetId[]) {
+		for (const id of PRESET_IDS as PresetId[]) {
 			const [title, desc] = w.presets[id];
-			const card = presets.createDiv({ cls: 'mtm-preset', attr: { role: 'radio' } });
+			const card = presets.createDiv({ cls: 'mtm-preset', attr: { role: 'radio', 'aria-checked': String(state.preset === id), tabindex: 0 } });
 			const titleEl = card.createSpan({ cls: 'mtm-preset-title', text: title });
 			if (state.preset === id) {
 				card.addClass('is-active');
@@ -67,14 +86,28 @@ export function renderWorkflow(body: HTMLElement, state: SetupState): void {
 			}
 			const dots = card.createSpan({ cls: 'mtm-preset-statuses' });
 			for (const status of id === 'custom' ? state.statuses : presetStatuses(id)) statusChip(dots, status, false);
+			if (id === 'next') {
+				const tiles = card.createSpan({ cls: 'mtm-preset-types' });
+				for (const type of presetTypes(id)) tileEl(tiles, type.icon).addClasses(typeClasses(type));
+			}
 			card.createSpan({ cls: 'mtm-preset-desc', text: desc });
-			card.addEventListener('click', () => {
+			const choose = () => {
 				state.preset = id;
+				// Custom keeps the statuses as edited and the types of the last preset chosen.
 				if (id !== 'custom') {
 					state.statuses = presetStatuses(id);
+					state.types = presetTypes(id);
 					editor.set(state.statuses);
+					renderTypeSummary(typesField, state.types);
 				}
 				renderPresets();
+			};
+			card.addEventListener('click', choose);
+			card.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					choose();
+				}
 			});
 		}
 	};
@@ -94,6 +127,8 @@ export function renderWorkflow(body: HTMLElement, state: SetupState): void {
 			renderPresets();
 		},
 	});
+	const typesField = body.createDiv({ cls: 'mtm-field' });
+	renderTypeSummary(typesField, state.types);
 	renderPresets();
 }
 
@@ -218,6 +253,9 @@ export interface SummaryWarnings {
 	linksOff: boolean;
 	basesOff: boolean;
 	openFilesAndLinks(): void;
+	/** Actions that would use a status or type the chosen workflow lacks (running setup again). */
+	losses: WorkflowLosses;
+	keepWorkflow(): void;
 }
 
 function summaryItem(list: HTMLElement, cls: string | null, icon: string, path: string, note: string): void {
@@ -262,6 +300,19 @@ export function renderSummary(body: HTMLElement, state: SetupState, plan: SetupP
 		onSample();
 	});
 
+	const { losses } = warnings;
+	if (losses.actions) {
+		const notice = summary.createDiv({ cls: 'mtm-notice mod-warning' });
+		appendIcon(notice, 'triangle-alert');
+		const div = notice.createDiv();
+		div.createEl('b', { text: t.lossesTitle(losses.actions) });
+		const list = [...losses.statuses, ...losses.types].map((l) => `${l.label} (${l.count})`).join(', ');
+		const total = [...losses.statuses, ...losses.types].reduce((n, l) => n + l.count, 0);
+		div.appendText(` ${t.losses(list, total > losses.actions)}`);
+		div.createDiv({ cls: 'mtm-notice-actions' })
+			.createEl('button', { text: t.keepWorkflow })
+			.addEventListener('click', () => warnings.keepWorkflow());
+	}
 	if (warnings.linksOff) {
 		const notice = summary.createDiv({ cls: 'mtm-notice mod-warning' });
 		appendIcon(notice, 'triangle-alert');

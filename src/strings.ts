@@ -491,9 +491,14 @@ export const STRINGS = {
 			presets: {
 				default: ['Default', 'Five statuses for most kinds of work.'],
 				simple: ['Simple', 'Three statuses: to do, doing, done.'],
+				next: ['Get stuff done', 'Someday kept apart from what’s next. Action types become contexts: where, or with what, you can act.'],
 				custom: ['Custom', 'Your own statuses, edited below.'],
 			},
 			statuses: 'Statuses',
+			types: 'Action types',
+			typesAside: 'Edit them later in Settings',
+			typesHint: (example: string) => `Every Action has one type: its colour on the board and /${example} in quick add.`,
+			contextsHint: (a: string, b: string) => `Contexts are your Action types: the colour of every card, the chips on every board, /${a} or /${b} in quick add.`,
 		},
 		matters: {
 			title: 'What matters right now?',
@@ -525,6 +530,10 @@ export const STRINGS = {
 			linksOffTitle: '“Automatically update internal links” is off.',
 			linksOff: 'If you rename a Matter, its Actions will lose their link to it. We recommend turning it on.',
 			openFilesAndLinks: 'Open Files and links',
+			lossesTitle: (n: number) => `${plural(n, 'Action uses', 'Actions use')} a status or type this workflow doesn’t have:`,
+			losses: (list: string, both: boolean) =>
+				`${list}${both ? '; some have both' : ''}. Nothing is rewritten: they show an orphan badge until you add a status or type with the same name in Settings, or run “Fix orphaned Actions”.`,
+			keepWorkflow: 'Keep my current workflow',
 			basesOffTitle: 'Bases is turned off.',
 			basesOff: 'The board, list, calendar and timeline need the Bases core plugin. Turn it on in Settings → Core plugins.',
 		},
