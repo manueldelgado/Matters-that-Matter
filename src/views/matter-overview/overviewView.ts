@@ -108,10 +108,10 @@ export class MatterOverviewView extends ItemView {
 		this.clearAbout();
 	}
 
-	/** Typing a custom cadence: a re-render would lose the number. */
+	/** Typing a custom cadence or the outcome: a re-render would lose the text. */
 	private isTyping(): boolean {
 		const el = activeDocument.activeElement;
-		return !!el?.instanceOf(HTMLInputElement) && this.contentEl.contains(el);
+		return !!el?.instanceOf(HTMLElement) && this.contentEl.contains(el) && (el.instanceOf(HTMLInputElement) || el.isContentEditable);
 	}
 
 	private clearAbout(): void {

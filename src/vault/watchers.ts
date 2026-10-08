@@ -7,7 +7,7 @@ import { STRINGS } from '../strings';
 import { toYmd } from '../model/dates';
 import { hasCompletedValue, StatusCache } from '../services/completion';
 import { linkText } from '../services/effective';
-import { WaitingCache } from '../services/waitingSince';
+import { WaitingCache, type PersonRef } from '../services/waitingSince';
 import { effectiveAction } from '../services/effective';
 import { inboxRepairs, isInboxDuplicate } from '../services/inboxGuard';
 import { linkedFile, resolverFor } from './index';
@@ -44,6 +44,7 @@ export class Watchers {
 			app.vault.on('rename', (file, oldPath) => {
 				this.statuses.rename(oldPath, file.path);
 				this.waiting.rename(oldPath, file.path);
+				if (file instanceof TFile) this.waiting.renamePerson(oldPath, file.path, file.basename);
 				this.plugin.selection.rename(oldPath, file.path);
 				this.updateRibbon();
 			}),
@@ -68,10 +69,11 @@ export class Watchers {
 		}
 	}
 
-	/** Identifies the waiting-on person: the resolved path, or the link text; null when absent. */
-	private personKey(file: TFile, raw: unknown): string | null {
-		if (!hasCompletedValue(raw)) return null;
-		return linkedFile(this.plugin.app, raw, file.path)?.path ?? linkText(raw);
+	/** The waiting-on person: the resolved path (or the link text) and the link text; null when absent. */
+	private personKey(file: TFile, raw: unknown): PersonRef | null {
+		const text = hasCompletedValue(raw) ? linkText(raw) : null;
+		if (!text) return null;
+		return { key: linkedFile(this.plugin.app, raw, file.path)?.path ?? text, text };
 	}
 
 	private async onChanged(file: TFile, cache: CachedMetadata): Promise<void> {

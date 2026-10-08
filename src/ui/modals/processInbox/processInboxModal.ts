@@ -50,6 +50,9 @@ import {
 	type FiledCard,
 } from './processRender';
 
+/** How long to wait for a just-written note to be parsed. */
+const PARSE_WAIT = 2000;
+
 /** Remembers Delegate's status between sessions (on this device). */
 const LAST_DELEGATE_KEY = 'mtm-process-delegate-status';
 
@@ -96,6 +99,9 @@ export class ProcessInboxModal extends Modal {
 	private busy = false;
 	private itemTitleEl: HTMLElement | null = null;
 	private saveStep: (() => void) | null = null;
+	/** A rename from the title, still being written. */
+	private renaming: Promise<void> | null = null;
+	private pointerDown = false;
 	/** Step values typed as tokens into the title, kept until the item is processed. */
 	private pendingHints: Partial<Form> = {};
 
@@ -138,6 +144,9 @@ export class ProcessInboxModal extends Modal {
 				return false;
 			}
 			if (!this.step || e.isComposing) return true;
+			// A focused button, segment or radio keeps its own Enter (Cancel must not save).
+			const el = activeDocument.activeElement;
+			if (el?.instanceOf(HTMLElement) && (el.tagName === 'BUTTON' || ['button', 'radio'].includes(el.getAttribute('role') ?? ''))) return true;
 			this.saveStep?.();
 			return false;
 		});
@@ -149,6 +158,8 @@ export class ProcessInboxModal extends Modal {
 
 	onOpen(): void {
 		this.modalEl.addClass('mtm-modal', 'mtm-process');
+		this.modalEl.addEventListener('pointerdown', () => (this.pointerDown = true), true);
+		this.modalEl.addEventListener('pointerup', () => (this.pointerDown = false), true);
 		void this.show();
 	}
 
@@ -188,11 +199,31 @@ export class ProcessInboxModal extends Modal {
 			this.renderEnd();
 			return;
 		}
+		// Right after a write (Undo) the cache is empty until the note is parsed again; the item would fall back to defaults.
+		await this.parsed(file);
+		if (this.current?.file !== file) this.pendingHints = {};
 		const item = actionItem(this.app, file, this.settings);
 		const details = getDetails(await this.app.vault.cachedRead(file));
 		this.current = { file, item, details };
 		this.step = null;
 		this.render();
+	}
+
+	/** Resolves once metadataCache has the note (or after a short wait). */
+	private parsed(file: TFile): Promise<void> {
+		const { metadataCache } = this.app;
+		if (metadataCache.getFileCache(file)) return Promise.resolve();
+		return new Promise((resolve) => {
+			const done = () => {
+				metadataCache.offref(ref);
+				window.clearTimeout(timer);
+				resolve();
+			};
+			const ref = metadataCache.on('changed', (changed) => {
+				if (changed === file) done();
+			});
+			const timer = window.setTimeout(done, PARSE_WAIT);
+		});
 	}
 
 	private render(): void {
@@ -299,12 +330,24 @@ export class ProcessInboxModal extends Modal {
 			if (this.step) Object.assign(this.form, hint);
 		}
 		const cleaned = result.title.trim();
+		this.itemTitleEl?.setText(cleaned || current.file.basename);
 		if (cleaned && cleaned !== current.file.basename) {
-			await this.guard(async () => {
-				await renameAction(this.app, current.file, cleaned);
-			});
+			this.renaming = renameAction(this.app, current.file, cleaned)
+				.then(() => undefined)
+				.catch((e) => {
+					new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+				})
+				.finally(() => (this.renaming = null));
 		}
-		if (this.current === current) this.render();
+		// The step's fields show the hints; a re-render now would swallow the click that ended the edit.
+		if (hint && this.step) this.renderAfterPointer();
+	}
+
+	/** Re-renders once any pressed pointer is released and its click has run. */
+	private renderAfterPointer(): void {
+		const run = () => window.setTimeout(() => this.current && this.render(), 0);
+		if (!this.pointerDown) run();
+		else activeDocument.addEventListener('pointerup', run, { once: true });
 	}
 
 	private formHints(result: ReturnType<typeof parseQuickAdd>): Partial<Form> | null {
@@ -324,6 +367,7 @@ export class ProcessInboxModal extends Modal {
 	// ——— Decisions ———
 
 	private async choose(d: Decision): Promise<void> {
+		if (this.renaming) await this.renaming;
 		const current = this.current;
 		if (!current || this.busy) return;
 		if (d === 'trash') return this.guard(() => this.trash(current));
@@ -611,7 +655,8 @@ export class ProcessInboxModal extends Modal {
 			this.contentEl.querySelector<HTMLInputElement>('input.mtm-process-matter')?.focus();
 			return null;
 		}
-		const known = this.candidates.matters.find((m) => normalise(m.name) === normalise(name));
+		// Processed means leaving the Inbox: its name never resolves to it.
+		const known = this.candidates.matters.find((m) => m.path !== this.settings.inboxPath && normalise(m.name) === normalise(name));
 		if (known) return known.path;
 		const file = await createMatter(this.app, this.settings, { name, icon: DEFAULT_MATTER_ICON, reviewEvery: null, sphereId: this.context.sphereId });
 		this.candidates = loadCandidates(this.app, this.settings);
@@ -689,8 +734,9 @@ export class ProcessInboxModal extends Modal {
 
 	private async doNext(current: Current): Promise<void> {
 		const status = this.status(this.form.statusId) ?? nextStatuses(this.settings.statuses)[0];
+		if (!status) return;
 		const matterPath = await this.resolveMatter();
-		if (!matterPath || !status) return;
+		if (!matterPath) return;
 		await editAction(this.app, current.file, this.settings, { statusId: status.id, matterPath, typeId: this.form.typeId }, this.dueEdit());
 		await this.finish(current, { decision: 'next', detail: status.label });
 	}
@@ -702,8 +748,9 @@ export class ProcessInboxModal extends Modal {
 			return;
 		}
 		const status = this.status(this.form.statusId) ?? delegateStatus(this.settings.statuses, null);
+		if (!status) return;
 		const matterPath = await this.resolveMatter();
-		if (!matterPath || !status) return;
+		if (!matterPath) return;
 		this.app.saveLocalStorage(LAST_DELEGATE_KEY, status.id);
 		await editAction(
 			this.app,

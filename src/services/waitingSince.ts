@@ -27,21 +27,44 @@ export function applyWaitingSince(fm: Record<string, unknown>, previousKey: stri
 	else fm['mtm-waiting-since'] = today;
 }
 
+/** Who an Action waits on: the resolved path when the link resolves, and the link text. */
+export interface PersonRef {
+	key: string;
+	text: string;
+}
+
+/**
+ * The same person: same resolved note, or same link text. The text covers a person note that was deleted
+ * or created later (the key falls back to the text); renames are remapped with `renamePerson`.
+ */
+function samePerson(a: PersonRef | null, b: PersonRef | null): boolean {
+	if (!a || !b) return a === b;
+	return a.key === b.key || a.text === b.text;
+}
+
 /** The last waiting-on person and waiting-since value seen for each Action path. */
 export class WaitingCache {
-	private seen = new Map<string, { key: string | null; since: unknown }>();
+	private seen = new Map<string, { person: PersonRef | null; since: unknown }>();
 
 	/** Records the values without judging a change (on load). */
-	seed(path: string, key: string | null, since: unknown): void {
-		this.seen.set(path, { key, since });
+	seed(path: string, person: PersonRef | null, since: unknown): void {
+		this.seen.set(path, { person, since });
 	}
 
 	/** Records a metadata change and returns what to do with mtm-waiting-since. */
-	observe(path: string, key: string | null, since: unknown, hasSince: boolean): SinceChange {
+	observe(path: string, person: PersonRef | null, since: unknown, hasSince: boolean): SinceChange {
 		const previous = this.seen.get(path);
-		this.seen.set(path, { key, since });
+		this.seen.set(path, { person, since });
 		if (!previous) return 'none';
-		return waitingSinceChange(previous.key, key, hasSince, previous.since !== since);
+		const before = samePerson(previous.person, person) ? (person?.key ?? null) : (previous.person?.key ?? null);
+		return waitingSinceChange(before, person?.key ?? null, hasSince, previous.since !== since);
+	}
+
+	/** A person note was renamed or moved: links to it are rewritten, but it is the same person. */
+	renamePerson(oldPath: string, newPath: string, newText: string): void {
+		for (const entry of this.seen.values()) {
+			if (entry.person?.key === oldPath) entry.person = { key: newPath, text: newText };
+		}
 	}
 
 	rename(oldPath: string, newPath: string): void {

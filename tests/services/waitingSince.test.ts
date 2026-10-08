@@ -33,27 +33,42 @@ describe('applyWaitingSince', () => {
 	});
 });
 
+const ana = { key: 'People/Ana.md', text: 'Ana' };
+const marco = { key: 'People/Marco.md', text: 'Marco' };
+
 describe('WaitingCache', () => {
 	it('never backfills: seeded values report no change', () => {
 		const cache = new WaitingCache();
-		cache.seed('a.md', 'Ana', undefined);
-		expect(cache.observe('a.md', 'Ana', undefined, false)).toBe('none');
-		expect(cache.observe('b.md', 'Ana', undefined, false)).toBe('none');
+		cache.seed('a.md', ana, undefined);
+		expect(cache.observe('a.md', ana, undefined, false)).toBe('none');
+		expect(cache.observe('b.md', ana, undefined, false)).toBe('none');
 	});
 
 	it('reports hand edits against the cached person', () => {
 		const cache = new WaitingCache();
 		cache.seed('a.md', null, undefined);
-		expect(cache.observe('a.md', 'Ana', undefined, false)).toBe('set');
+		expect(cache.observe('a.md', ana, undefined, false)).toBe('set');
 		// The plugin's own follow-up write: same person, date now present.
-		expect(cache.observe('a.md', 'Ana', '2026-10-08', true)).toBe('none');
+		expect(cache.observe('a.md', ana, '2026-10-08', true)).toBe('none');
+		expect(cache.observe('a.md', marco, '2026-10-08', true)).toBe('set');
 		expect(cache.observe('a.md', null, '2026-10-08', true)).toBe('remove');
 	});
 
 	it('follows renames', () => {
 		const cache = new WaitingCache();
-		cache.seed('a.md', 'Ana', '2026-10-01');
+		cache.seed('a.md', ana, '2026-10-01');
 		cache.rename('a.md', 'b.md');
 		expect(cache.observe('b.md', null, '2026-10-01', true)).toBe('remove');
+	});
+
+	it('keeps the date when the person note is renamed, deleted or created later', () => {
+		const cache = new WaitingCache();
+		cache.seed('a.md', ana, '2026-09-15');
+		cache.renamePerson('People/Ana.md', 'People/Ana Gil.md', 'Ana Gil');
+		expect(cache.observe('a.md', { key: 'People/Ana Gil.md', text: 'Ana Gil' }, '2026-09-15', true)).toBe('none');
+		// Deleted: the key falls back to the link text.
+		expect(cache.observe('a.md', { key: 'Ana Gil', text: 'Ana Gil' }, '2026-09-15', true)).toBe('none');
+		// Created again: the link resolves to a path.
+		expect(cache.observe('a.md', { key: 'People/Ana Gil.md', text: 'Ana Gil' }, '2026-09-15', true)).toBe('none');
 	});
 });
