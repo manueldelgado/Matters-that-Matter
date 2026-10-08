@@ -1,6 +1,7 @@
 // What the list shows: the board's lanes as groups, rows in column order. Pure.
 
-import type { SphereDef } from '../settings';
+import type { SphereDef, TypeDef } from '../settings';
+import { compareCards } from '../model/actions';
 import type { ActionItem } from './actionItems';
 import type { BoardLane, BoardModel } from './boardModel';
 import type { SphereCounts } from './spheres';
@@ -24,6 +25,30 @@ export interface ListSection {
 	counts: SphereCounts;
 	collapsed: boolean;
 	groups: ListGroup[];
+}
+
+/** A group of the list grouped by type: one per type in settings order. */
+export interface TypeGroup {
+	type: TypeDef;
+	/** By status in workflow order, then in card order, across Matters. */
+	rows: ActionItem[];
+	open: number;
+	waiting: number;
+}
+
+/** The board's rows regrouped by effective type, in settings order; types without rows are left out. */
+export function buildTypeGroups(board: BoardModel, types: readonly TypeDef[]): TypeGroup[] {
+	const order = new Map(board.columns.map((c, i) => [c.id, i]));
+	const rows = board.lanes.flatMap((lane) => [...lane.cells.values()].flat());
+	return types
+		.map((type) => {
+			const mine = rows
+				.filter((a) => a.effective.type.id === type.id)
+				.sort((a, b) => (order.get(a.effective.status.id) ?? 0) - (order.get(b.effective.status.id) ?? 0) || compareCards(a, b));
+			const open = mine.filter((a) => a.category !== 'closed');
+			return { type, rows: mine, open: open.length, waiting: open.filter((a) => a.waitingOn !== null).length };
+		})
+		.filter((g) => g.rows.length > 0);
 }
 
 export interface ListLayout {

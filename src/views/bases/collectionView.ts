@@ -20,6 +20,8 @@ export const OPTION_KEYS = {
 	showDone: 'mtmShowDone',
 	doneDays: 'mtmDoneDays',
 	hideEmptyLanes: 'mtmHideEmptyLanes',
+	groupBy: 'mtmGroupBy',
+	showBacklog: 'mtmShowBacklog',
 } as const;
 
 /** Type chips switched off, kept in the view config (so a newly added type starts on). */

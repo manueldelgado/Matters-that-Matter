@@ -3,8 +3,8 @@
 import { Keymap, setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
-import type { BoardLane } from '../../../services/boardModel';
-import type { ListGroup, ListLayout, ListSection } from '../../../services/listModel';
+import type { BoardLane, MatterInfo } from '../../../services/boardModel';
+import type { ListGroup, ListLayout, ListSection, TypeGroup } from '../../../services/listModel';
 import { NO_SPHERE } from '../../../services/spheres';
 import { NO_SPHERE_ICON } from '../collectionView';
 import { avatarEl, dueEl, orphanBadge, priorityEl, waitAgeEl, waitingTitle } from '../../../ui/components/card';
@@ -16,6 +16,8 @@ import { nextStepGhost, noNextActionHint } from '../../../ui/components/nextActi
 export interface ListHandlers {
 	openMatter: (path: string) => void;
 	newAction: (matterPath: string, statusId?: string) => void;
+	/** Quick add with a type (the "+" of a type group). */
+	newTypedAction: (typeId: string) => void;
 	/** The "No next Action" hint's menu. */
 	noNextActionMenu: (lane: BoardLane, anchor: HTMLElement) => void;
 	/** Opens the status menu under the chip. */
@@ -28,6 +30,10 @@ export interface ListHandlers {
 
 export interface ListInput {
 	layout: ListLayout;
+	/** Groups by type when the list is grouped by type; null groups by Matter. */
+	byType: TypeGroup[] | null;
+	/** Every Matter by path, for the Matter column. */
+	matters: ReadonlyMap<string, MatterInfo>;
 	selected: string | null;
 	now: Date;
 	/** The status for a Matter's next step, or null. */
@@ -39,6 +45,10 @@ export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers)
 	const { layout } = input;
 	if (!layout.groups.length) {
 		scroll.createDiv({ cls: 'mtm-empty', text: STRINGS.list.noMatches });
+		return scroll;
+	}
+	if (input.byType) {
+		renderByType(scroll, input.byType, input, h);
 		return scroll;
 	}
 	const table = scroll.createDiv({ cls: 'mtm-table' });
@@ -61,6 +71,33 @@ export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers)
 	}
 	if (layout.inbox && !layout.inboxFirst) renderGroup(layout.inbox);
 	return scroll;
+}
+
+/** One group per type, in settings order; each row names its Matter. No Sphere headings (Sphere chips still focus). */
+function renderByType(scroll: HTMLElement, groups: readonly TypeGroup[], input: ListInput, h: ListHandlers): void {
+	const l = STRINGS.list;
+	if (!groups.length) {
+		scroll.createDiv({ cls: 'mtm-empty', text: l.noMatches });
+		return;
+	}
+	const table = scroll.createDiv({ cls: ['mtm-table', 'mod-by-type'] });
+	const head = table.createDiv({ cls: 'mtm-table-head' });
+	for (const label of l.columnsByType) head.createSpan({ text: label });
+	for (const group of groups) {
+		const { type } = group;
+		const header = table.createDiv({ cls: ['mtm-table-group', 'mod-type', ...typeClasses(type)] });
+		tileEl(header, type.icon);
+		header.createSpan({ cls: 'mtm-table-group-title', text: type.label });
+		const meta = header.createSpan({ cls: 'mtm-table-group-meta', text: l.open(group.open) });
+		if (group.waiting) {
+			meta.appendText(' · ');
+			meta.createSpan({ cls: 'mod-waiting', text: l.waiting(group.waiting) });
+		}
+		const add = header.createDiv({ cls: ['clickable-icon', 'mtm-table-add'], attr: { 'aria-label': l.newTypedAction(type.label) } });
+		appendIcon(add, 'plus');
+		pressable(add, () => h.newTypedAction(type.id));
+		for (const item of group.rows) renderRow(table, item, input, h, input.matters.get(item.effective.matterPath));
+	}
 }
 
 /** A Sphere heading with its counts; collapsing it hides its Matters. */
@@ -102,7 +139,8 @@ function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers
 
 const empty = (cell: HTMLElement) => cell.createSpan({ cls: 'mtm-table-empty', text: '—' });
 
-function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: ListHandlers): void {
+/** A row; with `matter`, the Matter column follows the title (grouped by type). */
+function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: ListHandlers, matter?: MatterInfo): void {
 	const { type, status } = item.effective;
 	const done = item.category === 'closed';
 	const row = table.createDiv({
@@ -121,6 +159,16 @@ function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: Li
 
 	// One cell per column when wide; a single meta line when narrow (CSS).
 	const meta = row.createSpan({ cls: 'mtm-table-meta' });
+	if (matter) {
+		const cell = pressable(meta.createSpan({ cls: 'mtm-table-matter' }), (e) => {
+			e.stopPropagation();
+			h.openMatter(matter.path);
+		});
+		setTooltip(cell, STRINGS.list.openMatter);
+		setIcon(cell.createSpan({ cls: 'mtm-matter-icon' }), matter.icon);
+		cell.createSpan({ text: matter.name });
+		cell.addEventListener('dblclick', (e) => e.stopPropagation());
+	}
 	const chip = statusChip(meta, status);
 	chip.setAttrs({ role: 'button', tabindex: 0, 'aria-label': STRINGS.list.changeStatus });
 	chip.addEventListener('click', (e) => {

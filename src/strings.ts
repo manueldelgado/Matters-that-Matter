@@ -34,6 +34,7 @@ export const STRINGS = {
 		list: 'List',
 		calendar: 'Calendar',
 		timeline: 'Timeline',
+		nextActions: 'Next actions',
 		setup: 'Set up Matters',
 		options: {
 			inboxPosition: 'Inbox lane',
@@ -46,6 +47,10 @@ export const STRINGS = {
 			hide: 'Hide',
 			doneDays: 'Show done from the last N days (0 = all)',
 			hideEmptyLanes: 'Hide empty lanes',
+			groupBy: 'Group by',
+			groupByMatter: 'Matter',
+			groupByType: 'Type',
+			showBacklog: (label: string) => `Show ${label}`,
 		},
 	},
 
@@ -90,6 +95,10 @@ export const STRINGS = {
 		waiting: (n: number) => `${n} waiting`,
 		doneHidden: 'Done hidden',
 		doneShown: 'Done shown',
+		backlogHidden: (label: string) => `${label} hidden`,
+		backlogShown: (label: string) => `${label} shown`,
+		showBacklogHere: (label: string) => `Show ${label} Actions in this list`,
+		hideBacklogHere: (label: string) => `Hide ${label} Actions in this list`,
 		showDoneHere: 'Show done Actions on this board',
 		hideDoneHere: 'Hide done Actions on this board',
 		newAction: 'New Action',
@@ -186,6 +195,9 @@ export const STRINGS = {
 
 	list: {
 		columns: ['Action', 'Status', 'Due', 'Priority', 'Waiting on', 'Notes'],
+		columnsByType: ['Action', 'Matter', 'Status', 'Due', 'Priority', 'Waiting on', 'Notes'],
+		newTypedAction: (type: string) => `New ${type} Action`,
+		openMatter: 'Open Matter overview',
 		notFiled: 'Not filed yet',
 		open: (n: number) => `${n} open`,
 		waiting: (n: number) => `${n} waiting`,

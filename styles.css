@@ -990,3 +990,16 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-notice.mod-stalled .mtm-notice-actions{display:flex;gap:8px;margin-top:8px}
 .mtm-notice.mod-stalled .mtm-notice-actions button{display:inline-flex;align-items:center;gap:6px}
 .mtm-notice.mod-stalled .mtm-notice-actions .svg-icon{width:14px;height:14px}
+/* List grouped by type (V4): a Matter column after the title, and type group headings. */
+.mtm-table.mod-by-type{--mtm-table-cols:minmax(220px,2.2fr) minmax(140px,1fr) 96px 104px 84px minmax(110px,1fr) 40px;min-width:860px}
+.mtm-table-matter{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer}
+.mtm-table-matter>span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtm-table-matter .mtm-matter-icon .svg-icon{width:13px;height:13px}
+.mtm-table-matter:hover,.mtm-table-matter:focus-visible{color:var(--text-normal)}
+.mtm-table-group.mod-type .mtm-tile{width:22px;height:22px;border-radius:7px}
+.mtm-table-group.mod-type .mtm-tile .svg-icon{width:13px;height:13px}
+.mtm-table-group.mod-type .mtm-table-group-title{cursor:default}
+.mtm-table-group.mod-type .mtm-table-group-title:hover{text-decoration:none}
+.mtm-table-group.mod-type .mod-waiting{color:var(--mtm-waiting-ink)}
+/* Two-line rows: the Matter follows the status. */
+@container (max-width:600px){.mtm-table.mod-by-type{min-width:0}.mtm-table-row>.mtm-table-meta .mtm-table-matter{order:1;max-width:140px}.mtm-table-row>.mtm-table-meta>:not(.mtm-status):not(.mtm-table-matter){order:2}}

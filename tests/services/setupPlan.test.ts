@@ -130,12 +130,13 @@ describe('sample content', () => {
 });
 
 describe('boardBaseContent', () => {
-	it('filters Actions with the bracket syntax and lists the four views', () => {
-		const text = boardBaseContent({ board: 'Board', list: 'List', calendar: 'Calendar', timeline: 'Timeline' });
+	it('filters Actions with the bracket syntax and lists the four views, then Next actions', () => {
+		const text = boardBaseContent({ board: 'Board', list: 'List', calendar: 'Calendar', timeline: 'Timeline', nextActions: 'Next actions' });
 		expect(text).toBe(
 			'filters:\n  and:\n    - "note[\\"mtm-kind\\"] == \\"action\\""\nviews:\n' +
 				'  - type: mtm-board\n    name: "Board"\n  - type: mtm-list\n    name: "List"\n' +
-				'  - type: mtm-calendar\n    name: "Calendar"\n  - type: mtm-timeline\n    name: "Timeline"\n',
+				'  - type: mtm-calendar\n    name: "Calendar"\n  - type: mtm-timeline\n    name: "Timeline"\n' +
+				'  - type: mtm-list\n    name: "Next actions"\n    mtmGroupBy: type\n    mtmShowBacklog: false\n    mtmInboxPosition: hidden\n    mtmShowDone: hide\n',
 		);
 	});
 });

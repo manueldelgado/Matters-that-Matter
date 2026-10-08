@@ -1,4 +1,4 @@
-// The list: a custom Bases view. Rows grouped by Matter in lane order; Bases decides which Actions are rows.
+// The list: a custom Bases view. Rows grouped by Matter in lane order, or by type; Bases decides which Actions are rows.
 
 import type { QueryController } from 'obsidian';
 import type MattersPlugin from '../../../main';
@@ -6,7 +6,7 @@ import { toHm, toYmd } from '../../../model/dates';
 import type { ActionItem } from '../../../services/actionItems';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { buildBoard } from '../../../services/boardModel';
-import { buildListLayout } from '../../../services/listModel';
+import { buildListLayout, buildTypeGroups } from '../../../services/listModel';
 import { focusedSphere } from '../../../services/spheres';
 import { nextStepStatus } from '../../../services/nextAction';
 import { showNoNextActionMenu, showStatusMenu } from '../../../ui/components/menus';
@@ -14,12 +14,15 @@ import { moveAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
 import { setMatterState } from '../../../vault/matterWrites';
 import { renderEmpty } from '../board/boardRender';
-import { CollectionView } from '../collectionView';
+import { CollectionView, OPTION_KEYS } from '../collectionView';
+import { backlogStatus } from '../../../model/workflow';
 import { renderToolbar } from '../toolbar';
 import { renderList, type ListHandlers } from './listRender';
 
 export class ListView extends CollectionView {
 	readonly type = VIEW_TYPES.list;
+	/** The Sphere the list is focused on, for new Matters typed in quick add. */
+	private focus: string | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
 		super(controller, containerEl, plugin);
@@ -31,6 +34,9 @@ export class ListView extends CollectionView {
 		const now = new Date();
 		const today = toYmd(now);
 		const options = this.collectionOptions();
+		const groupBy = this.config.get(OPTION_KEYS.groupBy) === 'type' ? 'type' : 'matter';
+		const showBacklog = this.config.get(OPTION_KEYS.showBacklog) !== false;
+		const backlog = backlogStatus(settings.statuses);
 		const actions = this.actions();
 		const matters = allMatters(this.plugin.app, settings, today);
 		const timedToday = actions.some((a) => a.category !== 'closed' && a.due?.time && a.due.date === today);
@@ -42,6 +48,8 @@ export class ListView extends CollectionView {
 			settings.types,
 			settings.spheres,
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
+			groupBy,
+			showBacklog,
 			matters,
 			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
 		]);
@@ -52,11 +60,12 @@ export class ListView extends CollectionView {
 			actions,
 			matters,
 			settings.statuses,
-			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres },
+			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres, showBacklog },
 			today,
 			now,
 		);
 		const focus = focusedSphere(options.spheresOff, board.sphereKeys);
+		this.focus = focus;
 		const previous = this.containerEl.querySelector('.mtm-scroll');
 		const scroll = previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
 
@@ -69,12 +78,14 @@ export class ListView extends CollectionView {
 				typesOff: options.typesOff,
 				spheres: this.sphereChips(matters, actions, options.spheresOff),
 				showDone: options.showDone,
+				backlog: backlog ? { label: backlog.label, shown: showBacklog } : undefined,
 				openCount: board.empty ? null : board.openCount,
 			},
 			{
 				toggleType: (id) => this.toggleType(id),
 				toggleSphere: (key) => this.toggleSphere(key),
 				toggleDone: () => this.toggleDone(),
+				toggleBacklog: () => this.toggleBacklog(showBacklog),
 				newAction: () => this.plugin.quickAdd({ sphereId: focus }),
 			},
 		);
@@ -84,13 +95,26 @@ export class ListView extends CollectionView {
 		}
 		const scrollEl = renderList(
 			view,
-			{ layout: buildListLayout(board), selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(settings.statuses)?.id ?? null },
+			{
+				layout: buildListLayout(board),
+				byType: groupBy === 'type' ? buildTypeGroups(board, settings.types) : null,
+				matters: new Map(matters.map((m) => [m.path, m])),
+				selected: this.plugin.selection.path,
+				now,
+				nextStepId: nextStepStatus(settings.statuses)?.id ?? null,
+			},
 			this.handlers,
 		);
 		if (scroll) {
 			scrollEl.scrollLeft = scroll.left;
 			scrollEl.scrollTop = scroll.top;
 		}
+	}
+
+	/** On by default: showing the backlog again clears the option. */
+	private toggleBacklog(shown: boolean): void {
+		this.config.set(OPTION_KEYS.showBacklog, shown ? false : null);
+		this.refresh(false);
 	}
 
 	/** The list's way to move an Action without dragging: every status, then Mark as done or Reopen. */
@@ -104,6 +128,7 @@ export class ListView extends CollectionView {
 	private handlers: ListHandlers = {
 		openMatter: (path) => void this.plugin.openMatter(path),
 		newAction: (matterPath, statusId) => this.plugin.quickAdd({ matterPath, statusId }),
+		newTypedAction: (typeId) => this.plugin.quickAdd({ typeId, sphereId: this.focus }),
 		noNextActionMenu: (lane, anchor) => {
 			const m = lane.matter;
 			showNoNextActionMenu(anchor, {

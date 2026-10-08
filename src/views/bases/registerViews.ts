@@ -3,6 +3,7 @@
 import type { BasesAllOptions } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
+import { backlogStatus } from '../../model/workflow';
 import { VIEW_TYPES, type CollectionView } from '../../services/baseFile';
 import { BoardView } from './board/boardView';
 import { OPTION_KEYS } from './collectionView';
@@ -49,8 +50,26 @@ function boardOptions(): BasesAllOptions[] {
 }
 
 /** The list and timeline never show empty Matters, so they have no "Hide empty lanes". */
-function listOptions(): BasesAllOptions[] {
+function timelineOptions(): BasesAllOptions[] {
 	return [inboxOption(), ...doneOptions()];
+}
+
+/** The list can also group by type and hide the backlog status (named after it). */
+function listOptions(plugin: MattersPlugin): BasesAllOptions[] {
+	const o = STRINGS.views.options;
+	const backlog = backlogStatus(plugin.settings.statuses)?.label ?? STRINGS.editors.backlog;
+	return [
+		{
+			type: 'dropdown',
+			key: OPTION_KEYS.groupBy,
+			displayName: o.groupBy,
+			default: 'matter',
+			options: { matter: o.groupByMatter, type: o.groupByType },
+		},
+		{ type: 'toggle', key: OPTION_KEYS.showBacklog, displayName: o.showBacklog(backlog), default: true },
+		inboxOption(),
+		...doneOptions(),
+	];
 }
 
 /** Returns false when the Bases core plugin is off. */
@@ -69,7 +88,7 @@ export function registerCollectionViews(plugin: MattersPlugin): boolean {
 						: key === 'calendar'
 							? new CalendarView(controller, containerEl, plugin)
 							: new TimelineView(controller, containerEl, plugin),
-			options: key === 'board' ? boardOptions : key === 'calendar' ? doneOptions : listOptions,
+			options: key === 'board' ? boardOptions : key === 'calendar' ? doneOptions : key === 'list' ? () => listOptions(plugin) : timelineOptions,
 		});
 		ok &&= registered;
 	}

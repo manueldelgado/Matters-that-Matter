@@ -51,6 +51,8 @@ export interface QuickAddInit {
 	due?: string;
 	/** The Sphere a board is focused on: a new Matter typed with # goes there. */
 	sphereId?: string | null;
+	/** Type of the list group the modal was opened from. */
+	typeId?: string;
 }
 
 export class QuickAddModal extends Modal {
@@ -63,6 +65,7 @@ export class QuickAddModal extends Modal {
 	private contextDue: string | null;
 	private contextSphere: string | null;
 	private pickedType: string | null = null;
+	private readonly contextType: string | null;
 	private ignoredDates: string[] = [];
 	/** Start of a token whose suggestions were closed with Escape. */
 	private dismissedAt: number | null = null;
@@ -94,6 +97,8 @@ export class QuickAddModal extends Modal {
 		this.contextStatus = init.statusId ?? null;
 		this.contextDue = init.due ?? null;
 		this.contextSphere = init.sphereId ?? null;
+		this.contextType = init.typeId ?? null;
+		this.pickedType = this.contextType;
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], 'Escape', () => {
@@ -468,7 +473,7 @@ export class QuickAddModal extends Modal {
 			if (keepOpen) {
 				this.input.value = '';
 				this.ignoredDates = [];
-				this.pickedType = null;
+				this.pickedType = this.contextType;
 				this.dismissedAt = null;
 			} else this.close();
 		} catch (e) {

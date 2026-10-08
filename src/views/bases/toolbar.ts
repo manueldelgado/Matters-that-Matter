@@ -21,6 +21,8 @@ export interface ToolbarInput {
 	/** Sphere chips; empty without Spheres. */
 	spheres?: readonly SphereChip[];
 	showDone: boolean;
+	/** The list's backlog toggle, named after the backlog status; absent elsewhere. */
+	backlog?: { label: string; shown: boolean };
 	/** Null hides the count (nothing to count yet). */
 	openCount: number | null;
 }
@@ -29,7 +31,23 @@ export interface ToolbarHandlers {
 	toggleType: (typeId: string) => void;
 	toggleSphere?: (key: string) => void;
 	toggleDone: () => void;
+	toggleBacklog?: () => void;
 	newAction: () => void;
+}
+
+/** A toolbar note that switches something on this view: an eye, a label, a tooltip. Same element in both states. */
+function toggleNote(bar: HTMLElement, shown: boolean, label: string, title: string, onToggle: () => void): void {
+	const note = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
+	appendIcon(note, shown ? 'eye' : 'eye-off');
+	note.appendText(label);
+	setTooltip(note, title);
+	note.addEventListener('click', () => onToggle());
+	note.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onToggle();
+		}
+	});
 }
 
 /** Type chips (all on by default; each one switched off hides its type), Sphere chips, the open count, Show done and "+". */
@@ -61,17 +79,12 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 	bar.createSpan({ cls: 'mtm-spacer' });
 	if (input.openCount !== null) bar.createSpan({ cls: 'mtm-toolbar-note', text: STRINGS.board.open(input.openCount) });
 	const b = STRINGS.board;
-	const done = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
-	appendIcon(done, input.showDone ? 'eye' : 'eye-off');
-	done.appendText(input.showDone ? b.doneShown : b.doneHidden);
-	setTooltip(done, input.showDone ? b.hideDoneHere : b.showDoneHere);
-	done.addEventListener('click', () => h.toggleDone());
-	done.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			h.toggleDone();
-		}
-	});
+	const backlog = input.backlog;
+	if (backlog && h.toggleBacklog) {
+		const { label, shown } = backlog;
+		toggleNote(bar, shown, shown ? b.backlogShown(label) : b.backlogHidden(label), shown ? b.hideBacklogHere(label) : b.showBacklogHere(label), h.toggleBacklog);
+	}
+	toggleNote(bar, input.showDone, input.showDone ? b.doneShown : b.doneHidden, input.showDone ? b.hideDoneHere : b.showDoneHere, () => h.toggleDone());
 	const add = bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } });
 	setIcon(add, 'plus');
 	add.addEventListener('click', () => h.newAction());

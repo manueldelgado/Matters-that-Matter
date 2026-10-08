@@ -37,6 +37,8 @@ export interface BoardOptions {
 	spheresOff: ReadonlySet<string>;
 	/** Sphere bands collapsed on this board (NO_SPHERE for "No Sphere"). */
 	spheresCollapsed: ReadonlySet<string>;
+	/** Lists can hide the backlog status's Actions; shown when absent. */
+	showBacklog?: boolean;
 }
 
 export interface BoardBand {
@@ -98,6 +100,7 @@ export function buildBoard(
 	const visible = actions.filter(
 		(a) =>
 			columnIds.has(a.effective.status.id) &&
+			(options.showBacklog !== false || !a.effective.status.backlog) &&
 			typeShown(a.effective.type.id, options.typesOff) &&
 			isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today),
 	);

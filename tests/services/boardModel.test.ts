@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings';
 import { toActionItem, initials } from '../../src/services/actionItems';
 import { buildBoard, isLaneCollapsed, typeShown, type BoardOptions, type MatterInfo } from '../../src/services/boardModel';
 import type { ResolveLink } from '../../src/services/effective';
-import { buildList, buildListLayout } from '../../src/services/listModel';
+import { buildList, buildListLayout, buildTypeGroups } from '../../src/services/listModel';
 
 const settings = DEFAULT_SETTINGS;
 const typeIds = settings.types.map((t) => t.id);
@@ -157,6 +157,29 @@ describe('buildList', () => {
 		const groups = buildList(board);
 		expect(groups.map((g) => g.lane.matter.name)).toEqual(['Inbox', 'Kitchen']);
 		expect(groups[1]?.rows.map((r) => r.title)).toEqual(['Call plumber', 'Buy tiles', 'Ask Ana', 'Ancient task', 'Old task']);
+	});
+});
+
+describe('buildTypeGroups', () => {
+	it('groups rows by type in settings order, by status then card order, across Matters', () => {
+		const board = buildBoard(actions, matters, settings.statuses, options(), today);
+		const groups = buildTypeGroups(board, settings.types);
+		expect(groups.map((g) => g.type.id)).toEqual(['call', 'write', 'buy']);
+		// Write (the default type): Loose end and Lost are in the backlog (Inbox), Ask Ana is waiting.
+		expect(titles(groups[1]?.rows)).toEqual(['Loose end', 'Lost', 'Ask Ana']);
+		expect(groups[1]).toMatchObject({ open: 3, waiting: 1 });
+	});
+
+	it('leaves the backlog out when it is hidden', () => {
+		const board = buildBoard(actions, matters, settings.statuses, options({ showBacklog: false }), today);
+		expect(titles(buildTypeGroups(board, settings.types).flatMap((g) => g.rows))).toEqual(['Call plumber', 'Ask Ana', 'Buy tiles']);
+	});
+
+	it('flags no next Action on all Actions, even with the backlog hidden', () => {
+		const backlogOnly = [action('Someday idea', { 'mtm-matter': '[[Garden]]', 'mtm-status': 'later' }), action('Wait in backlog', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'later', 'mtm-waiting-on': '[[Ana]]' })];
+		const board = buildBoard(backlogOnly, matters, settings.statuses, options({ showBacklog: false }), today);
+		const flags = Object.fromEntries(board.lanes.map((l) => [l.matter.name, l.noNextAction]));
+		expect(flags).toEqual({ Inbox: false, Kitchen: false, Garden: true, Shed: false });
 	});
 });
 
