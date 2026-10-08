@@ -768,3 +768,24 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-section-more{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:var(--text-faint);cursor:pointer}
 .mtm-section-more:hover,.mtm-section-more:focus-visible{color:var(--text-normal)}
 .mtm-empty.mod-overview{align-items:center;padding:32px 20px;border:1px dashed var(--mtm-line);border-radius:14px}
+/* List group header: the title opens the Matter overview; "+" adds an Action in this Matter (on hover; always on mobile). */
+.mtm-table-group-title{cursor:pointer}
+.mtm-table-group-title:hover,.mtm-table-group-title:focus-visible{text-decoration:underline;text-decoration-color:var(--mtm-line);text-underline-offset:3px}
+.mtm-table-group .mtm-table-add{margin-left:auto;opacity:0;transition:opacity 120ms var(--mtm-ease)}
+.mtm-table-group:hover .mtm-table-add,.mtm-table-group .mtm-table-add:focus-visible,.is-mobile .mtm-table-group .mtm-table-add{opacity:1}
+/* List rows: the cells in .mtm-table-meta take their grid columns when wide; the status chip opens a status menu. */
+.mtm-table-meta{display:contents}
+.mtm-table-row .mtm-status{justify-self:start;padding:2px 6px;margin-left:-6px;border-radius:6px;cursor:pointer}
+.mtm-table-row .mtm-status:hover,.mtm-table-row .mtm-status:focus-visible{background:var(--background-modifier-hover)}
+/* List when narrow (sidebar, phone): two-line rows (title, then status, due, priority bars, waiting-on avatar) instead of a 720px table. */
+@container (max-width:600px){
+.mtm-table{min-width:0}
+.mtm-table-head{display:none}
+.mtm-table-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title title" "meta num";row-gap:2px;padding:6px 12px}
+.mtm-table-row>.mtm-table-title{grid-area:title}
+.mtm-table-row>.mtm-table-meta{grid-area:meta;display:flex;align-items:center;gap:10px;min-width:0;padding-left:34px}
+.mtm-table-row>.mtm-table-num{grid-area:num}
+.mtm-table-meta>span:has(>.mtm-table-empty){display:none}
+.mtm-table-meta :is(.mtm-priority-label,.mtm-table-waiting-name){display:none}
+.mtm-table-meta .mtm-link-chip{height:22px;padding:0 2px}
+}

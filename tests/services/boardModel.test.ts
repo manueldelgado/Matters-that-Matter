@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings';
 import { toActionItem, initials } from '../../src/services/actionItems';
 import { buildBoard, isLaneCollapsed, typeShown, type BoardOptions, type MatterInfo } from '../../src/services/boardModel';
 import type { ResolveLink } from '../../src/services/effective';
+import { buildList } from '../../src/services/listModel';
 
 const settings = DEFAULT_SETTINGS;
 const typeIds = settings.types.map((t) => t.id);
@@ -139,5 +140,14 @@ describe('buildBoard', () => {
 	it('reports an empty board only without any Actions', () => {
 		expect(board.empty).toBe(false);
 		expect(buildBoard([], matters, settings.statuses, typeIds, options(), today).empty).toBe(true);
+	});
+});
+
+describe('buildList', () => {
+	it('keeps lane order, drops empty groups and lists rows by status, then card order', () => {
+		const board = buildBoard(actions, matters, settings.statuses, typeIds, options({ showDone: true }), today);
+		const groups = buildList(board);
+		expect(groups.map((g) => g.lane.matter.name)).toEqual(['Inbox', 'Kitchen']);
+		expect(groups[1]?.rows.map((r) => r.title)).toEqual(['Call plumber', 'Buy tiles', 'Ask Ana', 'Ancient task', 'Old task']);
 	});
 });

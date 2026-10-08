@@ -1,66 +1,38 @@
 // The board: a custom Bases view. Lanes come from all Matter notes; Bases decides which Actions are cards.
 
-import { BasesView, debounce, Keymap, Menu, normalizePath, Notice, TFile, type QueryController } from 'obsidian';
+import { Menu, normalizePath, type QueryController } from 'obsidian';
 import type MattersPlugin from '../../../main';
 import { STRINGS } from '../../../strings';
 import { toHm, toYmd } from '../../../model/dates';
-import { resolveInboxPosition, resolveShowDone } from '../../../model/actions';
 import { moveLane, moveLaneBy, orderLanes } from '../../../model/matters';
-import type { ActionItem } from '../../../services/actionItems';
 import { buildBoard, type BoardLane, type BoardModel, type BoardOptions, type MatterInfo } from '../../../services/boardModel';
 import { VIEW_TYPES } from '../../../services/baseFile';
-import { actionItem, allMatters } from '../../../vault/index';
-import { frontmatterOf } from '../../../vault/notes';
-import { dismissOrphan, moveAction } from '../../../vault/actionWrites';
+import { allMatters } from '../../../vault/index';
+import { moveAction } from '../../../vault/actionWrites';
 import { markReviewed, setMatterState, writeLaneOrders } from '../../../vault/matterWrites';
-import { OPTION_KEYS } from '../registerViews';
+import { CollectionView, OPTION_KEYS } from '../collectionView';
 import { attachDrag } from './boardDrag';
-import { renderBoard, renderEmpty, renderToolbar, type BoardHandlers } from './boardRender';
+import { renderToolbar } from '../toolbar';
+import { renderBoard, renderEmpty, type BoardHandlers } from './boardRender';
 
-/** Per-board state kept in the .base view config besides the declared options. */
+/** Per-board lane toggles kept in the .base view config besides the declared options. */
 const LANES_KEY = 'mtmLanes';
-const TYPES_OFF_KEY = 'mtmTypesOff';
-const CONFIG_DELAY = 800;
 
 type LaneToggles = Record<string, 'collapsed' | 'expanded'>;
 
-export class BoardView extends BasesView {
+export class BoardView extends CollectionView {
 	readonly type = VIEW_TYPES.board;
-	private signature = '';
 	private model: BoardModel | null = null;
 	private matters: MatterInfo[] = [];
-	/** Toggles not yet written to the view config; they win over what the config says. */
-	private pending: { lanes?: LaneToggles; typesOff?: string[] } = {};
-	private flushConfig = debounce(() => this.writeConfig(), CONFIG_DELAY, true);
-	/** Bases provides data and config from the first onDataUpdated on. */
-	private ready = false;
 
-	constructor(
-		controller: QueryController,
-		private containerEl: HTMLElement,
-		private plugin: MattersPlugin,
-	) {
-		super(controller);
-		this.registerEvent(plugin.events.on('settings-changed', () => this.refresh(true)));
-		this.registerEvent(plugin.selection.on('changed', () => this.markSelection()));
-		// Labels such as Today and overdue states change with the clock.
-		this.registerInterval(window.setInterval(() => this.refresh(false), 60_000));
-	}
-
-	onDataUpdated(): void {
-		this.ready = true;
-		this.refresh(false);
-	}
-
-	onunload(): void {
-		this.flushConfig.run();
+	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
+		super(controller, containerEl, plugin);
 	}
 
 	// ——— Options ———
 
 	private laneToggles(): LaneToggles {
-		if (this.pending.lanes) return this.pending.lanes;
-		const raw = this.config.get(LANES_KEY);
+		const raw = this.configValue(LANES_KEY);
 		const out: LaneToggles = {};
 		if (raw && typeof raw === 'object') {
 			for (const [path, v] of Object.entries(raw as Record<string, unknown>)) {
@@ -70,48 +42,18 @@ export class BoardView extends BasesView {
 		return out;
 	}
 
-	private typesOff(): string[] {
-		if (this.pending.typesOff) return this.pending.typesOff;
-		const raw = this.config.get(TYPES_OFF_KEY);
-		return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : [];
-	}
-
-	/** View options fall back to their declared defaults: config.get() returns nothing until changed. */
 	private options(): BoardOptions {
-		const s = this.plugin.settings;
-		const days = Number(this.config.get(OPTION_KEYS.doneDays) ?? 0);
 		return {
-			inboxPosition: resolveInboxPosition(this.config.get(OPTION_KEYS.inboxPosition), s.defaultInboxPosition),
-			showDone: resolveShowDone(this.config.get(OPTION_KEYS.showDone), s.showDone),
-			doneDays: Number.isFinite(days) && days > 0 ? days : null,
+			...this.collectionOptions(),
 			hideEmptyLanes: this.config.get(OPTION_KEYS.hideEmptyLanes) === true,
-			typesOff: new Set(this.typesOff()),
 			laneToggles: this.laneToggles(),
 		};
 	}
 
-	/** Never called during a render: config.set() triggers onDataUpdated. */
-	private writeConfig(): void {
-		const { lanes, typesOff } = this.pending;
-		if (lanes) this.config.set(LANES_KEY, Object.keys(lanes).length ? lanes : null);
-		if (typesOff) this.config.set(TYPES_OFF_KEY, typesOff.length ? typesOff : null);
-		this.pending = {};
-	}
-
 	// ——— Data and rendering ———
 
-	private actions(): ActionItem[] {
-		const { app } = this.plugin;
-		const items: ActionItem[] = [];
-		for (const entry of this.data.data) {
-			const file = entry.file;
-			if (frontmatterOf(app, file)?.['mtm-kind'] === 'action') items.push(actionItem(app, file, this.plugin.settings));
-		}
-		return items;
-	}
-
 	/** Re-renders only when what the board shows has changed. */
-	private refresh(force: boolean): void {
+	protected refresh(force: boolean): void {
 		const { settings } = this.plugin;
 		if (!this.ready || !settings.setupDone) return;
 		const now = new Date();
@@ -144,7 +86,7 @@ export class BoardView extends BasesView {
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
 		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now };
-		renderToolbar(view, input, this.handlers);
+		renderToolbar(view, { ...input, openCount: model.empty ? null : model.openCount }, this.handlers);
 		if (model.empty) {
 			renderEmpty(view, this.handlers);
 			return;
@@ -160,25 +102,7 @@ export class BoardView extends BasesView {
 		}
 	}
 
-	private markSelection(): void {
-		const selected = this.plugin.selection.path;
-		this.containerEl.querySelectorAll<HTMLElement>('.mtm-card[data-path]').forEach((el) => {
-			el.toggleClass('is-selected', el.dataset.path === selected);
-		});
-	}
-
 	// ——— Actions ———
-
-	private async write(path: string, fn: (file: TFile) => Promise<void>): Promise<void> {
-		const file = this.plugin.app.vault.getFileByPath(path);
-		if (!file) return;
-		try {
-			await fn(file);
-		} catch (e) {
-			console.error('Matters that Matter: write failed', e);
-			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
-		}
-	}
 
 	private nonInboxOrder(options: BoardOptions): MatterInfo[] {
 		return (orderLanes(this.matters, options.inboxPosition) as MatterInfo[]).filter((m) => !m.isInbox);
@@ -234,20 +158,8 @@ export class BoardView extends BasesView {
 	}
 
 	private handlers: BoardHandlers = {
-		toggleType: (typeId) => {
-			const off = new Set(this.typesOff());
-			if (off.has(typeId)) off.delete(typeId);
-			else off.add(typeId);
-			this.pending.typesOff = [...off];
-			this.flushConfig();
-			this.refresh(true);
-		},
-		toggleDone: () => {
-			// Back to "inherit" when the board would match the global setting, so it follows later changes to it.
-			const show = !this.options().showDone;
-			this.config.set(OPTION_KEYS.showDone, show === this.plugin.settings.showDone ? null : show ? 'show' : 'hide');
-			this.refresh(false);
-		},
+		toggleType: (typeId) => this.toggleType(typeId),
+		toggleDone: () => this.toggleDone(),
 		toggleLane: (path) => {
 			const matter = this.matters.find((m) => m.path === path);
 			const lane = this.model?.lanes.find((l) => l.matter.path === path);
@@ -258,8 +170,7 @@ export class BoardView extends BasesView {
 			const byDefault = matter.state !== 'active';
 			if (collapse === byDefault) delete toggles[path];
 			else toggles[path] = collapse ? 'collapsed' : 'expanded';
-			this.pending.lanes = toggles;
-			this.flushConfig();
+			this.setConfigSoon(LANES_KEY, Object.keys(toggles).length ? toggles : null);
 			this.refresh(true);
 		},
 		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath }),
@@ -270,14 +181,8 @@ export class BoardView extends BasesView {
 			const file = this.plugin.app.vault.getFileByPath(normalizePath(path));
 			if (file) void markReviewed(this.plugin.app, file);
 		},
-		select: (path) => void this.plugin.selectAction(path),
-		open: (path, e) => {
-			const file = this.plugin.app.vault.getFileByPath(path);
-			if (!file) return;
-			this.plugin.selection.set(path);
-			const pane = e instanceof MouseEvent ? Keymap.isModEvent(e) : false;
-			void this.plugin.app.workspace.getLeaf(pane || 'tab').openFile(file);
-		},
-		dismiss: (item) => void this.write(item.path, (file) => dismissOrphan(this.plugin.app, file, this.plugin.settings)),
+		select: (path) => this.select(path),
+		open: (path, e) => this.open(path, e),
+		dismiss: (item) => this.dismiss(item),
 	};
 }

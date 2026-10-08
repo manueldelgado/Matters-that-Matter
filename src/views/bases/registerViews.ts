@@ -1,11 +1,13 @@
 // Registers the board, list, calendar and timeline as custom Bases views.
-// List, calendar and timeline are placeholders until each one is built.
+// Calendar and timeline are placeholders until each one is built.
 
 import { BasesView, type BasesAllOptions, type QueryController } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
 import { VIEW_TYPES, type CollectionView } from '../../services/baseFile';
 import { BoardView } from './board/boardView';
+import { OPTION_KEYS } from './collectionView';
+import { ListView } from './list/listView';
 
 const ICONS: Record<CollectionView, string> = {
 	board: 'square-kanban',
@@ -14,13 +16,6 @@ const ICONS: Record<CollectionView, string> = {
 	timeline: 'chart-gantt',
 };
 
-/** Option keys stored in the .base view config. */
-export const OPTION_KEYS = {
-	inboxPosition: 'mtmInboxPosition',
-	showDone: 'mtmShowDone',
-	doneDays: 'mtmDoneDays',
-	hideEmptyLanes: 'mtmHideEmptyLanes',
-} as const;
 
 function doneOptions(): BasesAllOptions[] {
 	const o = STRINGS.views.options;
@@ -36,19 +31,25 @@ function doneOptions(): BasesAllOptions[] {
 	];
 }
 
+function inboxOption(): BasesAllOptions {
+	const o = STRINGS.views.options;
+	return {
+		type: 'dropdown',
+		key: OPTION_KEYS.inboxPosition,
+		displayName: o.inboxPosition,
+		default: 'inherit',
+		options: { inherit: o.inherit, top: o.first, bottom: o.last, hidden: o.hidden },
+	};
+}
+
 function boardOptions(): BasesAllOptions[] {
 	const o = STRINGS.views.options;
-	return [
-		{
-			type: 'dropdown',
-			key: OPTION_KEYS.inboxPosition,
-			displayName: o.inboxPosition,
-			default: 'inherit',
-			options: { inherit: o.inherit, top: o.first, bottom: o.last, hidden: o.hidden },
-		},
-		...doneOptions(),
-		{ type: 'toggle', key: OPTION_KEYS.hideEmptyLanes, displayName: o.hideEmptyLanes, default: false },
-	];
+	return [inboxOption(), ...doneOptions(), { type: 'toggle', key: OPTION_KEYS.hideEmptyLanes, displayName: o.hideEmptyLanes, default: false }];
+}
+
+/** The list never shows empty Matters, so it has no "Hide empty lanes". */
+function listOptions(): BasesAllOptions[] {
+	return [inboxOption(), ...doneOptions()];
 }
 
 class PlaceholderView extends BasesView {
@@ -75,8 +76,12 @@ export function registerCollectionViews(plugin: MattersPlugin): boolean {
 			name: STRINGS.views[key],
 			icon: ICONS[key],
 			factory: (controller, containerEl) =>
-				key === 'board' ? new BoardView(controller, containerEl, plugin) : new PlaceholderView(controller, containerEl, type),
-			options: key === 'board' ? boardOptions : doneOptions,
+				key === 'board'
+					? new BoardView(controller, containerEl, plugin)
+					: key === 'list'
+						? new ListView(controller, containerEl, plugin)
+						: new PlaceholderView(controller, containerEl, type),
+			options: key === 'board' ? boardOptions : key === 'list' ? listOptions : doneOptions,
 		});
 		ok &&= registered;
 	}

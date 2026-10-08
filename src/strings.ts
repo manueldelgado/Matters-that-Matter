@@ -153,6 +153,19 @@ export const STRINGS = {
 		added: (matter: string, status: string) => `Added to ${matter} · ${status}`,
 	},
 
+	list: {
+		columns: ['Action', 'Status', 'Due', 'Priority', 'Waiting on', 'Notes'],
+		notFiled: 'Not filed yet',
+		open: (n: number) => `${n} open`,
+		waiting: (n: number) => `${n} waiting`,
+		newAction: 'New Action',
+		changeStatus: 'Change status',
+		markDone: 'Mark as done',
+		reopen: 'Reopen',
+		linkedNotes: 'Linked notes',
+		noMatches: 'No Actions match this view’s filters.',
+	},
+
 	overview: {
 		title: 'Matter',
 		matter: 'Matter',

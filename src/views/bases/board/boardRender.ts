@@ -31,38 +31,7 @@ export interface RenderInput {
 	now: Date;
 }
 
-export function renderToolbar(view: HTMLElement, input: RenderInput, h: BoardHandlers): void {
-	const bar = view.createDiv({ cls: 'mtm-toolbar' });
-	const filters = bar.createDiv({ cls: 'mtm-filters' });
-	filters.createSpan({ cls: 'mtm-toolbar-label', text: STRINGS.board.actionTypes });
-	// A chip is on unless switched off; with every chip off, all types show (see typeShown).
-	for (const type of input.types) {
-		const chip = filters.createEl('button', { cls: ['mtm-filter', ...typeClasses(type)] });
-		if (!input.typesOff.has(type.id)) chip.addClass('is-active');
-		tileEl(chip, type.icon, 'mod-xs');
-		chip.appendText(type.label);
-		chip.addEventListener('click', () => h.toggleType(type.id));
-	}
-	bar.createSpan({ cls: 'mtm-spacer' });
-	if (!input.model.empty) bar.createSpan({ cls: 'mtm-toolbar-note', text: STRINGS.board.open(input.model.openCount) });
-	const b = STRINGS.board;
-	const done = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
-	appendIcon(done, input.showDone ? 'eye' : 'eye-off');
-	done.appendText(input.showDone ? b.doneShown : b.doneHidden);
-	setTooltip(done, input.showDone ? b.hideDoneHere : b.showDoneHere);
-	done.addEventListener('click', () => h.toggleDone());
-	done.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			h.toggleDone();
-		}
-	});
-	const add = bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } });
-	setIcon(add, 'plus');
-	add.addEventListener('click', () => h.newAction());
-}
-
-export function renderEmpty(view: HTMLElement, h: BoardHandlers): void {
+export function renderEmpty(view: HTMLElement, h: Pick<BoardHandlers, 'newAction' | 'newMatter'>): void {
 	const empty = view.createDiv({ cls: 'mtm-scroll' }).createDiv({ cls: 'mtm-board-empty' });
 	tileEl(empty, 'sprout', 'mod-xl mtm-type-call mtm-tone-mint');
 	empty.createEl('h2', { cls: 'mtm-board-empty-title', text: STRINGS.board.emptyTitle });
