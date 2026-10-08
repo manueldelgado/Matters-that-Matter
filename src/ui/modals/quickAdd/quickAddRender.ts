@@ -47,6 +47,7 @@ export interface TokensInput {
 	today: string;
 	onRemoveDate: (chip: Chip) => void;
 	onRemoveMatter: () => void;
+	onRemoveContextDue: () => void;
 }
 
 function token(parent: HTMLElement, cls: string[], tooltip?: string): HTMLElement {
@@ -89,6 +90,13 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 		);
 		status.createSpan({ cls: 'mtm-status-dot' });
 		status.appendText(t.status.label);
+	}
+
+	if (draft.dueFromContext && draft.due) {
+		const date = token(row, ['mod-date'], q.contextDue);
+		appendIcon(date, 'calendar');
+		date.appendText(dateChipLabel(null, draft.due, t.today));
+		removeButton(date, q.removeDate, t.onRemoveContextDue);
 	}
 
 	const shown = t.chips.filter((c) => {

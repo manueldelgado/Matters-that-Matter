@@ -47,6 +47,8 @@ export interface QuickAddInit {
 	matterPath?: string;
 	/** Status of the column the modal was opened from. */
 	statusId?: string;
+	/** Due date of the calendar day the modal was opened from ('YYYY-MM-DD'). */
+	due?: string;
 }
 
 export class QuickAddModal extends Modal {
@@ -56,6 +58,7 @@ export class QuickAddModal extends Modal {
 
 	private contextMatter: string | null;
 	private readonly contextStatus: string | null;
+	private contextDue: string | null;
 	private pickedType: string | null = null;
 	private ignoredDates: string[] = [];
 	/** Start of a token whose suggestions were closed with Escape. */
@@ -86,6 +89,7 @@ export class QuickAddModal extends Modal {
 		super(plugin.app);
 		this.contextMatter = init.matterPath ?? null;
 		this.contextStatus = init.statusId ?? null;
+		this.contextDue = init.due ?? null;
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], 'Escape', () => {
@@ -199,6 +203,7 @@ export class QuickAddModal extends Modal {
 			contextMatter: this.contextMatter,
 			contextStatus: this.contextStatus,
 			pickedType: this.pickedType,
+			contextDue: this.contextDue,
 			inboxPath: s.inboxPath,
 			backlogId: backlogStatus(s.statuses)?.id ?? s.statuses[0]?.id ?? '',
 			defaultTypeId: defaultType(s.types)?.id ?? s.types[0]?.id ?? '',
@@ -332,6 +337,10 @@ export class QuickAddModal extends Modal {
 			},
 			onRemoveMatter: () => {
 				this.contextMatter = null;
+				this.refocus();
+			},
+			onRemoveContextDue: () => {
+				this.contextDue = null;
 				this.refocus();
 			},
 		});

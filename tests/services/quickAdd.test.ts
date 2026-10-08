@@ -150,6 +150,12 @@ describe('draftOf', () => {
 		expect(draftOf(parseQuickAdd('/shop Paint', ctx), picked).typeId).toBe('follow-up');
 	});
 
+	it('uses the context date until a date is typed', () => {
+		const withDay = { ...defaults, contextDue: '2026-10-21' };
+		expect(draftOf(parseQuickAdd('Paint', ctx), withDay)).toMatchObject({ due: '2026-10-21', dueFromContext: true });
+		expect(draftOf(parseQuickAdd('Paint tomorrow', ctx), withDay)).toMatchObject({ due: '2026-10-09', dueFromContext: false });
+	});
+
 	it('cannot add without a title', () => {
 		expect(draftOf(parseQuickAdd('/call #kitchen', ctx), defaults).canAdd).toBe(false);
 	});

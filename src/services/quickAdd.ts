@@ -123,6 +123,8 @@ export interface QuickAddDefaults {
 	contextStatus: string | null;
 	/** Type chosen in the picker when the input has no `/type` token. */
 	pickedType: string | null;
+	/** Due date from the calendar day the modal was opened from ('YYYY-MM-DD'); a typed date replaces it. */
+	contextDue?: string | null;
 	inboxPath: string;
 	backlogId: string;
 	defaultTypeId: string;
@@ -142,11 +144,15 @@ export interface Draft {
 	priority: Priority | null;
 	start: string | null;
 	due: string | null;
+	/** The due date is the context's, not typed. */
+	dueFromContext: boolean;
 	canAdd: boolean;
 }
 
 export function draftOf(result: QuickAddResult, d: QuickAddDefaults): Draft {
 	const matter = result.matterPath ?? d.contextMatter;
+	const typedDate = result.due !== null || result.start !== null;
+	const contextDue = typedDate ? null : (d.contextDue ?? null);
 	return {
 		title: result.title,
 		typeId: result.typeId ?? d.pickedType ?? d.defaultTypeId,
@@ -157,7 +163,8 @@ export function draftOf(result: QuickAddResult, d: QuickAddDefaults): Draft {
 		people: result.people,
 		priority: result.priority,
 		start: result.start,
-		due: result.due,
+		due: contextDue ?? result.due,
+		dueFromContext: contextDue !== null,
 		canAdd: result.title.trim().length > 0,
 	};
 }

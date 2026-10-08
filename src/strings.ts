@@ -128,6 +128,7 @@ export const STRINGS = {
 		defaultStatus: (status: string) => `New Actions start in ${status}`,
 		contextMatter: 'From the lane you added it in',
 		contextStatus: 'From the column you added it in',
+		contextDue: 'From the calendar day you added it on',
 		noType: (query: string, fallback: string) => `No type called “${query}”, so it uses the default type, ${fallback}`,
 		noMatter: (query: string) => `No Matter called “${query}”`,
 		noPerson: (query: string) => `No note called “${query}”`,
@@ -164,6 +165,18 @@ export const STRINGS = {
 		reopen: 'Reopen',
 		linkedNotes: 'Linked notes',
 		noMatches: 'No Actions match this view’s filters.',
+	},
+
+	calendar: {
+		today: 'Today',
+		previous: 'Previous month',
+		next: 'Next month',
+		more: (n: number) => `${n} more`,
+		newOnDay: 'New Action on this day',
+		agendaCount: (n: number) => (n === 1 ? '1 Action' : `${n} Actions`),
+		agendaEmpty: 'Nothing on this day.',
+		rangeSep: ' → ',
+		tipSep: ' · ',
 	},
 
 	overview: {
