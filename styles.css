@@ -740,3 +740,8 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 body .modal.mtm-quick-add > .modal-header-button{display:none}
 /* The input sits inside .mtm-qa-field (for the suggestions), so the contract's flex:1 no longer sizes it. */
 body .mtm-quick-add .mtm-qa-field > input.mtm-qa-input{width:100%}
+/* Since Obsidian 1.13 the close button is .modal-header-button (24px, absolutely placed in .modal), so the contract's
+   .mtm-modal .modal-close-button rule no longer applies. Centre it on the .mtm-modal-head title row (desktop; phones lay out modals differently). */
+body:not(.is-phone) .modal.mtm-modal > .modal-header-button{top:29px;right:16px}
+/* Heads that start with a 40px tile (delete status/type) have a taller title row. */
+body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .modal-header-button{top:37px}
