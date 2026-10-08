@@ -4,7 +4,7 @@ import { Keymap, type QueryController } from 'obsidian';
 import type MattersPlugin from '../../../main';
 import { STRINGS } from '../../../strings';
 import { isShownByDone } from '../../../model/actions';
-import { addDays, daysBetween, toYmd, type Ymd } from '../../../model/dates';
+import { addDays, daysBetween, toYmd, weekday, type Ymd } from '../../../model/dates';
 import type { ActionItem } from '../../../services/actionItems';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { orderMatters, typeShown } from '../../../services/boardModel';
@@ -25,6 +25,7 @@ export class TimelineView extends CollectionView {
 	private range: TimelineRange | null = null;
 	/** The first day in view, kept across re-renders; null until the first render scrolls to the opening week. */
 	private firstVisible: Ymd | null = null;
+	private lastWeekStart: string | null = null;
 	private items: ActionItem[] = [];
 	private scrollEl: HTMLElement | null = null;
 	private rangeEl: HTMLElement | null = null;
@@ -33,9 +34,17 @@ export class TimelineView extends CollectionView {
 	/** Day width at the last scroll; when it changes (narrow layout), the same first day is scrolled back into view. */
 	private lastDayWidth = 0;
 	/** Keeps the same dates in view, and the dates label right, when the view is resized. */
+	/** Rendered while hidden: the scroll couldn't be set, so it is set when the view is shown. */
+	private scrollPending = false;
 	private resize = new ResizeObserver(() => {
+		if (!this.isShown()) {
+			this.scrollPending = true;
+			return;
+		}
 		const width = this.dayWidth();
-		if (this.lastDayWidth && width !== this.lastDayWidth && this.firstVisible) this.scrollToDay(this.firstVisible, false);
+		const resized = this.lastDayWidth && width !== this.lastDayWidth;
+		if ((this.scrollPending || resized) && this.firstVisible) this.scrollToDay(this.firstVisible, false);
+		this.scrollPending = false;
 		this.lastDayWidth = width;
 		this.updateRangeLabel();
 	});
@@ -76,7 +85,8 @@ export class TimelineView extends CollectionView {
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
 		this.items = items;
-		if (this.scrollEl && this.range) this.firstVisible = this.visibleDays().first;
+		// A hidden tab reads its scroll as 0: keep the day seen last instead.
+		if (this.scrollEl && this.range && this.isShown()) this.firstVisible = this.visibleDays().first;
 
 		const range = timelineRange(today, settings.weekStart);
 		this.range = range;
@@ -130,8 +140,18 @@ export class TimelineView extends CollectionView {
 			this.handlers,
 		);
 		this.scrollEl = scroll;
-		this.lastDayWidth = this.dayWidth();
-		this.scrollToDay(this.firstVisible ?? openingDay(today, settings.weekStart), false);
+		this.firstVisible ??= openingDay(today, settings.weekStart);
+		// After a change of week start, the view starts on the new first day of the week.
+		if (this.lastWeekStart && this.lastWeekStart !== settings.weekStart) {
+			const startDay = settings.weekStart === 'monday' ? 1 : 0;
+			const back = (weekday(this.firstVisible) - startDay + 7) % 7;
+			this.firstVisible = addDays(this.firstVisible, back <= 3 ? -back : 7 - back);
+		}
+		this.lastWeekStart = settings.weekStart;
+		if (this.isShown()) {
+			this.lastDayWidth = this.dayWidth();
+			this.scrollToDay(this.firstVisible, false);
+		} else this.scrollPending = true;
 		scroll.addEventListener('scroll', () => this.updateRangeLabel(), { passive: true });
 		this.resize.observe(scroll);
 		this.updateRangeLabel();
@@ -170,8 +190,13 @@ export class TimelineView extends CollectionView {
 		return { first: addDays(range.from, first), last: addDays(range.from, Math.max(first, last)) };
 	}
 
+	/** Whether the scroll element has a box (a background tab has none). */
+	private isShown(): boolean {
+		return !!this.scrollEl && this.scrollEl.clientWidth > 0;
+	}
+
 	private updateRangeLabel(): void {
-		if (!this.rangeEl || !this.scrollEl) return;
+		if (!this.rangeEl || !this.scrollEl || !this.isShown()) return;
 		const { first, last } = this.visibleDays();
 		if (this.dayWidth() === this.lastDayWidth) this.firstVisible = first;
 		this.rangeEl.setText(rangeLabel(first, last, toYmd(new Date())));

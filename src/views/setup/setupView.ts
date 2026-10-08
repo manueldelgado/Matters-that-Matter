@@ -96,6 +96,11 @@ export class SetupView extends ItemView {
 					const file = app.vault.getFileByPath(normalizePath(path));
 					return !!file && frontmatterOf(app, file)?.['mtm-kind'] === 'matter';
 				},
+				isOtherKind: (path) => {
+					const file = app.vault.getFileByPath(normalizePath(path));
+					const kind = file ? frontmatterOf(app, file)?.['mtm-kind'] : undefined;
+					return kind !== undefined && kind !== 'matter';
+				},
 				maxLaneOrder: maxLaneOrder(app),
 			},
 		);

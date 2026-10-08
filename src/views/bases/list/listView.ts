@@ -66,8 +66,7 @@ export class ListView extends CollectionView {
 		);
 		const focus = focusedSphere(options.spheresOff, board.sphereKeys);
 		this.sphereFocus = focus;
-		const previous = this.containerEl.querySelector('.mtm-scroll');
-		const scroll = previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
+		const scroll = this.captureScroll('.mtm-scroll');
 
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
@@ -105,10 +104,7 @@ export class ListView extends CollectionView {
 			},
 			this.handlers,
 		);
-		if (scroll) {
-			scrollEl.scrollLeft = scroll.left;
-			scrollEl.scrollTop = scroll.top;
-		}
+		this.restoreScroll(scrollEl, scroll);
 	}
 
 	/** On by default: showing the backlog again clears the option. */

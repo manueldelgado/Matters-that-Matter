@@ -1,6 +1,6 @@
 // Reading MTM notes through metadataCache, and creating files and folders.
 
-import { normalizePath, TFile, type App } from 'obsidian';
+import { normalizePath, TFile, type App, type TAbstractFile } from 'obsidian';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 
@@ -20,6 +20,20 @@ export function maxLaneOrder(app: App): number | null {
 		.map((f) => parseLaneOrder(frontmatterOf(app, f)?.['mtm-lane-order']))
 		.filter((n): n is number => n !== null);
 	return orders.length ? Math.max(...orders) : null;
+}
+
+/**
+ * Whether a file already uses this path, ignoring case: macOS and Windows treat "Call Bob.md" and "call bob.md"
+ * as the same file, so creating or renaming onto it fails. `except` is the file being renamed.
+ */
+export function pathTaken(app: App, path: string, except?: TAbstractFile): boolean {
+	const target = normalizePath(path);
+	const exact = app.vault.getAbstractFileByPath(target);
+	if (exact) return exact !== except;
+	const slash = target.lastIndexOf('/');
+	const parent = slash < 0 ? app.vault.getRoot() : app.vault.getFolderByPath(target.slice(0, slash));
+	const lower = target.toLowerCase();
+	return !!parent?.children.some((child) => child !== except && child.path.toLowerCase() === lower);
 }
 
 export function exists(app: App, path: string): boolean {
@@ -55,6 +69,6 @@ export function linkTo(app: App, target: TFile, sourcePath: string): string {
 export async function createPersonNote(app: App, peopleFolder: string, name: string): Promise<TFile> {
 	const folder = normalizePath(peopleFolder);
 	await ensureFolder(app, folder);
-	const title = uniqueTitle(sanitiseTitle(name) || name, (t) => app.vault.getAbstractFileByPath(`${folder}/${t}.md`) !== null);
+	const title = uniqueTitle(sanitiseTitle(name) || name, (t) => pathTaken(app, `${folder}/${t}.md`));
 	return app.vault.create(`${folder}/${title}.md`, '');
 }

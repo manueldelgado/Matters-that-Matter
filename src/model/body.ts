@@ -14,6 +14,9 @@ export function splitFrontmatter(content: string): { frontmatter: string; body: 
 	return { frontmatter, body: content.slice(frontmatter.length) };
 }
 
+/** The note's line ending: notes written on Windows may use CRLF; edits keep it. */
+const eolOf = (content: string) => (content.includes('\r\n') ? '\r\n' : '\n');
+
 function endsDetails(line: string): boolean {
 	return LIST_RE.test(line) || HEADING_RE.test(line) || EMBED_RE.test(line) || FENCE_RE.test(line);
 }
@@ -26,7 +29,7 @@ function detailsEnd(lines: readonly string[]): number {
 
 /** Body text before the first list item, heading, embed or code block. */
 export function getDetails(content: string): string {
-	const lines = splitFrontmatter(content).body.split('\n');
+	const lines = splitFrontmatter(content).body.replace(/\r\n/g, '\n').split('\n');
 	return lines.slice(0, detailsEnd(lines)).join('\n').trim();
 }
 
@@ -37,6 +40,8 @@ export function getDetails(content: string): string {
  * and leave the previous copy behind on every save.
  */
 export function setDetails(content: string, details: string, previous?: string): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return setDetails(content.replace(/\r\n/g, '\n'), details, previous).replace(/\n/g, eol);
 	const { frontmatter, body } = splitFrontmatter(content);
 	const lead = body.length - body.trimStart().length;
 	const prev = previous?.trim() ?? '';
@@ -82,6 +87,8 @@ const indentOf = (line: string) => (/^\s*/.exec(line)?.[0] ?? '').length;
  * or at the end of the body if there is none. `lastTaskLine` may come from metadataCache.
  */
 export function insertTask(content: string, text: string, lastTaskLine?: number): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return insertTask(content.replace(/\r\n/g, '\n'), text, lastTaskLine).replace(/\n/g, eol);
 	const item = `- [ ] ${text.replace(/\s+/g, ' ').trim()}`;
 	const last = lastTaskLine ?? taskLines(content).at(-1);
 	const lines = content.split('\n');
@@ -120,7 +127,7 @@ const TASK_TEXT_RE = /^\s*(?:[-*+]|\d+[.)])\s+\[(.)\]\s?(.*)$/;
 
 /** The task on a line, or null. Any mark other than a space counts as checked, as Obsidian renders it. */
 export function parseTask(line: string): { checked: boolean; text: string } | null {
-	const m = TASK_TEXT_RE.exec(line);
+	const m = TASK_TEXT_RE.exec(line.replace(/\r$/, ''));
 	if (!m) return null;
 	return { checked: m[1] !== ' ', text: (m[2] ?? '').trim() };
 }

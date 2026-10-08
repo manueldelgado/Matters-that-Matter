@@ -12,7 +12,7 @@ import { applyStatus } from '../services/completion';
 import { effectiveAction, linkText } from '../services/effective';
 import { STRINGS } from '../strings';
 import { linkedFile, resolverFor } from './index';
-import { createNote, ensureFolder, frontmatterOf, linkTo, type Frontmatter } from './notes';
+import { createNote, ensureFolder, frontmatterOf, linkTo, pathTaken, type Frontmatter } from './notes';
 
 export interface ActionTarget {
 	statusId?: string;
@@ -73,7 +73,7 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 	const folder = normalizePath(settings.folders.actions);
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.title) || STRINGS.untitledAction;
-	const title = uniqueTitle(base, (t) => app.vault.getAbstractFileByPath(`${folder}/${t}.md`) !== null);
+	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
 	const path = `${folder}/${title}.md`;
 	const status = settings.statuses.find((s) => s.id === init.statusId);
 	const fm: Frontmatter = {
@@ -115,10 +115,8 @@ export async function renameAction(app: App, file: TFile, rawTitle: string): Pro
 	if (!base || base === file.basename) return false;
 	const folder = file.parent?.path ?? '';
 	const pathFor = (t: string) => normalizePath(folder && folder !== '/' ? `${folder}/${t}.md` : `${t}.md`);
-	const title = uniqueTitle(base, (t) => {
-		const existing = app.vault.getAbstractFileByPath(pathFor(t));
-		return existing !== null && existing !== file;
-	});
+	// The same name in another case is the same file: renaming "call bob" to "Call Bob" changes its case only.
+	const title = uniqueTitle(base, (t) => pathTaken(app, pathFor(t), file));
 	await app.fileManager.renameFile(file, pathFor(title));
 	return true;
 }

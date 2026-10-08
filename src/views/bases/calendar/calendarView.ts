@@ -70,8 +70,7 @@ export class CalendarView extends CollectionView {
 		const weeks = buildCalendar(items, grid, this.month, today);
 		this.days = weeks.flat();
 		const names = new Map(matters.map((m) => [m.path, m.name]));
-		const previous = this.containerEl.querySelector('.mtm-scroll');
-		const scrollTop = previous?.scrollTop ?? 0;
+		const scroll0 = this.captureScroll('.mtm-scroll');
 
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
@@ -110,7 +109,7 @@ export class CalendarView extends CollectionView {
 			},
 			this.handlers,
 		);
-		scroll.scrollTop = scrollTop;
+		this.restoreScroll(scroll, scroll0 ? { left: 0, top: scroll0.top } : null);
 		this.attachDrag(scroll);
 	}
 

@@ -3,7 +3,7 @@
 // Setup never overwrites a file: existing files are reused or, for Matter names, adopted.
 
 import type { MattersSettings, StatusDef, TypeDef } from '../settings';
-import { sanitiseTitle } from '../model/titles';
+import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { formatMtmDate, addDays, toYmd, type MtmDate } from '../model/dates';
 import { normalise } from './fuzzy';
 
@@ -68,6 +68,8 @@ export interface VaultSnapshot {
 	exists(path: string): boolean;
 	/** Whether the note at the path already has mtm-kind: matter. */
 	isMatter(path: string): boolean;
+	/** Whether the note at the path is another MTM note (an Action): it is never adopted as a Matter. */
+	isOtherKind?(path: string): boolean;
 	/** The highest mtm-lane-order among existing Matters, or null. */
 	maxLaneOrder: number | null;
 }
@@ -126,8 +128,10 @@ export function planSetup(choices: SetupChoices, vault: VaultSnapshot): SetupPla
 
 	let laneOrder = vault.maxLaneOrder === null ? 0 : Math.floor(vault.maxLaneOrder);
 	const adopt = new Set(choices.adopt);
-	for (const name of matterNames(choices.newMatters)) {
-		const path = joinPath(folders.matters, `${name}.md`);
+	for (const typed of matterNames(choices.newMatters)) {
+		let path = joinPath(folders.matters, `${typed}.md`);
+		// An Action with that name (Matters and Actions share a folder) keeps its note; the Matter gets "Name 2".
+		if (vault.isOtherKind?.(path)) path = joinPath(folders.matters, `${uniqueTitle(typed, (t) => vault.exists(joinPath(folders.matters, `${t}.md`)))}.md`);
 		if (path === inboxPath || vault.isMatter(path)) reuse.push(path);
 		else if (vault.exists(path)) adopt.add(path);
 		else
@@ -139,7 +143,7 @@ export function planSetup(choices: SetupChoices, vault: VaultSnapshot): SetupPla
 			});
 	}
 	for (const path of adopt) {
-		if (path === inboxPath || vault.isMatter(path)) continue;
+		if (path === inboxPath || vault.isMatter(path) || vault.isOtherKind?.(path)) continue;
 		modify.push({ path, add: { 'mtm-kind': 'matter', 'mtm-state': 'active' } });
 	}
 

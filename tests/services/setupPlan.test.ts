@@ -140,3 +140,17 @@ describe('boardBaseContent', () => {
 		);
 	});
 });
+
+describe('planSetup and existing Actions', () => {
+	it('never adopts an Action as a Matter; the new Matter gets another name', () => {
+		const snapshot: VaultSnapshot = {
+			exists: (p) => p === 'MTM/Matters/Call Bob.md',
+			isMatter: () => false,
+			isOtherKind: (p) => p === 'MTM/Matters/Call Bob.md',
+			maxLaneOrder: null,
+		};
+		const plan = planSetup(choices({ newMatters: 'Call Bob', adopt: ['MTM/Matters/Call Bob.md'] }), snapshot);
+		expect(plan.modify).toEqual([]);
+		expect(plan.create.some((n) => n.path === 'MTM/Matters/Call Bob 2.md')).toBe(true);
+	});
+});

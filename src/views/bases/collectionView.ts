@@ -49,6 +49,9 @@ export abstract class CollectionView extends BasesView {
 	/** Bases provides data and config from the first onDataUpdated on. */
 	protected ready = false;
 	protected signature = '';
+	/** The last scroll position seen while the view was visible (a hidden tab reads 0 and ignores writes). */
+	private lastScroll: { left: number; top: number } | null = null;
+	private scrollWaiter: ResizeObserver | null = null;
 	/** Config values not yet written (null clears a key); they win over what the config says. */
 	private pending = new Map<string, unknown>();
 	private flushConfig = debounce(() => this.writeConfig(), CONFIG_DELAY, true);
@@ -74,6 +77,7 @@ export abstract class CollectionView extends BasesView {
 	}
 
 	onunload(): void {
+		this.scrollWaiter?.disconnect();
 		this.flushConfig.run();
 	}
 
@@ -145,6 +149,46 @@ export abstract class CollectionView extends BasesView {
 		if (!matter || matter.isInbox) return true;
 		const keys = sphereKeysFor(matters, this.plugin.settings.spheres);
 		return keys.length === 0 || sphereShown(matter.sphere, off);
+	}
+
+	// ——— Scroll across re-renders ———
+
+	/** Where the scroll element is now, or where it was last seen when the view is hidden. */
+	protected captureScroll(selector: string): { left: number; top: number } | null {
+		const el = this.containerEl.querySelector(selector);
+		if (el && el.clientWidth > 0) this.lastScroll = { left: el.scrollLeft, top: el.scrollTop };
+		return this.lastScroll;
+	}
+
+	/** Puts the position back; in a hidden tab, as soon as the view is shown again. */
+	protected restoreScroll(el: HTMLElement, pos: { left: number; top: number } | null): void {
+		this.scrollWaiter?.disconnect();
+		this.scrollWaiter = null;
+		// Follow the user's scrolling, so a re-render in a background tab knows where they were.
+		el.addEventListener(
+			'scroll',
+			() => {
+				if (el.clientWidth > 0) this.lastScroll = { left: el.scrollLeft, top: el.scrollTop };
+			},
+			{ passive: true },
+		);
+		if (!pos) return;
+		const apply = () => {
+			el.scrollLeft = pos.left;
+			el.scrollTop = pos.top;
+		};
+		if (el.clientWidth > 0) {
+			apply();
+			return;
+		}
+		const waiter = new ResizeObserver(() => {
+			if (el.clientWidth === 0) return;
+			waiter.disconnect();
+			if (this.scrollWaiter === waiter) this.scrollWaiter = null;
+			apply();
+		});
+		this.scrollWaiter = waiter;
+		waiter.observe(el);
 	}
 
 	// ——— Data ———

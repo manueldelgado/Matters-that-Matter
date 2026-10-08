@@ -31,6 +31,8 @@ export async function executePlan(app: App, plan: SetupPlan): Promise<void> {
 		if (!(file instanceof TFile)) continue;
 		const add = resolveValues(app, change.add, change.path);
 		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+			// Another MTM note (an Action) is never turned into a Matter.
+			if (fm['mtm-kind'] !== undefined && fm['mtm-kind'] !== 'matter') return;
 			fm['mtm-kind'] = add['mtm-kind'];
 			// Adoption keeps a state the note already has.
 			if (fm['mtm-state'] === undefined && add['mtm-state'] !== undefined) fm['mtm-state'] = add['mtm-state'];

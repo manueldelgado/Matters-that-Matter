@@ -3,7 +3,7 @@
 import { normalizePath, type App, type TFile } from 'obsidian';
 import { uniqueTitle } from '../model/titles';
 import { stripMtmProperties } from '../services/processInbox';
-import { ensureFolder, type Frontmatter } from './notes';
+import { ensureFolder, pathTaken, type Frontmatter } from './notes';
 
 /** What Undo needs to bring a trashed note back. */
 export interface TrashedNote {
@@ -26,7 +26,7 @@ export async function restoreTrashed(app: App, note: TrashedNote): Promise<TFile
 	const base = note.path.slice(slash + 1).replace(/\.md$/i, '');
 	if (folder) await ensureFolder(app, folder);
 	const pathFor = (t: string) => normalizePath(folder ? `${folder}/${t}.md` : `${t}.md`);
-	const title = uniqueTitle(base, (t) => app.vault.getAbstractFileByPath(pathFor(t)) !== null);
+	const title = uniqueTitle(base, (t) => pathTaken(app, pathFor(t)));
 	return app.vault.create(pathFor(title), note.content);
 }
 
@@ -44,6 +44,6 @@ export async function keepAsNote(app: App, file: TFile, folder: string): Promise
 	const current = file.parent?.path === '/' ? '' : (file.parent?.path ?? '');
 	if (current === target) return;
 	const pathFor = (t: string) => normalizePath(target ? `${target}/${t}.md` : `${t}.md`);
-	const title = uniqueTitle(file.basename, (t) => app.vault.getAbstractFileByPath(pathFor(t)) !== null);
+	const title = uniqueTitle(file.basename, (t) => pathTaken(app, pathFor(t), file));
 	await app.fileManager.renameFile(file, pathFor(title));
 }

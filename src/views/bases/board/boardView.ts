@@ -87,8 +87,7 @@ export class BoardView extends CollectionView {
 	}
 
 	private render(model: BoardModel, options: BoardOptions, now: Date): void {
-		const previous = this.containerEl.querySelector('.mtm-board-scroll');
-		const scroll = previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
+		const scroll = this.captureScroll('.mtm-board-scroll');
 
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
@@ -103,10 +102,7 @@ export class BoardView extends CollectionView {
 			moveCard: (path, matterPath, statusId) => void this.write(path, (file) => moveAction(this.plugin.app, file, { matterPath, statusId }, this.plugin.settings)),
 			moveLane: (path, beforePath, sphereKey) => void this.moveLaneBefore(path, beforePath, sphereKey, options),
 		});
-		if (scroll) {
-			scrollEl.scrollLeft = scroll.left;
-			scrollEl.scrollTop = scroll.top;
-		}
+		this.restoreScroll(scrollEl, scroll);
 	}
 
 	// ——— Actions ———

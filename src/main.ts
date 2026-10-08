@@ -132,7 +132,18 @@ export default class MattersPlugin extends Plugin {
 		const folder = vault.getAbstractFileByPath(normalizePath(this.settings.folders.boards));
 		const boards =
 			folder instanceof TFolder ? folder.children.filter((f): f is TFile => f instanceof TFile && f.extension === 'base') : [];
-		const open = (file: TFile) => void workspace.getLeaf(false).openFile(file);
+		// A board already open is brought forward; otherwise it opens in a new tab, never over the note being read.
+		const open = (file: TFile) => {
+			const existing = workspace.getLeavesOfType('bases').find((leaf) => leaf.view instanceof FileView && leaf.view.file?.path === file.path);
+			if (existing) {
+				void workspace.revealLeaf(existing);
+				workspace.setActiveLeaf(existing, { focus: true });
+				return;
+			}
+			const active = workspace.getMostRecentLeaf();
+			const leaf = active && active.view.getViewType() === 'empty' ? active : workspace.getLeaf('tab');
+			void leaf.openFile(file);
+		};
 
 		if (boards.length > 1) {
 			new BoardPicker(this.app, boards, open).open();

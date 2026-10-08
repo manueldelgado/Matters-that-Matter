@@ -151,3 +151,20 @@ describe('setDetails with the previous text', () => {
 		expect(setDetails(note, 'New', 'Notes')).toBe(`${fm}New\n\n- [ ] Step\n`);
 	});
 });
+
+describe('CRLF notes', () => {
+	const crlf = '---\r\nmtm-kind: action\r\n---\r\nDetails.\r\n\r\n- [ ] a\r\n- [ ] b\r\n';
+	it('reads the checklist and details', () => {
+		expect(checklistItems(crlf).map((i) => i.text)).toEqual(['a', 'b']);
+		expect(getDetails(crlf)).toBe('Details.');
+	});
+
+	it('keeps CRLF when editing', () => {
+		const added = insertTask(crlf, 'c');
+		expect(added).toBe('---\r\nmtm-kind: action\r\n---\r\nDetails.\r\n\r\n- [ ] a\r\n- [ ] b\r\n- [ ] c\r\n');
+		const ticked = toggleTask(crlf, 6, 'b', true);
+		expect(ticked).toContain('- [x] b\r\n');
+		const details = setDetails(crlf, 'New\nlines', 'Details.');
+		expect(details).toBe('---\r\nmtm-kind: action\r\n---\r\nNew\r\nlines\r\n\r\n- [ ] a\r\n- [ ] b\r\n');
+	});
+});

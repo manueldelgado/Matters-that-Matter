@@ -6,7 +6,7 @@ import { toYmd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { formatCadence, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
 import { STRINGS } from '../strings';
-import { createNote, ensureFolder, maxLaneOrder, type Frontmatter } from './notes';
+import { createNote, ensureFolder, maxLaneOrder, pathTaken, type Frontmatter } from './notes';
 
 export async function writeLaneOrders(app: App, writes: readonly LaneOrderWrite[]): Promise<void> {
 	for (const w of writes) {
@@ -74,7 +74,7 @@ export async function createMatter(app: App, settings: MattersSettings, init: Ne
 	const folder = normalizePath(settings.folders.matters);
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.name) || STRINGS.untitledMatter;
-	const title = uniqueTitle(base, (t) => app.vault.getAbstractFileByPath(`${folder}/${t}.md`) !== null);
+	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
 	const fm: Frontmatter = {
 		'mtm-kind': 'matter',
 		'mtm-icon': init.icon,
