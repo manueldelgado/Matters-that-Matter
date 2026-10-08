@@ -30,11 +30,25 @@ export function getDetails(content: string): string {
 	return lines.slice(0, detailsEnd(lines)).join('\n').trim();
 }
 
-/** Replaces the details, keeping the frontmatter and everything from the first block on. */
-export function setDetails(content: string, details: string): string {
+/**
+ * Replaces the details, keeping the frontmatter and everything after them.
+ * `previous` is the details text the editor last read or wrote: when the body still starts with it, exactly that
+ * text is replaced. Typed details may contain a list line or heading, which would otherwise end the details early
+ * and leave the previous copy behind on every save.
+ */
+export function setDetails(content: string, details: string, previous?: string): string {
 	const { frontmatter, body } = splitFrontmatter(content);
-	const lines = body.split('\n');
-	const rest = lines.slice(detailsEnd(lines)).join('\n');
+	const lead = body.length - body.trimStart().length;
+	const prev = previous?.trim() ?? '';
+	let rest: string;
+	const after = body.slice(lead + prev.length);
+	// The previous text must still be whole lines at the start of the body.
+	if (prev && body.slice(lead).startsWith(prev) && (after === '' || /^[ \t]*\r?\n/.test(after))) {
+		rest = after.replace(/^\s*\n/, '');
+	} else {
+		const lines = body.split('\n');
+		rest = lines.slice(detailsEnd(lines)).join('\n');
+	}
 	const text = details.trim();
 	if (!text) return frontmatter + rest;
 	if (!rest) return `${frontmatter}${text}\n`;

@@ -209,7 +209,7 @@ describe('unmatched names', () => {
 		const monday = parse('@Ana Monday');
 		expect(monday.chips[0]).toMatchObject({ query: 'Ana' });
 		expect(monday.due).toBe('2026-10-12');
-		expect(parse('@Ana, Pedro').chips[0]).toMatchObject({ query: 'Ana,' });
+		expect(parse('@Ana, Pedro').chips[0]).toMatchObject({ query: 'Ana' });
 	});
 
 	it('are someone else when the name runs on past a match on its first words', () => {
@@ -227,5 +227,60 @@ describe('unmatched names', () => {
 
 	it('also apply to new Matters', () => {
 		expect(parse('Paint #Garden Shed').chips[0]).toMatchObject({ query: 'Garden Shed', path: null });
+	});
+});
+
+describe('QA 8 October 2026', () => {
+	const date = (input: string, extra: Partial<QuickAddContext> = {}) => {
+		const r = parse(input, extra);
+		return { title: r.title, start: r.start, due: r.due };
+	};
+
+	it('reads a month name followed by a day as a day, not a year', () => {
+		expect(date('Call Ana oct 12')).toEqual({ title: 'Call Ana', start: null, due: '2026-10-12' });
+		expect(date('Call Ana October 12 at 3pm')).toEqual({ title: 'Call Ana', start: null, due: '2026-10-12T15:00' });
+		expect(date('dec 25 party')).toEqual({ title: 'party', start: null, due: '2026-12-25' });
+		expect(date('Trip oct 12 - oct 14')).toEqual({ title: 'Trip', start: '2026-10-12', due: '2026-10-14' });
+		expect(date('Dentist 15/10 at 16:30').due).toBe('2026-10-15T16:30');
+	});
+
+	it('leaves ordinary words in the title', () => {
+		for (const t of ['Morning run', 'Weekend trip', 'Noon meeting', 'March planning', 'Fix the sun deck', 'Buy mar salt', 'Plan the weekend']) {
+			expect(date(t)).toEqual({ title: t, start: null, due: null });
+		}
+		expect(date('Call tomorrow morning').due?.slice(0, 10)).toBe('2026-10-10');
+		expect(date('Weekend 20-22 oct')).toEqual({ title: 'Weekend', start: '2026-10-20', due: '2026-10-22' });
+	});
+
+	it('reads a date across a token, and a range followed by a token', () => {
+		const r = parse('Call Marco tomorrow #Kitchen 5pm');
+		expect(r).toMatchObject({ title: 'Call Marco', due: '2026-10-10T17:00', matterPath: 'M/Kitchen renovation.md' });
+		expect(date('Weekend away 20-22 oct #Garden')).toEqual({ title: 'Weekend away', start: '2026-10-20', due: '2026-10-22' });
+	});
+
+	it('a removed date chip also ignores the dates inside it', () => {
+		const first = parse('Call Ana friday 10am');
+		const chip = first.chips.find((c) => c.kind === 'date');
+		expect(chip?.text).toBe('friday 10am');
+		expect(date('Call Ana friday 10am', { ignoredDates: [chip?.text ?? ''] })).toEqual({ title: 'Call Ana friday 10am', start: null, due: null });
+	});
+
+	it('keeps a weekday range in order', () => {
+		expect(date('Trip friday until monday')).toEqual({ title: 'Trip', start: '2026-10-16', due: '2026-10-19' });
+	});
+
+	it('reads more Spanish', () => {
+		expect(date('Comprar pan pasado mañana')).toEqual({ title: 'Comprar pan', start: null, due: '2026-10-11' });
+		expect(date('Fin de semana del 20 al 22 de octubre')).toEqual({ title: 'Fin de semana', start: '2026-10-20', due: '2026-10-22' });
+		expect(date('Pagar la luz el viernes')).toEqual({ title: 'Pagar la luz', start: null, due: '2026-10-16' });
+	});
+
+	it('drops a word that only introduces the date', () => {
+		expect(date('Prepare taxes by end of month').title).toBe('Prepare taxes');
+		expect(date('Pay rent on friday').title).toBe('Pay rent');
+	});
+
+	it('keeps punctuation after a token out of the name', () => {
+		expect(parse('Talk about #Kitchen, tomorrow')).toMatchObject({ title: 'Talk about', matterPath: 'M/Kitchen renovation.md', due: '2026-10-10' });
 	});
 });

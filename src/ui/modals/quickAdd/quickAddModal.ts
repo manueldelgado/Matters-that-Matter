@@ -176,7 +176,14 @@ export class QuickAddModal extends Modal {
 	}
 
 	private parserContext(): QuickAddContext {
-		return { now: new Date(), types: this.types, matters: this.matters, people: this.people, ignoredDates: this.ignoredDates };
+		return {
+			now: new Date(),
+			types: this.types,
+			matters: this.matters,
+			people: this.people,
+			ignoredDates: this.ignoredDates,
+			languages: this.settings.dateLanguages,
+		};
 	}
 
 	// ——— State ———

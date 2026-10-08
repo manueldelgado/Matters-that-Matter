@@ -92,8 +92,9 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 
 // ——— Body edits: only the targeted lines change ———
 
-export async function writeDetails(app: App, file: TFile, details: string): Promise<void> {
-	await app.vault.process(file, (content) => setDetails(content, details));
+/** `previous` is the details text the inspector last read or wrote (see setDetails). */
+export async function writeDetails(app: App, file: TFile, details: string, previous?: string): Promise<void> {
+	await app.vault.process(file, (content) => setDetails(content, details, previous));
 }
 
 export async function setChecklistItem(app: App, file: TFile, line: number, text: string, checked: boolean): Promise<void> {

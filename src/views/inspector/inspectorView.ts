@@ -32,6 +32,8 @@ export class InspectorView extends ItemView {
 	/** A refresh skipped while the user was typing; it runs when focus leaves the field. */
 	private deferred = false;
 	private pendingDetails: { file: TFile; text: string } | null = null;
+	/** The details text last read from or written to the note, so a save replaces exactly that. */
+	private detailsBase: { path: string; text: string } | null = null;
 	/** The details write in flight; a refresh waits for it so it never shows the old text. */
 	private detailsWrite: Promise<void> = Promise.resolve();
 	private saveDetailsSoon = debounce(() => void this.flushDetails(), DETAILS_DELAY, true);
@@ -134,6 +136,7 @@ export class InspectorView extends ItemView {
 		const details = await readActionDetails(app, file, plugin.settings);
 		if (token !== this.renderToken) return;
 		this.details = details;
+		this.detailsBase = { path: file.path, text: details.details };
 
 		const scrollTop = sameFile ? this.contentEl.querySelector('.mtm-inspector-body')?.scrollTop ?? 0 : 0;
 		const refocusStep = sameFile && activeDocument.activeElement?.closest('.mtm-check-add') !== null;
@@ -180,9 +183,14 @@ export class InspectorView extends ItemView {
 		const pending = this.pendingDetails;
 		this.pendingDetails = null;
 		if (!pending) return this.detailsWrite;
-		this.detailsWrite = writeDetails(this.app, pending.file, pending.text).catch((e) => {
-			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
-		});
+		const base = this.detailsBase?.path === pending.file.path ? this.detailsBase.text : undefined;
+		this.detailsWrite = writeDetails(this.app, pending.file, pending.text, base)
+			.then(() => {
+				this.detailsBase = { path: pending.file.path, text: pending.text.trim() };
+			})
+			.catch((e) => {
+				new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+			});
 		return this.detailsWrite;
 	}
 

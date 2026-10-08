@@ -628,7 +628,8 @@ export class ProcessInboxModal extends Modal {
 
 	/** The first step's title and type, read like quick add (only /type counts here). */
 	private parseStep(text: string): { title: string; typeId: string | null } {
-		const result = parseQuickAdd(text, { now: new Date(), types: this.candidates.types, matters: [], people: [], ignoredDates: [text] });
+		// Dates stay in the step's title: only a /type counts here.
+		const result = parseQuickAdd(text, { now: new Date(), types: this.candidates.types, matters: [], people: [], languages: [] });
 		return { title: result.title.trim(), typeId: result.typeId };
 	}
 

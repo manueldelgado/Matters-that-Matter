@@ -121,3 +121,33 @@ describe('checklist', () => {
 		expect(toggleTask(note, 6, 'Something else', true)).toBe(note);
 	});
 });
+
+describe('setDetails with the previous text', () => {
+	const fm = '---\nmtm-kind: action\n---\n';
+	it('does not duplicate typed list lines or headings across saves', () => {
+		let note = `${fm}\n- [ ] Step\n`;
+		let prev = getDetails(note);
+		for (const typed of ['Notes\n- a', 'Notes\n- ab', 'Notes\n- abc']) {
+			note = setDetails(note, typed, prev);
+			prev = typed;
+		}
+		expect(note).toBe(`${fm}Notes\n- abc\n\n- [ ] Step\n`);
+		prev = 'Plain.';
+		note = `${fm}Plain.\n`;
+		for (const typed of ['Plain.\n## Heading', 'Plain.\n## Heading two']) {
+			note = setDetails(note, typed, prev);
+			prev = typed;
+		}
+		expect(note).toBe(`${fm}Plain.\n## Heading two\n`);
+	});
+
+	it('falls back when the note no longer starts with the previous text', () => {
+		const note = `${fm}Changed elsewhere.\n\n- [ ] Step\n`;
+		expect(setDetails(note, 'Mine.', 'Old text.')).toBe(`${fm}Mine.\n\n- [ ] Step\n`);
+	});
+
+	it('matches whole lines only', () => {
+		const note = `${fm}Notes more\n\n- [ ] Step\n`;
+		expect(setDetails(note, 'New', 'Notes')).toBe(`${fm}New\n\n- [ ] Step\n`);
+	});
+});
