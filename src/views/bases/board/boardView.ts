@@ -80,7 +80,7 @@ export class BoardView extends CollectionView {
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
 
-		this.model = buildBoard(actions, this.matters, settings.statuses, settings.types.map((t) => t.id), options, today, now);
+		this.model = buildBoard(actions, this.matters, settings.statuses, options, today, now);
 		this.chips = this.sphereChips(this.matters, actions, options.spheresOff);
 		this.render(this.model, options, now);
 	}

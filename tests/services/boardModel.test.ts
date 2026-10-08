@@ -82,7 +82,7 @@ describe('toActionItem', () => {
 });
 
 describe('buildBoard', () => {
-	const board = buildBoard(actions, matters, settings.statuses, typeIds, options(), today);
+	const board = buildBoard(actions, matters, settings.statuses, options(), today);
 
 	it('hides closed columns when Show done is off', () => {
 		expect(board.columns.map((c) => c.id)).toEqual(['later', 'next', 'doing', 'waiting']);
@@ -90,7 +90,7 @@ describe('buildBoard', () => {
 
 	it('orders lanes with the Inbox at its position', () => {
 		expect(board.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen', 'Garden', 'Shed']);
-		const bottom = buildBoard(actions, matters, settings.statuses, typeIds, options({ inboxPosition: 'bottom' }), today);
+		const bottom = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'bottom' }), today);
 		expect(bottom.lanes.at(-1)?.matter.name).toBe('Inbox');
 	});
 
@@ -109,31 +109,33 @@ describe('buildBoard', () => {
 	});
 
 	it('shows done Actions within the window when Show done is on', () => {
-		const all = buildBoard(actions, matters, settings.statuses, typeIds, options({ showDone: true }), today);
+		const all = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today);
 		expect(titles(all.lanes[1]!.cells.get('done'))).toEqual(['Ancient task', 'Old task']);
-		const recent = buildBoard(actions, matters, settings.statuses, typeIds, options({ showDone: true, doneDays: 7 }), today);
+		const recent = buildBoard(actions, matters, settings.statuses, options({ showDone: true, doneDays: 7 }), today);
 		expect(titles(recent.lanes[1]!.cells.get('done'))).toEqual(['Old task']);
 	});
 
 	it('hides the Inbox lane and its Actions', () => {
-		const b = buildBoard(actions, matters, settings.statuses, typeIds, options({ inboxPosition: 'hidden' }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'hidden' }), today);
 		expect(b.lanes.map((l) => l.matter.name)).not.toContain('Inbox');
 		expect(b.openCount).toBe(3);
 	});
 
 	it('hides empty lanes on request', () => {
-		const b = buildBoard(actions, matters, settings.statuses, typeIds, options({ hideEmptyLanes: true }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ hideEmptyLanes: true }), today);
 		expect(b.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen']);
 	});
 
 	it('filters by type chips', () => {
-		const b = buildBoard(actions, matters, settings.statuses, typeIds, options({ typesOff: new Set(['buy']) }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ typesOff: new Set(['buy']) }), today);
 		expect(titles(b.lanes[1]!.cells.get('next'))).toEqual(['Call plumber']);
 	});
 
-	it('shows all types when every chip is off', () => {
-		expect(typeShown('call', new Set(typeIds), typeIds)).toBe(true);
-		expect(typeShown('call', new Set(['call']), typeIds)).toBe(false);
+	it('hides each type whose chip is off, even when every chip is off', () => {
+		expect(typeShown('call', new Set(['buy']))).toBe(true);
+		expect(typeShown('call', new Set(['call']))).toBe(false);
+		// Every chip off hides every type.
+		expect(typeShown('call', new Set(typeIds))).toBe(false);
 	});
 
 	it('collapses dormant lanes unless the board says otherwise', () => {
@@ -144,13 +146,13 @@ describe('buildBoard', () => {
 
 	it('reports an empty board only without any Actions', () => {
 		expect(board.empty).toBe(false);
-		expect(buildBoard([], matters, settings.statuses, typeIds, options(), today).empty).toBe(true);
+		expect(buildBoard([], matters, settings.statuses, options(), today).empty).toBe(true);
 	});
 });
 
 describe('buildList', () => {
 	it('keeps lane order, drops empty groups and lists rows by status, then card order', () => {
-		const board = buildBoard(actions, matters, settings.statuses, typeIds, options({ showDone: true }), today);
+		const board = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today);
 		const groups = buildList(board);
 		expect(groups.map((g) => g.lane.matter.name)).toEqual(['Inbox', 'Kitchen']);
 		expect(groups[1]?.rows.map((r) => r.title)).toEqual(['Call plumber', 'Buy tiles', 'Ask Ana', 'Ancient task', 'Old task']);
@@ -165,10 +167,10 @@ describe('Sphere bands', () => {
 	// Garden is in Home, Kitchen in Work (ahead of Garden by lane order), Shed in none.
 	const sphered = [{ ...kitchen, sphere: 'work' }, inbox, { ...garden, sphere: 'home' }, shed];
 	const build = (over: Partial<BoardOptions> = {}) =>
-		buildBoard(actions, sphered, settings.statuses, typeIds, options({ spheres, ...over }), today, new Date(2026, 9, 9, 12));
+		buildBoard(actions, sphered, settings.statuses, options({ spheres, ...over }), today, new Date(2026, 9, 9, 12));
 
 	it('without Spheres there are no bands and no chips', () => {
-		const b = buildBoard(actions, sphered, settings.statuses, typeIds, options(), today);
+		const b = buildBoard(actions, sphered, settings.statuses, options(), today);
 		expect(b.bands).toBeNull();
 		expect(b.sphereKeys).toEqual([]);
 	});
@@ -191,8 +193,8 @@ describe('Sphere bands', () => {
 		const b = build({ spheresOff: new Set(['home', '']) });
 		expect(b.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen']);
 		expect(b.columnCounts.get('next')).toBe(2);
-		// Every chip off shows everything, like type chips.
-		expect(build({ spheresOff: new Set(['home', 'work', '']) }).lanes).toHaveLength(4);
+		// Every chip off leaves only the Inbox (unlike type chips).
+		expect(build({ spheresOff: new Set(['home', 'work', '']) }).lanes.map((l) => l.matter.name)).toEqual(['Inbox']);
 	});
 
 	it('keeps collapsed bands with their lanes and counts', () => {

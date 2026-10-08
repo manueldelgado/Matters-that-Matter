@@ -50,7 +50,6 @@ export class ListView extends CollectionView {
 			actions,
 			matters,
 			settings.statuses,
-			settings.types.map((t) => t.id),
 			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres },
 			today,
 			now,

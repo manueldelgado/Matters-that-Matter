@@ -36,12 +36,11 @@ export class CalendarView extends CollectionView {
 		const today = toYmd(now);
 		const options = this.collectionOptions();
 		const all = this.actions();
-		const typeIds = settings.types.map((t) => t.id);
 		const matters = allMatters(app, settings, today);
 		const byPath = new Map(matters.map((m) => [m.path, m]));
 		const items = all.filter(
 			(a) =>
-				typeShown(a.effective.type.id, options.typesOff, typeIds) &&
+				typeShown(a.effective.type.id, options.typesOff) &&
 				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today) &&
 				this.matterShown(byPath.get(a.effective.matterPath), matters, options.spheresOff),
 		);

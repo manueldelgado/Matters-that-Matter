@@ -32,12 +32,12 @@ export interface ToolbarHandlers {
 	newAction: () => void;
 }
 
-/** Type chips (all on by default; with none on, all show), the open count, Show done and "+". */
+/** Type chips (all on by default; each one switched off hides its type), Sphere chips, the open count, Show done and "+". */
 export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: ToolbarHandlers): void {
 	const bar = view.createDiv({ cls: 'mtm-toolbar' });
 	const filters = bar.createDiv({ cls: 'mtm-filters' });
 	filters.createSpan({ cls: 'mtm-toolbar-label', text: STRINGS.board.actionTypes });
-	// A chip is on unless switched off; with every chip off, all types show (see typeShown).
+	// A chip is on unless switched off (see typeShown).
 	for (const type of input.types) {
 		const chip = filters.createEl('button', { cls: ['mtm-filter', ...typeClasses(type)] });
 		if (!input.typesOff.has(type.id)) chip.addClass('is-active');

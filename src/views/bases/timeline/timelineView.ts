@@ -51,7 +51,6 @@ export class TimelineView extends CollectionView {
 		const today = toYmd(now);
 		const options = this.collectionOptions();
 		const all = this.actions();
-		const typeIds = settings.types.map((t) => t.id);
 		const allMatterInfo = allMatters(app, settings, today);
 		const matters = orderMatters(allMatterInfo, settings.spheres, options.inboxPosition).filter((m) =>
 			this.matterShown(m, allMatterInfo, options.spheresOff),
@@ -59,7 +58,7 @@ export class TimelineView extends CollectionView {
 		const shownPaths = new Set(matters.map((m) => m.path));
 		const items = all.filter(
 			(a) =>
-				typeShown(a.effective.type.id, options.typesOff, typeIds) &&
+				typeShown(a.effective.type.id, options.typesOff) &&
 				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today) &&
 				shownPaths.has(a.effective.matterPath),
 		);

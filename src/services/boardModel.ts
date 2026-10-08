@@ -24,13 +24,13 @@ export interface BoardOptions {
 	/** "Show done from the last N days"; null shows all closed Actions. */
 	doneDays: number | null;
 	hideEmptyLanes: boolean;
-	/** Type IDs switched off in the toolbar. When every type is off, all show. */
+	/** Type IDs switched off in the toolbar. */
 	typesOff: ReadonlySet<string>;
 	/** Lanes the user expanded or collapsed on this board, by Matter path. */
 	laneToggles: Readonly<Record<string, 'collapsed' | 'expanded'>>;
 	/** Spheres from settings, in order; none means no bands. */
 	spheres: readonly SphereDef[];
-	/** Sphere chips switched off (NO_SPHERE for "No Sphere"). With every chip off, all show. */
+	/** Sphere chips switched off (NO_SPHERE for "No Sphere"). */
 	spheresOff: ReadonlySet<string>;
 	/** Sphere bands collapsed on this board (NO_SPHERE for "No Sphere"). */
 	spheresCollapsed: ReadonlySet<string>;
@@ -68,10 +68,9 @@ export interface BoardModel {
 	empty: boolean;
 }
 
-/** Whether a type passes the toolbar chips. */
-export function typeShown(typeId: string, typesOff: ReadonlySet<string>, allTypeIds: readonly string[]): boolean {
-	const allOff = allTypeIds.length > 0 && allTypeIds.every((id) => typesOff.has(id));
-	return allOff || !typesOff.has(typeId);
+/** Whether a type passes the toolbar chips: all on by default; a chip switched off hides its type, even the last one. */
+export function typeShown(typeId: string, typesOff: ReadonlySet<string>): boolean {
+	return !typesOff.has(typeId);
 }
 
 export function isLaneCollapsed(matter: MatterInfo, toggles: BoardOptions['laneToggles']): boolean {
@@ -84,7 +83,6 @@ export function buildBoard(
 	actions: readonly ActionItem[],
 	matters: readonly MatterInfo[],
 	statuses: readonly StatusDef[],
-	typeIds: readonly string[],
 	options: BoardOptions,
 	today: Ymd,
 	now?: Date,
@@ -95,7 +93,7 @@ export function buildBoard(
 	const visible = actions.filter(
 		(a) =>
 			columnIds.has(a.effective.status.id) &&
-			typeShown(a.effective.type.id, options.typesOff, typeIds) &&
+			typeShown(a.effective.type.id, options.typesOff) &&
 			isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today),
 	);
 
@@ -107,7 +105,7 @@ export function buildBoard(
 	}
 
 	const keys = sphereKeysFor(matters, options.spheres);
-	const shown = (m: MatterInfo) => m.isInbox || keys.length === 0 || sphereShown(m.sphere, options.spheresOff, keys);
+	const shown = (m: MatterInfo) => m.isInbox || keys.length === 0 || sphereShown(m.sphere, options.spheresOff);
 
 	const lanes: BoardLane[] = [];
 	const columnCounts = new Map(columns.map((c) => [c.id, 0]));

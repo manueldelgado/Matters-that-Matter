@@ -35,9 +35,9 @@ export interface CollectionOptions {
 	showDone: boolean;
 	/** "Show done from the last N days"; null shows all closed Actions. */
 	doneDays: number | null;
-	/** Type IDs switched off in the toolbar. When every type is off, all show. */
+	/** Type IDs switched off in the toolbar. */
 	typesOff: ReadonlySet<string>;
-	/** Sphere chips switched off (NO_SPHERE for "No Sphere"). When every chip is off, all show. */
+	/** Sphere chips switched off (NO_SPHERE for "No Sphere"). */
 	spheresOff: ReadonlySet<string>;
 	/** Sphere bands collapsed on this view. */
 	spheresCollapsed: ReadonlySet<string>;
@@ -142,7 +142,7 @@ export abstract class CollectionView extends BasesView {
 	protected matterShown(matter: MatterInfo | undefined, matters: readonly MatterInfo[], off: ReadonlySet<string>): boolean {
 		if (!matter || matter.isInbox) return true;
 		const keys = sphereKeysFor(matters, this.plugin.settings.spheres);
-		return keys.length === 0 || sphereShown(matter.sphere, off, keys);
+		return keys.length === 0 || sphereShown(matter.sphere, off);
 	}
 
 	// ——— Data ———

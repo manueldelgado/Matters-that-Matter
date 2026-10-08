@@ -26,11 +26,11 @@ describe('focus', () => {
 		expect(sphereKeys(spheres, false)).toEqual(['home', 'work']);
 	});
 
-	it('shows what is on; with every chip off, everything', () => {
-		expect(sphereShown('home', new Set(['home']), keys)).toBe(false);
-		expect(sphereShown(null, new Set(['home']), keys)).toBe(true);
-		expect(sphereShown(null, new Set([NO_SPHERE]), keys)).toBe(false);
-		expect(sphereShown('home', new Set(keys), keys)).toBe(true);
+	it('shows what is on; with every chip off, nothing', () => {
+		expect(sphereShown('home', new Set(['home']))).toBe(false);
+		expect(sphereShown(null, new Set(['home']))).toBe(true);
+		expect(sphereShown(null, new Set([NO_SPHERE]))).toBe(false);
+		expect(sphereShown('home', new Set(keys))).toBe(false);
 	});
 
 	it('names the one Sphere in focus', () => {

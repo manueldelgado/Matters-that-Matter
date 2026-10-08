@@ -21,10 +21,9 @@ export function effectiveSphere(raw: unknown, spheres: readonly SphereDef[], isI
 	return spheres.some((s) => s.id === value) ? { id: value, orphan: null } : { id: null, orphan: value };
 }
 
-/** Whether a Sphere passes the focus chips: all on by default; with every chip off, all show (as type chips). */
-export function sphereShown(id: string | null, off: ReadonlySet<string>, keys: readonly string[]): boolean {
-	const allOff = keys.length > 0 && keys.every((k) => off.has(k));
-	return allOff || !off.has(id ?? NO_SPHERE);
+/** Whether a Sphere passes the focus chips: all on by default; a chip switched off hides its Sphere, even the last one. */
+export function sphereShown(id: string | null, off: ReadonlySet<string>): boolean {
+	return !off.has(id ?? NO_SPHERE);
 }
 
 /** The chips a toolbar offers: every Sphere, plus "No Sphere" when some Matter has none. */
