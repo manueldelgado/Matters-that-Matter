@@ -692,3 +692,5 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 /* Custom review cadence: "Every <n> <unit>" under the cadence segments. */
 .mtm-cadence-custom{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
 body .mtm-cadence-custom input[type=number]{width:64px}
+/* Settings hero inside a declarative render row (.setting-item): fill the row; the group card replaces the divider. */
+.mtm-settings .setting-item > .mtm-settings-hero{flex:1;padding:4px 0;margin-bottom:0;border-bottom:0}

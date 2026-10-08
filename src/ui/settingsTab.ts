@@ -1,6 +1,7 @@
 // Settings tab: folders, board defaults, and the status and type editors.
+// Declarative, so Obsidian's settings search indexes every setting.
 
-import { debounce, normalizePath, Notice, PluginSettingTab, Setting, type App } from 'obsidian';
+import { debounce, normalizePath, Notice, PluginSettingTab, type App, type Setting, type SettingDefinition, type SettingDefinitionItem } from 'obsidian';
 import type MattersPlugin from '../main';
 import type { MattersSettings, StatusDef, TypeDef } from '../settings';
 import { STRINGS } from '../strings';
@@ -12,6 +13,7 @@ import { TypeEditor } from './components/typeEditor';
 import { DeleteModal } from './modals/deleteModal';
 
 type FolderKey = keyof MattersSettings['folders'];
+const FOLDER_PREFIX = 'folders.';
 
 export class MattersSettingTab extends PluginSettingTab {
 	private statusEditor: StatusEditor | null = null;
@@ -20,55 +22,111 @@ export class MattersSettingTab extends PluginSettingTab {
 
 	constructor(app: App, private plugin: MattersPlugin) {
 		super(app, plugin);
+		this.containerEl.addClass('mtm-settings');
 	}
 
-	display(): void {
-		const { containerEl } = this;
+	getSettingDefinitions(): SettingDefinitionItem[] {
 		const s = STRINGS.settings;
-		containerEl.empty();
-		containerEl.addClass('mtm-settings');
+		return [
+			{ name: STRINGS.pluginName, searchable: false, render: (setting) => this.renderHero(setting) },
+			{
+				type: 'group',
+				heading: s.folders,
+				items: [
+					{ name: s.folders, searchable: false, render: (setting) => { setting.setName('').setDesc(s.foldersNote); } },
+					this.folder('matters', s.mattersFolder, s.mattersFolderDesc),
+					this.folder('actions', s.actionsFolder, s.actionsFolderDesc),
+					this.folder('boards', s.boardsFolder, s.boardsFolderDesc),
+					this.folder('people', s.peopleFolder, s.peopleFolderDesc),
+				],
+			},
+			{
+				type: 'group',
+				heading: s.board,
+				items: [
+					{
+						name: s.inboxLane,
+						desc: s.inboxLaneDesc,
+						control: {
+							type: 'dropdown',
+							key: 'defaultInboxPosition',
+							options: { top: STRINGS.views.options.first, bottom: STRINGS.views.options.last },
+						},
+					},
+					{ name: s.showDone, desc: s.showDoneDesc, control: { type: 'toggle', key: 'showDone' } },
+					{
+						name: s.weekStart,
+						desc: s.weekStartDesc,
+						control: { type: 'dropdown', key: 'weekStart', options: { monday: s.monday, sunday: s.sunday } },
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: s.statuses,
+				items: [{ name: s.statuses, desc: s.statusesDesc, aliases: [...s.statusesAliases], render: (setting) => this.renderStatuses(setting) }],
+			},
+			{
+				type: 'group',
+				heading: s.types,
+				items: [{ name: s.types, desc: s.typesDesc, aliases: [...s.typesAliases], render: (setting) => this.renderTypes(setting) }],
+			},
+		];
+	}
 
-		const hero = containerEl.createDiv({ cls: 'mtm-settings-hero' });
+	getControlValue(key: string): unknown {
+		if (key.startsWith(FOLDER_PREFIX)) return this.plugin.settings.folders[key.slice(FOLDER_PREFIX.length) as FolderKey];
+		return this.plugin.settings[key as keyof MattersSettings];
+	}
+
+	setControlValue(key: string, value: unknown): void | Promise<void> {
+		const settings = this.plugin.settings;
+		if (key.startsWith(FOLDER_PREFIX)) {
+			settings.folders[key.slice(FOLDER_PREFIX.length) as FolderKey] = normalizePath(String(value).trim());
+			this.saveSoon();
+			return;
+		}
+		if (key === 'defaultInboxPosition') settings.defaultInboxPosition = value === 'bottom' ? 'bottom' : 'top';
+		else if (key === 'showDone') settings.showDone = value === true;
+		else if (key === 'weekStart') settings.weekStart = value === 'sunday' ? 'sunday' : 'monday';
+		else return;
+		return this.plugin.saveSettings();
+	}
+
+	hide(): void {
+		// Flush a pending edit before the tab closes.
+		this.saveSoon.run();
+		super.hide();
+	}
+
+	private folder(key: FolderKey, name: string, desc: string): SettingDefinition {
+		return {
+			name,
+			desc,
+			control: {
+				type: 'folder',
+				key: FOLDER_PREFIX + key,
+				validate: (value) => {
+					const path = normalizePath(value.trim());
+					return !value.trim() || path === '/' ? STRINGS.settings.folderRequired : undefined;
+				},
+			},
+		};
+	}
+
+	private renderHero(setting: Setting): void {
+		setting.settingEl.empty();
+		const hero = setting.settingEl.createDiv({ cls: 'mtm-settings-hero' });
 		const heroText = hero.createDiv();
 		heroText.createDiv({ cls: 'mtm-settings-hero-title', text: STRINGS.pluginName });
-		heroText.createDiv({ cls: 'mtm-settings-hero-sub', text: s.heroSub });
+		heroText.createDiv({ cls: 'mtm-settings-hero-sub', text: STRINGS.settings.heroSub });
 		hero.createSpan({ cls: 'mtm-spacer' });
-		hero.createEl('button', { text: s.runSetupAgain }).addEventListener('click', () => void this.plugin.openSetup());
+		hero.createEl('button', { text: STRINGS.settings.runSetupAgain }).addEventListener('click', () => void this.plugin.openSetup());
+	}
 
-		new Setting(containerEl).setName(s.folders).setDesc(s.foldersNote).setHeading();
-		this.folder(containerEl, 'matters', s.mattersFolder, s.mattersFolderDesc);
-		this.folder(containerEl, 'actions', s.actionsFolder, s.actionsFolderDesc);
-		this.folder(containerEl, 'boards', s.boardsFolder, s.boardsFolderDesc);
-		this.folder(containerEl, 'people', s.peopleFolder, s.peopleFolderDesc);
-
-		new Setting(containerEl).setName(s.board).setHeading();
-		new Setting(containerEl)
-			.setName(s.inboxLane)
-			.setDesc(s.inboxLaneDesc)
-			.addDropdown((d) =>
-				d
-					.addOption('top', STRINGS.views.options.first)
-					.addOption('bottom', STRINGS.views.options.last)
-					.setValue(this.plugin.settings.defaultInboxPosition)
-					.onChange((v) => this.save({ defaultInboxPosition: v === 'bottom' ? 'bottom' : 'top' })),
-			);
-		new Setting(containerEl)
-			.setName(s.showDone)
-			.setDesc(s.showDoneDesc)
-			.addToggle((t) => t.setValue(this.plugin.settings.showDone).onChange((v) => this.save({ showDone: v })));
-		new Setting(containerEl)
-			.setName(s.weekStart)
-			.setDesc(s.weekStartDesc)
-			.addDropdown((d) =>
-				d
-					.addOption('monday', s.monday)
-					.addOption('sunday', s.sunday)
-					.setValue(this.plugin.settings.weekStart)
-					.onChange((v) => this.save({ weekStart: v === 'sunday' ? 'sunday' : 'monday' })),
-			);
-
-		new Setting(containerEl).setName(s.statuses).setHeading();
-		this.statusEditor = new StatusEditor(containerEl.createDiv(), {
+	private renderStatuses(setting: Setting): () => void {
+		setting.settingEl.empty();
+		this.statusEditor = new StatusEditor(setting.settingEl, {
 			statuses: this.plugin.settings.statuses,
 			onChange: (statuses) => {
 				this.plugin.settings.statuses = statuses;
@@ -76,9 +134,12 @@ export class MattersSettingTab extends PluginSettingTab {
 			},
 			onDelete: (status) => this.deleteStatus(status),
 		});
+		return () => (this.statusEditor = null);
+	}
 
-		new Setting(containerEl).setName(s.types).setHeading();
-		this.typeEditor = new TypeEditor(this.app, containerEl.createDiv(), {
+	private renderTypes(setting: Setting): () => void {
+		setting.settingEl.empty();
+		this.typeEditor = new TypeEditor(this.app, setting.settingEl, {
 			types: this.plugin.settings.types,
 			onChange: (types) => {
 				this.plugin.settings.types = types;
@@ -86,30 +147,7 @@ export class MattersSettingTab extends PluginSettingTab {
 			},
 			onDelete: (type) => this.deleteType(type),
 		});
-	}
-
-	hide(): void {
-		// Flush a pending label edit before the tab closes.
-		this.saveSoon.run();
-	}
-
-	private folder(containerEl: HTMLElement, key: FolderKey, name: string, desc: string): void {
-		new Setting(containerEl)
-			.setName(name)
-			.setDesc(desc)
-			.addText((t) =>
-				t.setValue(this.plugin.settings.folders[key]).onChange((value) => {
-					const path = normalizePath(value.trim());
-					if (!path || path === '/') return;
-					this.plugin.settings.folders[key] = path;
-					this.saveSoon();
-				}),
-			);
-	}
-
-	private save(patch: Partial<MattersSettings>): void {
-		Object.assign(this.plugin.settings, patch);
-		void this.plugin.saveSettings();
+		return () => (this.typeEditor = null);
 	}
 
 	private deleteStatus(status: StatusDef): void {

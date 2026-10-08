@@ -42,6 +42,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Keep startup light: `onload` registers things and loads settings; heavier work waits for `workspace.onLayoutReady` or first use. Debounce work triggered by vault events.
 - Commands via `this.addCommand` with stable IDs (never rename after release); no default hotkeys.
 - Persist settings with `loadData`/`saveData`.
+- Settings tab: declarative `getSettingDefinitions()`, no `display()` (`minAppVersion` 1.13.0 or later). Custom UI goes in `render` rows.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies

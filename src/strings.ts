@@ -193,8 +193,13 @@ export const STRINGS = {
 		weekStartDesc: 'For the calendar and timeline.',
 		monday: 'Monday',
 		sunday: 'Sunday',
+		folderRequired: 'Enter a folder path inside the vault.',
 		statuses: 'Statuses',
+		statusesDesc: 'The columns of the board, in order.',
+		statusesAliases: ['workflow', 'columns', 'backlog', 'done'],
 		types: 'Action types',
+		typesDesc: 'The colour and icon of every Action.',
+		typesAliases: ['colours', 'icons', 'default type'],
 	},
 
 	setup: {

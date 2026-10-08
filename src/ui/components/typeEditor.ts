@@ -92,15 +92,15 @@ export class TypeEditor {
 
 		swatches(row, type.tone, (tone) => this.update(current.id, { tone }));
 
-		if (type.default) {
-			row.createSpan({ cls: 'mtm-default-badge', text: STRINGS.editors.default });
-		} else {
-			const marker = row.createEl('button', { cls: 'mtm-marker', text: STRINGS.editors.default, attr: { 'aria-label': STRINGS.editors.makeDefault } });
-			marker.addEventListener('click', () => {
-				const next = setDefaultType(this.types, current.id);
-				if (next) this.commit(next);
-			});
-		}
+		// Same element in both states, like the status editor's markers, so the row never shifts.
+		const marker = row.createEl('button', { cls: 'mtm-marker', text: STRINGS.editors.default });
+		if (type.default) marker.addClass('is-active');
+		else marker.setAttr('aria-label', STRINGS.editors.makeDefault);
+		marker.addEventListener('click', () => {
+			if (current.default) return;
+			const next = setDefaultType(this.types, current.id);
+			if (next) this.commit(next);
+		});
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteType } });
 		appendIcon(del, 'trash-2');
