@@ -7,7 +7,7 @@ import { buildTimeline, dragDates, openingDay, timelineRange, weekStartOf } from
 const resolve = (text: string) => ({ path: `M/${text}.md`, isMatter: true });
 const action = (title: string, fm: Record<string, unknown>) =>
 	toActionItem(`A/${title}.md`, title, { 'mtm-kind': 'action', 'mtm-status': 'next', ...fm }, DEFAULT_SETTINGS, resolve);
-const matter = (name: string): MatterInfo => ({ path: `M/${name}.md`, name, laneOrder: null, isInbox: false, icon: 'circle-dot', state: 'active', review: null });
+const matter = (name: string): MatterInfo => ({ path: `M/${name}.md`, name, laneOrder: null, isInbox: false, icon: 'circle-dot', state: 'active', review: null, sphere: null, sphereOrphan: null });
 
 // Thursday 8 October 2026.
 const today = '2026-10-08';

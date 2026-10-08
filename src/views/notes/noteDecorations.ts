@@ -203,11 +203,12 @@ export class NoteDecorations {
 			review = { state, label };
 		}
 
-		const signature = JSON.stringify([file.path, matter, stats, review]);
+		const sphere = settings.spheres.find((x) => x.id === matter.sphere)?.label ?? null;
+		const signature = JSON.stringify([file.path, matter, stats, review, sphere]);
 		if (this.unchanged(view, signature, force)) return;
 		this.signatures.set(view, signature);
 
-		this.place(view, ['mtm-matter-note'], () => [renderMatterBanner({ matter, stats, review }, () => void this.plugin.openMatter(file.path))]);
+		this.place(view, ['mtm-matter-note'], () => [renderMatterBanner({ matter, sphere, stats, review }, () => void this.plugin.openMatter(file.path))]);
 	}
 
 	// ——— Handlers ———

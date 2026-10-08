@@ -7,6 +7,7 @@ import { matterState, parseCadence, parseLaneOrder, reviewInfo } from '../model/
 import { toActionItem, type ActionItem } from '../services/actionItems';
 import { linkText, type ResolveLink } from '../services/effective';
 import type { MatterInfo } from '../services/boardModel';
+import { effectiveSphere } from '../services/spheres';
 import { frontmatterOf, notesOfKind } from './notes';
 
 export const DEFAULT_MATTER_ICON = 'circle-dot';
@@ -67,6 +68,7 @@ export function matterInfo(app: App, file: TFile, settings: MattersSettings, tod
 	const icon = typeof fm['mtm-icon'] === 'string' && fm['mtm-icon'].trim() ? fm['mtm-icon'].trim() : DEFAULT_MATTER_ICON;
 	const state = isInbox ? 'active' : matterState(fm['mtm-state']);
 	const cadence = parseCadence(fm['mtm-review-every']);
+	const sphere = effectiveSphere(fm['mtm-sphere'], settings.spheres, isInbox);
 	return {
 		path: file.path,
 		name: file.basename,
@@ -75,6 +77,8 @@ export function matterInfo(app: App, file: TFile, settings: MattersSettings, tod
 		icon: isInbox && !fm['mtm-icon'] ? 'inbox' : icon,
 		state,
 		review: isInbox || !cadence ? null : reviewInfo(fm['mtm-review-every'], fm['mtm-last-reviewed'], today),
+		sphere: sphere.id,
+		sphereOrphan: sphere.orphan,
 	};
 }
 
@@ -86,7 +90,7 @@ export function allMatters(app: App, settings: MattersSettings, today: Ymd): Mat
 	const matters = files.map((f) => matterInfo(app, f, settings, today));
 	if (!inboxFile) {
 		const name = settings.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? 'Inbox';
-		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null });
+		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null, sphere: null, sphereOrphan: null });
 	}
 	return matters;
 }

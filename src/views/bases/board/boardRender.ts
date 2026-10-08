@@ -4,12 +4,15 @@ import { setIcon, setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
-import type { BoardLane, BoardModel } from '../../../services/boardModel';
+import type { BoardBand, BoardLane, BoardModel } from '../../../services/boardModel';
+import { NO_SPHERE } from '../../../services/spheres';
 import { appendIcon, statusClasses, tileEl, typeClasses } from '../../../ui/components/dom';
-import { renderCard } from '../../../ui/components/card';
+import { orphanBadge, renderCard } from '../../../ui/components/card';
+import { NO_SPHERE_ICON } from '../collectionView';
 
 export interface BoardHandlers {
 	toggleType(typeId: string): void;
+	toggleSphere(key: string): void;
 	toggleDone(): void;
 	newAction(statusId?: string, matterPath?: string): void;
 	newMatter(): void;
@@ -17,6 +20,11 @@ export interface BoardHandlers {
 	openMatter(path: string): void;
 	laneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void;
 	markReviewed(path: string): void;
+	/** Collapses or expands a Sphere band (NO_SPHERE for "No Sphere"). */
+	toggleBand(key: string): void;
+	bandMenu(band: BoardBand, e: MouseEvent, button: HTMLElement): void;
+	/** Removes an `mtm-sphere` value that names no Sphere. */
+	dismissSphere(path: string): void;
 	select(path: string): void;
 	open(path: string, e: MouseEvent | KeyboardEvent): void;
 	dismiss(item: ActionItem): void;
@@ -55,7 +63,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 	const reviewDue = !!m.review?.due && m.state === 'active';
 	const header = board.createDiv({
 		cls: ['mtm-lane-header', ...laneMods(lane), ...(lane.collapsed ? ['is-collapsed'] : []), ...(reviewDue ? ['is-review-due'] : [])],
-		attr: { 'data-lane': m.path },
+		attr: { 'data-lane': m.path, ...(m.isInbox ? {} : { 'data-sphere': m.sphere ?? NO_SPHERE }) },
 	});
 
 	const row = header.createDiv({ cls: 'mtm-lane-row' });
@@ -86,6 +94,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 			appendIcon(badge, m.state === 'dormant' ? 'moon' : 'archive');
 			badge.appendText(m.state === 'dormant' ? b.dormant : b.closed);
 		}
+		if (m.sphereOrphan !== null) orphanBadge(meta, 'sphere', m.sphereOrphan, true, () => h.dismissSphere(m.path));
 		const r = m.review;
 		if (r && m.state === 'active') {
 			const kind = r.lastReviewed === null ? 'never' : r.due ? 'overdue' : 'ontime';
@@ -163,12 +172,67 @@ export function renderBoard(view: HTMLElement, input: RenderInput, h: BoardHandl
 		header.createSpan({ cls: 'mtm-col-count', text: String(model.columnCounts.get(column.id) ?? 0) });
 	}
 
-	model.lanes.forEach((lane, i) => {
-		const inbox = lane.matter.isInbox;
-		if (inbox && i > 0) board.createDiv({ cls: 'mtm-lane-sep' });
+	const renderLane = (lane: BoardLane) => {
 		renderLaneHeader(board, lane, h);
 		for (const column of model.columns) renderCell(board, lane, column, input, h);
-		if (inbox && i === 0 && model.lanes.length > 1) board.createDiv({ cls: 'mtm-lane-sep' });
-	});
+	};
+	if (!model.bands) {
+		model.lanes.forEach((lane, i) => {
+			const inbox = lane.matter.isInbox;
+			if (inbox && i > 0) board.createDiv({ cls: 'mtm-lane-sep' });
+			renderLane(lane);
+			if (inbox && i === 0 && model.lanes.length > 1) board.createDiv({ cls: 'mtm-lane-sep' });
+		});
+		return scroll;
+	}
+
+	board.addClass('has-spheres');
+	const inbox = model.lanes.find((l) => l.matter.isInbox);
+	const inboxFirst = !!inbox && model.lanes[0] === inbox;
+	if (inbox && inboxFirst) {
+		renderLane(inbox);
+		if (model.bands.length) board.createDiv({ cls: 'mtm-lane-sep' });
+	}
+	for (const band of model.bands) {
+		renderBand(board, band, model, h);
+		if (!band.collapsed) band.lanes.forEach(renderLane);
+	}
+	if (inbox && !inboxFirst) {
+		if (model.bands.length) board.createDiv({ cls: 'mtm-lane-sep' });
+		renderLane(inbox);
+	}
 	return scroll;
+}
+
+/** A Sphere band: a full-width row above its lanes, with the Sphere's count in every column. */
+function renderBand(board: HTMLElement, band: BoardBand, model: BoardModel, h: BoardHandlers): void {
+	const key = band.sphere?.id ?? NO_SPHERE;
+	const el = board.createDiv({
+		cls: ['mtm-sphere-band', ...(band.sphere ? [] : ['mod-none']), ...(band.collapsed ? ['is-collapsed'] : [])],
+		attr: { 'data-sphere': key },
+	});
+	const head = el.createDiv({ cls: 'mtm-sphere-head' });
+	const toggle = head.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': STRINGS.board.collapse, role: 'button' } });
+	appendIcon(toggle, 'chevron-down');
+	toggle.addEventListener('click', () => h.toggleBand(key));
+	tileEl(head, band.sphere?.icon ?? NO_SPHERE_ICON, 'mod-neutral');
+	const title = head.createSpan({ cls: 'mtm-sphere-title', text: band.sphere?.label ?? STRINGS.spheres.none });
+	title.addEventListener('click', () => h.toggleBand(key));
+	const menu = head.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': STRINGS.spheres.menu } });
+	appendIcon(menu, 'ellipsis');
+	menu.addEventListener('click', (e) => h.bandMenu(band, e, menu));
+
+	for (const column of model.columns) {
+		const entry = band.counts.byStatus.get(column.id);
+		const cell = el.createDiv({ cls: ['mtm-sphere-count', ...statusClasses(column)] });
+		if (!entry) continue;
+		cell.createSpan({ cls: 'mtm-status-dot' });
+		cell.appendText(String(entry.count));
+		if (entry.late) {
+			const late = cell.createSpan({ cls: 'mtm-sphere-late' });
+			appendIcon(late, 'circle-alert');
+			late.appendText(String(entry.late));
+		}
+		setTooltip(cell, STRINGS.spheres.columnTitle(entry.count, column.label, entry.late));
+	}
 }

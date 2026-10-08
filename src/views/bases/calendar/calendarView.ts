@@ -37,12 +37,14 @@ export class CalendarView extends CollectionView {
 		const options = this.collectionOptions();
 		const all = this.actions();
 		const typeIds = settings.types.map((t) => t.id);
+		const matters = allMatters(app, settings, today);
+		const byPath = new Map(matters.map((m) => [m.path, m]));
 		const items = all.filter(
 			(a) =>
 				typeShown(a.effective.type.id, options.typesOff, typeIds) &&
-				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today),
+				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today) &&
+				this.matterShown(byPath.get(a.effective.matterPath), matters, options.spheresOff),
 		);
-		const matters = allMatters(app, settings, today);
 		const grid = monthWeeks(this.month, settings.weekStart);
 		const inGrid = (d: Ymd | null): d is Ymd => !!d && grid.some((w) => w.includes(d));
 		// The picked day stays while it is on screen; otherwise today in the current month, else the first day.
@@ -57,8 +59,9 @@ export class CalendarView extends CollectionView {
 			settings.statuses,
 			settings.types,
 			settings.weekStart,
-			{ ...options, typesOff: [...options.typesOff] },
-			matters.map((m) => [m.path, m.name]),
+			settings.spheres,
+			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff] },
+			matters.map((m) => [m.path, m.name, m.sphere]),
 			items.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed]),
 		]);
 		if (!force && signature === this.signature) return;
@@ -76,8 +79,19 @@ export class CalendarView extends CollectionView {
 		const openCount = all.filter((a) => a.category !== 'closed').length;
 		renderToolbar(
 			view,
-			{ types: settings.types, typesOff: options.typesOff, showDone: options.showDone, openCount: all.length ? openCount : null },
-			{ toggleType: (id) => this.toggleType(id), toggleDone: () => this.toggleDone(), newAction: () => this.plugin.quickAdd() },
+			{
+				types: settings.types,
+				typesOff: options.typesOff,
+				spheres: this.sphereChips(matters, all, options.spheresOff),
+				showDone: options.showDone,
+				openCount: all.length ? openCount : null,
+			},
+			{
+				toggleType: (id) => this.toggleType(id),
+				toggleSphere: (key) => this.toggleSphere(key),
+				toggleDone: () => this.toggleDone(),
+				newAction: () => this.plugin.quickAdd(),
+			},
 		);
 		if (!all.length) {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd(), newMatter: () => this.plugin.newMatter() });

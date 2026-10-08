@@ -3,7 +3,9 @@
 import { Keymap, setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
-import type { ListGroup } from '../../../services/listModel';
+import type { ListGroup, ListLayout, ListSection } from '../../../services/listModel';
+import { NO_SPHERE } from '../../../services/spheres';
+import { NO_SPHERE_ICON } from '../collectionView';
 import { avatarEl, dueEl, orphanBadge, priorityEl } from '../../../ui/components/card';
 import { appendIcon, pressable, statusChip, tileEl, typeClasses } from '../../../ui/components/dom';
 
@@ -15,34 +17,62 @@ export interface ListHandlers {
 	select: (path: string) => void;
 	open: (path: string, e: MouseEvent | KeyboardEvent) => void;
 	dismiss: (item: ActionItem) => void;
+	toggleSection: (key: string) => void;
 }
 
 export interface ListInput {
-	groups: ListGroup[];
+	layout: ListLayout;
 	selected: string | null;
 	now: Date;
 }
 
 export function renderList(view: HTMLElement, input: ListInput, h: ListHandlers): HTMLElement {
 	const scroll = view.createDiv({ cls: 'mtm-scroll' });
-	if (!input.groups.length) {
+	const { layout } = input;
+	if (!layout.groups.length) {
 		scroll.createDiv({ cls: 'mtm-empty', text: STRINGS.list.noMatches });
 		return scroll;
 	}
 	const table = scroll.createDiv({ cls: 'mtm-table' });
 	const head = table.createDiv({ cls: 'mtm-table-head' });
 	for (const label of STRINGS.list.columns) head.createSpan({ text: label });
-	for (const group of input.groups) {
-		renderGroupHeader(table, group, h);
+	const renderGroup = (group: ListGroup, inSphere = false) => {
+		renderGroupHeader(table, group, h, inSphere);
 		for (const item of group.rows) renderRow(table, item, input, h);
+	};
+	if (!layout.sections) {
+		layout.groups.forEach((g) => renderGroup(g));
+		return scroll;
 	}
+	if (layout.inbox && layout.inboxFirst) renderGroup(layout.inbox);
+	for (const section of layout.sections) {
+		renderSectionHeader(table, section, h);
+		if (!section.collapsed) section.groups.forEach((g) => renderGroup(g, true));
+	}
+	if (layout.inbox && !layout.inboxFirst) renderGroup(layout.inbox);
 	return scroll;
 }
 
-function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers): void {
+/** A Sphere heading with its counts; collapsing it hides its Matters. */
+function renderSectionHeader(table: HTMLElement, section: ListSection, h: ListHandlers): void {
+	const sp = STRINGS.spheres;
+	const key = section.sphere?.id ?? NO_SPHERE;
+	const header = table.createDiv({ cls: ['mtm-table-sphere', ...(section.collapsed ? ['is-collapsed'] : [])] });
+	const toggle = pressable(header.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': STRINGS.board.collapse } }), () => h.toggleSection(key));
+	appendIcon(toggle, 'chevron-down');
+	tileEl(header, section.sphere?.icon ?? NO_SPHERE_ICON, 'mod-neutral');
+	pressable(header.createSpan({ cls: 'mtm-table-sphere-title', text: section.sphere?.label ?? sp.none }), () => h.toggleSection(key));
+	const meta = header.createSpan({ cls: 'mtm-table-sphere-meta' });
+	const { open, late, waiting } = section.counts;
+	meta.createSpan({ text: sp.open(open) });
+	if (late) meta.createSpan({ cls: 'mod-late', text: sp.late(late) });
+	if (waiting) meta.createSpan({ cls: 'mod-waiting', text: sp.waiting(waiting) });
+}
+
+function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers, inSphere: boolean): void {
 	const l = STRINGS.list;
 	const { matter, openCount, waitingCount } = group.lane;
-	const header = table.createDiv({ cls: 'mtm-table-group' });
+	const header = table.createDiv({ cls: ['mtm-table-group', ...(inSphere ? ['mod-in-sphere'] : [])] });
 	setIcon(header.createSpan({ cls: 'mtm-matter-icon' }), matter.icon);
 	pressable(header.createSpan({ cls: 'mtm-table-group-title', text: matter.name }), () => h.openMatter(matter.path));
 	const meta = matter.isInbox ? l.notFiled : [l.open(openCount), ...(waitingCount ? [l.waiting(waitingCount)] : [])].join(' · ');

@@ -5,11 +5,10 @@ import type MattersPlugin from '../../../main';
 import { STRINGS } from '../../../strings';
 import { isShownByDone } from '../../../model/actions';
 import { addDays, daysBetween, toYmd, type Ymd } from '../../../model/dates';
-import { orderLanes } from '../../../model/matters';
 import type { ActionItem } from '../../../services/actionItems';
 import { VIEW_TYPES } from '../../../services/baseFile';
-import { typeShown, type MatterInfo } from '../../../services/boardModel';
-import { buildTimeline, dragDates, openingDay, timelineRange, type DragEdge, type TimelineRange } from '../../../services/timelineModel';
+import { orderMatters, typeShown } from '../../../services/boardModel';
+import { buildTimeline, dragDates, openingDay, timelineRange, timelineSections, type DragEdge, type TimelineRange } from '../../../services/timelineModel';
 import { editAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
 import { renderEmpty } from '../board/boardRender';
@@ -53,20 +52,26 @@ export class TimelineView extends CollectionView {
 		const options = this.collectionOptions();
 		const all = this.actions();
 		const typeIds = settings.types.map((t) => t.id);
+		const allMatterInfo = allMatters(app, settings, today);
+		const matters = orderMatters(allMatterInfo, settings.spheres, options.inboxPosition).filter((m) =>
+			this.matterShown(m, allMatterInfo, options.spheresOff),
+		);
+		const shownPaths = new Set(matters.map((m) => m.path));
 		const items = all.filter(
 			(a) =>
 				typeShown(a.effective.type.id, options.typesOff, typeIds) &&
-				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today),
+				isShownByDone(a.category, a.completed, options.showDone, options.doneDays, today) &&
+				shownPaths.has(a.effective.matterPath),
 		);
-		const matters = orderLanes(allMatters(app, settings, today), options.inboxPosition) as MatterInfo[];
 
 		const signature = JSON.stringify([
 			today,
 			settings.statuses,
 			settings.types,
 			settings.weekStart,
-			{ ...options, typesOff: [...options.typesOff] },
-			matters.map((m) => [m.path, m.name, m.icon]),
+			settings.spheres,
+			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
+			matters.map((m) => [m.path, m.name, m.icon, m.sphere]),
 			items.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn]),
 		]);
 		if (!force && signature === this.signature) return;
@@ -77,6 +82,7 @@ export class TimelineView extends CollectionView {
 		const range = timelineRange(today, settings.weekStart);
 		this.range = range;
 		const groups = buildTimeline(items, matters, range);
+		const sections = settings.spheres.length ? timelineSections(groups, settings.spheres, options.spheresCollapsed) : null;
 		const names = new Map(matters.map((m) => [m.path, m.name]));
 
 		this.resize.disconnect();
@@ -87,8 +93,19 @@ export class TimelineView extends CollectionView {
 		const openCount = all.filter((a) => a.category !== 'closed').length;
 		renderToolbar(
 			view,
-			{ types: settings.types, typesOff: options.typesOff, showDone: options.showDone, openCount: all.length ? openCount : null },
-			{ toggleType: (id) => this.toggleType(id), toggleDone: () => this.toggleDone(), newAction: () => this.plugin.quickAdd() },
+			{
+				types: settings.types,
+				typesOff: options.typesOff,
+				spheres: this.sphereChips(allMatterInfo, all, options.spheresOff),
+				showDone: options.showDone,
+				openCount: all.length ? openCount : null,
+			},
+			{
+				toggleType: (id) => this.toggleType(id),
+				toggleSphere: (key) => this.toggleSphere(key),
+				toggleDone: () => this.toggleDone(),
+				newAction: () => this.plugin.quickAdd(),
+			},
 		);
 		if (!all.length) {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd(), newMatter: () => this.plugin.newMatter() });
@@ -105,6 +122,7 @@ export class TimelineView extends CollectionView {
 			{
 				range,
 				groups,
+				sections,
 				weekStart: settings.weekStart,
 				today,
 				selected: this.plugin.selection.path,
@@ -234,6 +252,7 @@ export class TimelineView extends CollectionView {
 		earlier: () => this.scrollEl?.scrollBy({ left: -7 * this.dayWidth(), behavior: 'smooth' }),
 		later: () => this.scrollEl?.scrollBy({ left: 7 * this.dayWidth(), behavior: 'smooth' }),
 		openMatter: (path) => void this.plugin.openMatter(path),
+		toggleSection: (key) => this.toggleSphereCollapsed(key),
 		select: (path) => this.select(path),
 		open: (path, e) => this.open(path, e),
 	};

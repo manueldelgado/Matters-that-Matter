@@ -148,14 +148,20 @@ export default class MattersPlugin extends Plugin {
 		new QuickAddModal(this, init).open();
 	}
 
-	newMatter(): void {
-		new NewMatterModal(this.app, async (result) => {
-			try {
-				await createMatter(this.app, this.settings, result);
-			} catch (e) {
-				new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
-			}
-		}).open();
+	/** The New Matter dialog; from a board focused on one Sphere it starts in that Sphere. */
+	newMatter(sphereId: string | null = null): void {
+		new NewMatterModal(
+			this.app,
+			async (result) => {
+				try {
+					await createMatter(this.app, this.settings, result);
+				} catch (e) {
+					new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+				}
+			},
+			'',
+			{ spheres: this.settings.spheres, sphereId },
+		).open();
 	}
 
 	/** Selects an Action and shows it in the inspector, opening the inspector if needed. */

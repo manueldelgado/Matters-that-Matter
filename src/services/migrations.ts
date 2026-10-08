@@ -1,14 +1,17 @@
 // Settings loading: schema migrations, defaults for missing keys, and flag repair.
 
-import { DEFAULT_SETTINGS, type MattersSettings } from '../settings';
+import { DEFAULT_SETTINGS, type MattersSettings, type SphereDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
-export const CURRENT_SCHEMA = 1;
+export const CURRENT_SCHEMA = 2;
 
 type Data = Record<string, unknown>;
 
 /** Steps from version n to n + 1, indexed by n. Every change to settings or properties adds one. */
-const STEPS: Record<number, (data: Data) => Data> = {};
+const STEPS: Record<number, (data: Data) => Data> = {
+	// 2: Spheres group Matters; none until the user adds some.
+	1: (data) => ({ ...data, spheres: [] }),
+};
 
 const isObject = (v: unknown): v is Data => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -40,6 +43,7 @@ export function migrateSettings(saved: unknown): MattersSettings {
 	};
 	settings.statuses = validItems(settings.statuses) ?? defaults.statuses;
 	settings.types = validItems(settings.types) ?? defaults.types;
+	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 
 	return { ...settings, ...normaliseFlags(settings.statuses, settings.types) };
 }

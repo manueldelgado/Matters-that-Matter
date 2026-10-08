@@ -44,10 +44,19 @@ export async function setMatterIcon(app: App, file: TFile, icon: string): Promis
 	});
 }
 
+/** Puts a Matter in a Sphere, or in none (removes the property). */
+export async function setMatterSphere(app: App, file: TFile, sphereId: string | null): Promise<void> {
+	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		if (sphereId) fm['mtm-sphere'] = sphereId;
+		else delete fm['mtm-sphere'];
+	});
+}
+
 export interface NewMatter {
 	name: string;
 	icon: string;
 	reviewEvery: string | null;
+	sphereId?: string | null;
 }
 
 /** Creates an active Matter in the Matters folder, after the last lane. */
@@ -63,5 +72,6 @@ export async function createMatter(app: App, settings: MattersSettings, init: Ne
 		'mtm-lane-order': Math.floor(maxLaneOrder(app) ?? 0) + 1,
 	};
 	if (init.reviewEvery) fm['mtm-review-every'] = init.reviewEvery;
+	if (init.sphereId) fm['mtm-sphere'] = init.sphereId;
 	return createNote(app, `${folder}/${title}.md`, fm);
 }

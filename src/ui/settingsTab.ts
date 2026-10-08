@@ -3,13 +3,14 @@
 
 import { debounce, normalizePath, Notice, PluginSettingTab, type App, type Setting, type SettingDefinition, type SettingDefinitionItem } from 'obsidian';
 import type MattersPlugin from '../main';
-import type { MattersSettings, StatusDef, TypeDef } from '../settings';
+import type { MattersSettings, SphereDef, StatusDef, TypeDef } from '../settings';
 import { STRINGS } from '../strings';
 import { backlogStatus, defaultType } from '../model/workflow';
-import { actionsUsing, moveStatus, moveType } from '../vault/workflowWrites';
+import { actionsUsing, mattersInSphere, moveSphere, moveStatus, moveType } from '../vault/workflowWrites';
 import { statusChip, tileEl, typeClasses } from './components/dom';
 import { StatusEditor } from './components/statusEditor';
 import { TypeEditor } from './components/typeEditor';
+import { SphereEditor } from './components/sphereEditor';
 import { DeleteModal } from './modals/deleteModal';
 
 type FolderKey = keyof MattersSettings['folders'];
@@ -18,6 +19,7 @@ const FOLDER_PREFIX = 'folders.';
 export class MattersSettingTab extends PluginSettingTab {
 	private statusEditor: StatusEditor | null = null;
 	private typeEditor: TypeEditor | null = null;
+	private sphereEditor: SphereEditor | null = null;
 	private saveSoon = debounce(() => void this.plugin.saveSettings(), 400, true);
 
 	constructor(app: App, private plugin: MattersPlugin) {
@@ -70,6 +72,14 @@ export class MattersSettingTab extends PluginSettingTab {
 				type: 'group',
 				heading: s.types,
 				items: [{ name: s.types, desc: s.typesDesc, aliases: [...s.typesAliases], render: (setting) => this.renderTypes(setting) }],
+			},
+			{
+				type: 'group',
+				heading: s.spheres,
+				items: [
+					{ name: '', searchable: false, render: (setting) => { setting.setName('').setDesc(s.spheresDesc); } },
+					{ name: s.spheres, desc: s.spheresDesc, aliases: [...s.spheresAliases], render: (setting) => this.renderSpheres(setting) },
+				],
 			},
 		];
 	}
@@ -148,6 +158,46 @@ export class MattersSettingTab extends PluginSettingTab {
 			onDelete: (type) => this.deleteType(type),
 		});
 		return () => (this.typeEditor = null);
+	}
+
+	private renderSpheres(setting: Setting): () => void {
+		setting.settingEl.empty();
+		this.sphereEditor = new SphereEditor(this.app, setting.settingEl, {
+			spheres: this.plugin.settings.spheres,
+			count: (id) => mattersInSphere(this.app, id).length,
+			onChange: (spheres) => {
+				this.plugin.settings.spheres = spheres;
+				this.saveSoon();
+			},
+			onDelete: (sphere) => this.deleteSphere(sphere),
+		});
+		return () => (this.sphereEditor = null);
+	}
+
+	/** Matters in the Sphere move to another one or to none (preselected) first; settings are saved last. */
+	private deleteSphere(sphere: SphereDef): void {
+		const spheres = this.plugin.settings.spheres;
+		const files = mattersInSphere(this.app, sphere.id);
+		const none = { id: '', label: STRINGS.spheres.none, icon: 'circle-dashed' };
+		new DeleteModal(this.app, {
+			kind: 'Sphere',
+			label: sphere.label,
+			count: files.length,
+			preselect: '',
+			destinations: [...spheres.filter((x) => x.id !== sphere.id), none].map((x) => ({
+				id: x.id,
+				render: (el: HTMLElement) => {
+					tileEl(el, x.icon, 'mod-sm mod-neutral');
+					el.appendText(x.label);
+				},
+			})),
+			onConfirm: async (destId) => {
+				if (files.length) new Notice(STRINGS.notices.movedMatters(await moveSphere(this.app, files, destId || null)));
+				this.plugin.settings.spheres = this.plugin.settings.spheres.filter((x) => x.id !== sphere.id);
+				await this.plugin.saveSettings();
+				this.sphereEditor?.set(this.plugin.settings.spheres);
+			},
+		}).open();
 	}
 
 	private deleteStatus(status: StatusDef): void {

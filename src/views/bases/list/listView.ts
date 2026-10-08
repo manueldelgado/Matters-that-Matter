@@ -6,7 +6,8 @@ import { toHm, toYmd } from '../../../model/dates';
 import type { ActionItem } from '../../../services/actionItems';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { buildBoard } from '../../../services/boardModel';
-import { buildList } from '../../../services/listModel';
+import { buildListLayout } from '../../../services/listModel';
+import { focusedSphere } from '../../../services/spheres';
 import { showStatusMenu } from '../../../ui/components/menus';
 import { moveAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
@@ -37,7 +38,8 @@ export class ListView extends CollectionView {
 			timedToday ? toHm(now) : '',
 			settings.statuses,
 			settings.types,
-			{ ...options, typesOff: [...options.typesOff] },
+			settings.spheres,
+			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
 			matters,
 			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.due, a.completed, a.waitingOn, a.linkedCount]),
 		]);
@@ -49,9 +51,11 @@ export class ListView extends CollectionView {
 			matters,
 			settings.statuses,
 			settings.types.map((t) => t.id),
-			{ ...options, hideEmptyLanes: true, laneToggles: {} },
+			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres },
 			today,
+			now,
 		);
+		const focus = focusedSphere(options.spheresOff, board.sphereKeys);
 		const previous = this.containerEl.querySelector('.mtm-scroll');
 		const scroll = previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
 
@@ -59,14 +63,25 @@ export class ListView extends CollectionView {
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
 		renderToolbar(
 			view,
-			{ types: settings.types, typesOff: options.typesOff, showDone: options.showDone, openCount: board.empty ? null : board.openCount },
-			{ toggleType: (id) => this.toggleType(id), toggleDone: () => this.toggleDone(), newAction: () => this.plugin.quickAdd() },
+			{
+				types: settings.types,
+				typesOff: options.typesOff,
+				spheres: this.sphereChips(matters, actions, options.spheresOff),
+				showDone: options.showDone,
+				openCount: board.empty ? null : board.openCount,
+			},
+			{
+				toggleType: (id) => this.toggleType(id),
+				toggleSphere: (key) => this.toggleSphere(key),
+				toggleDone: () => this.toggleDone(),
+				newAction: () => this.plugin.quickAdd({ sphereId: focus }),
+			},
 		);
 		if (board.empty) {
-			renderEmpty(view, { newAction: () => this.plugin.quickAdd(), newMatter: () => this.plugin.newMatter() });
+			renderEmpty(view, { newAction: () => this.plugin.quickAdd({ sphereId: focus }), newMatter: () => this.plugin.newMatter(focus) });
 			return;
 		}
-		const scrollEl = renderList(view, { groups: buildList(board), selected: this.plugin.selection.path, now }, this.handlers);
+		const scrollEl = renderList(view, { layout: buildListLayout(board), selected: this.plugin.selection.path, now }, this.handlers);
 		if (scroll) {
 			scrollEl.scrollLeft = scroll.left;
 			scrollEl.scrollTop = scroll.top;
@@ -88,5 +103,6 @@ export class ListView extends CollectionView {
 		select: (path) => this.select(path),
 		open: (path, e) => this.open(path, e),
 		dismiss: (item) => this.dismiss(item),
+		toggleSection: (key) => this.toggleSphereCollapsed(key),
 	};
 }

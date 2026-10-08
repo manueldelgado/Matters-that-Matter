@@ -1,6 +1,7 @@
-// "New Matter": name, icon and review cadence.
+// "New Matter": name, icon, Sphere (when there are any) and review cadence.
 
 import { Modal, type App } from 'obsidian';
+import type { SphereDef } from '../../settings';
 import { formatCadence, parseCadence } from '../../model/matters';
 import { STRINGS } from '../../strings';
 import { DEFAULT_MATTER_ICON } from '../../vault/index';
@@ -12,6 +13,13 @@ export interface NewMatterResult {
 	name: string;
 	icon: string;
 	reviewEvery: string | null;
+	sphereId: string | null;
+}
+
+export interface NewMatterContext {
+	spheres: readonly SphereDef[];
+	/** The Sphere it starts in (from a board focused on one), or none. */
+	sphereId: string | null;
 }
 
 export class NewMatterModal extends Modal {
@@ -19,13 +27,16 @@ export class NewMatterModal extends Modal {
 	/** A preset cadence, 'custom', or '' for never. */
 	private review = '';
 	private custom: CadenceFields | null = null;
+	private sphereId: string | null;
 
 	constructor(
 		app: App,
 		private onCreate: (result: NewMatterResult) => void | Promise<void>,
 		private initialName = '',
+		private context: NewMatterContext = { spheres: [], sphereId: null },
 	) {
 		super(app);
+		this.sphereId = context.sphereId;
 	}
 
 	onOpen(): void {
@@ -53,6 +64,8 @@ export class NewMatterModal extends Modal {
 			}).open(),
 		);
 		const input = row.createEl('input', { type: 'text', value: this.initialName, attr: { 'aria-label': t.name, placeholder: t.placeholder } });
+
+		if (this.context.spheres.length) this.renderSpheres(body);
 
 		const reviewField = body.createDiv({ cls: 'mtm-field' });
 		reviewField.createDiv({ cls: 'mtm-label', text: t.review });
@@ -91,7 +104,7 @@ export class NewMatterModal extends Modal {
 				reviewEvery = formatCadence(cadence);
 			}
 			create.disabled = true;
-			void Promise.resolve(this.onCreate({ name, icon: this.icon, reviewEvery })).finally(() => this.close());
+			void Promise.resolve(this.onCreate({ name, icon: this.icon, reviewEvery, sphereId: this.sphereId })).finally(() => this.close());
 		};
 		create.addEventListener('click', submit);
 		const onEnter = (e: KeyboardEvent) => {
@@ -100,6 +113,27 @@ export class NewMatterModal extends Modal {
 		input.addEventListener('keydown', onEnter);
 		reviewField.addEventListener('keydown', onEnter);
 		input.focus();
+	}
+
+	private renderSpheres(body: HTMLElement): void {
+		const field = body.createDiv({ cls: 'mtm-field' });
+		field.createDiv({ cls: 'mtm-label', text: STRINGS.newMatter.sphere });
+		const seg = field.createDiv({ cls: 'mtm-seg mod-full' });
+		const options: [string | null, string, string | null][] = [
+			...this.context.spheres.map((s): [string, string, string] => [s.id, s.label, s.icon]),
+			[null, STRINGS.newMatter.noSphere, null],
+		];
+		for (const [id, label, icon] of options) {
+			const item = seg.createEl('button', { cls: 'mtm-seg-item' });
+			if (icon) appendIcon(item, icon);
+			item.appendText(label);
+			if (id === this.sphereId) item.addClass('is-active');
+			item.addEventListener('click', () => {
+				this.sphereId = id;
+				seg.querySelectorAll('.is-active').forEach((el) => el.removeClass('is-active'));
+				item.addClass('is-active');
+			});
+		}
 	}
 
 	/** Shows the custom fields under the segments, starting from the preset that was selected. */

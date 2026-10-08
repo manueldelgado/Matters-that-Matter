@@ -5,6 +5,8 @@ import { compareCards } from '../model/actions';
 import type { ActionItem } from './actionItems';
 import type { MatterInfo } from './boardModel';
 import { placement, type WeekStart } from './calendarModel';
+import type { SphereDef } from '../settings';
+import { groupBySphere, NO_SPHERE, sphereCounts, type SphereCounts } from './spheres';
 
 /** How far the timeline reaches back and ahead of today. */
 const MAX_BACK = 182;
@@ -70,6 +72,37 @@ export function buildTimeline(items: readonly ActionItem[], matters: readonly Ma
 		groups.push({ matter, rows });
 	}
 	return groups;
+}
+
+export interface TimelineSection {
+	/** Null for "No Sphere". */
+	sphere: SphereDef | null;
+	groups: TimelineGroup[];
+	counts: SphereCounts;
+	collapsed: boolean;
+}
+
+export interface TimelineSections {
+	/** The Inbox group, shown before or after the sections. */
+	inbox: TimelineGroup | null;
+	inboxFirst: boolean;
+	sections: TimelineSection[];
+}
+
+/** `groups` (in board order) in Sphere sections; the Inbox stays outside them, where it was. */
+export function timelineSections(groups: readonly TimelineGroup[], spheres: readonly SphereDef[], collapsed: ReadonlySet<string>, now = new Date()): TimelineSections {
+	const inbox = groups.find((g) => g.matter.isInbox) ?? null;
+	const sections = groupBySphere(
+		groups.filter((g) => !g.matter.isInbox),
+		(g) => g.matter.sphere,
+		spheres,
+	).map(({ sphere, items }) => ({
+		sphere,
+		groups: items,
+		counts: sphereCounts(items.flatMap((g) => g.rows.map((r) => r.item)), now),
+		collapsed: collapsed.has(sphere?.id ?? NO_SPHERE),
+	}));
+	return { inbox, inboxFirst: groups[0]?.matter.isInbox ?? true, sections };
 }
 
 export type DragEdge = 'move' | 'start' | 'end';

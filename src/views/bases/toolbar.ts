@@ -5,9 +5,21 @@ import type { TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { appendIcon, tileEl, typeClasses } from '../../ui/components/dom';
 
+export interface SphereChip {
+	/** Sphere ID, or NO_SPHERE. */
+	key: string;
+	label: string;
+	icon: string;
+	/** Open Actions in this Sphere in the view's data. */
+	count: number;
+	on: boolean;
+}
+
 export interface ToolbarInput {
 	types: readonly TypeDef[];
 	typesOff: ReadonlySet<string>;
+	/** Sphere chips; empty without Spheres. */
+	spheres?: readonly SphereChip[];
 	showDone: boolean;
 	/** Null hides the count (nothing to count yet). */
 	openCount: number | null;
@@ -15,6 +27,7 @@ export interface ToolbarInput {
 
 export interface ToolbarHandlers {
 	toggleType: (typeId: string) => void;
+	toggleSphere?: (key: string) => void;
 	toggleDone: () => void;
 	newAction: () => void;
 }
@@ -31,6 +44,19 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 		tileEl(chip, type.icon, 'mod-xs');
 		chip.appendText(type.label);
 		chip.addEventListener('click', () => h.toggleType(type.id));
+	}
+	if (input.spheres?.length) {
+		bar.createSpan({ cls: 'mtm-toolbar-sep' });
+		const spheres = bar.createDiv({ cls: 'mtm-filters' });
+		spheres.createSpan({ cls: 'mtm-toolbar-label', text: STRINGS.spheres.label });
+		for (const sphere of input.spheres) {
+			const chip = spheres.createEl('button', { cls: ['mtm-filter', 'mod-sphere', ...(sphere.on ? ['is-active'] : [])] });
+			tileEl(chip, sphere.icon, 'mod-xs');
+			chip.appendText(sphere.label);
+			chip.createSpan({ cls: 'mtm-filter-count', text: String(sphere.count) });
+			setTooltip(chip, STRINGS.spheres.chipTitle(sphere.label, sphere.count));
+			chip.addEventListener('click', () => h.toggleSphere?.(sphere.key));
+		}
 	}
 	bar.createSpan({ cls: 'mtm-spacer' });
 	if (input.openCount !== null) bar.createSpan({ cls: 'mtm-toolbar-note', text: STRINGS.board.open(input.openCount) });

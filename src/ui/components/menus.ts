@@ -1,12 +1,16 @@
-// Status and type menus: the non-drag way to move an Action, shared by the list and the note banner.
+// Status, type and Sphere menus: the non-drag way to move an Action or a Matter, shared by the views and the note banner.
 
 import { Menu } from 'obsidian';
-import type { StatusCategory, StatusDef, TypeDef } from '../../settings';
+import type { SphereDef, StatusCategory, StatusDef, TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { backlogStatus, doneStatus } from '../../model/workflow';
 import { statusChip, tileEl, typeClasses } from './dom';
 
-function showUnder(menu: Menu, anchor: HTMLElement): void {
+function showUnder(menu: Menu, anchor: HTMLElement | { x: number; y: number }): void {
+	if (!('getBoundingClientRect' in anchor)) {
+		menu.showAtPosition(anchor);
+		return;
+	}
 	const rect = anchor.getBoundingClientRect();
 	menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 });
 }
@@ -62,5 +66,34 @@ export function showTypeMenu(anchor: HTMLElement, types: readonly TypeDef[], cur
 				}),
 		);
 	}
+	showUnder(menu, anchor);
+}
+
+/** Every Sphere with its icon, then "No Sphere"; under an element, or at a point (after another menu). */
+export function showSphereMenu(
+	anchor: HTMLElement | { x: number; y: number },
+	spheres: readonly SphereDef[],
+	currentId: string | null,
+	onPick: (sphereId: string | null) => void,
+): void {
+	const menu = new Menu().setUseNativeMenu(false);
+	const options: [string | null, string, string][] = [...spheres.map((s): [string, string, string] => [s.id, s.label, s.icon]), [null, STRINGS.spheres.none, 'circle-dashed']];
+	options.forEach(([id, label, icon], i) => {
+		if (i === spheres.length) menu.addSeparator();
+		menu.addItem((item) =>
+			item
+				.setTitle(
+					createFragment((f) => {
+						const row = f.createSpan({ cls: 'mtm-menu-type' });
+						tileEl(row, icon, 'mod-sm mod-neutral');
+						row.appendText(label);
+					}),
+				)
+				.setChecked(id === currentId)
+				.onClick(() => {
+					if (id !== currentId) onPick(id);
+				}),
+		);
+	});
 	showUnder(menu, anchor);
 }

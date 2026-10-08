@@ -22,6 +22,13 @@ export interface TypeDef {
 	default?: boolean;
 }
 
+/** A sphere of life (Home, Work, Family) that groups related Matters. Order is the array's. */
+export interface SphereDef {
+	id: string;
+	label: string;
+	icon: string;
+}
+
 export interface MattersSettings {
 	schemaVersion: number;
 	setupDone: boolean;
@@ -33,6 +40,7 @@ export interface MattersSettings {
 	};
 	statuses: StatusDef[];
 	types: TypeDef[];
+	spheres: SphereDef[];
 	inboxPath: string;
 	boardPath: string;
 	defaultInboxPosition: 'top' | 'bottom';
@@ -42,7 +50,7 @@ export interface MattersSettings {
 }
 
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 1,
+	schemaVersion: 2,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',
@@ -65,6 +73,7 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 		{ id: 'buy', label: 'Buy', icon: 'shopping-bag', tone: 'peach' },
 		{ id: 'visit', label: 'Visit', icon: 'map-pin', tone: 'bubblegum' },
 	],
+	spheres: [],
 	inboxPath: 'MTM/Matters/Inbox.md',
 	boardPath: 'MTM/Boards/Matters.base',
 	defaultInboxPosition: 'top',

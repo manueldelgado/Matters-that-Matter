@@ -4,13 +4,17 @@ import { Keymap, setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../../strings';
 import { addDays, dayLabel, daysBetween, weekday, type Ymd } from '../../../model/dates';
 import type { WeekStart } from '../../../services/calendarModel';
-import type { TimelineGroup, TimelineRange, TimelineRow } from '../../../services/timelineModel';
-import { appendIcon, pressable, typeClasses } from '../../../ui/components/dom';
+import type { TimelineGroup, TimelineRange, TimelineRow, TimelineSection, TimelineSections } from '../../../services/timelineModel';
+import { NO_SPHERE } from '../../../services/spheres';
+import { NO_SPHERE_ICON } from '../collectionView';
+import { appendIcon, pressable, tileEl, typeClasses } from '../../../ui/components/dom';
 import { actionTooltip } from '../actionTooltip';
 
 export interface TimelineInput {
 	range: TimelineRange;
 	groups: TimelineGroup[];
+	/** Sphere sections, or null without Spheres. */
+	sections: TimelineSections | null;
 	weekStart: WeekStart;
 	today: Ymd;
 	selected: string | null;
@@ -22,6 +26,7 @@ export interface TimelineHandlers {
 	earlier: () => void;
 	later: () => void;
 	openMatter: (path: string) => void;
+	toggleSection: (key: string) => void;
 	select: (path: string) => void;
 	open: (path: string, e: MouseEvent | KeyboardEvent) => void;
 }
@@ -74,15 +79,41 @@ export function renderTimeline(view: HTMLElement, input: TimelineInput, h: Timel
 	}
 	if (todayIndex >= 0 && todayIndex < range.days) timeline.createDiv({ cls: 'mtm-tl-today' });
 
-	for (const group of input.groups) {
+	const renderGroup = (group: TimelineGroup) => {
 		const row = timeline.createDiv({ cls: 'mtm-tl-group' });
 		const label = pressable(row.createDiv({ cls: 'mtm-tl-label' }), () => h.openMatter(group.matter.path));
 		setIcon(label.createSpan({ cls: 'mtm-matter-icon' }), group.matter.icon);
 		label.appendText(group.matter.name);
 		row.createDiv({ cls: 'mtm-tl-track' });
 		for (const r of group.rows) renderRow(timeline, r, input, h);
+	};
+	const sections = input.sections;
+	if (!sections) {
+		input.groups.forEach(renderGroup);
+		return { scroll, timeline };
 	}
+	timeline.addClass('has-spheres');
+	if (sections.inbox && sections.inboxFirst) renderGroup(sections.inbox);
+	for (const section of sections.sections) {
+		renderSection(timeline, section, h);
+		if (!section.collapsed) section.groups.forEach(renderGroup);
+	}
+	if (sections.inbox && !sections.inboxFirst) renderGroup(sections.inbox);
 	return { scroll, timeline };
+}
+
+/** A Sphere band across the timeline: its name and counts in the label, collapsible. */
+function renderSection(timeline: HTMLElement, section: TimelineSection, h: TimelineHandlers): void {
+	const sp = STRINGS.spheres;
+	const key = section.sphere?.id ?? NO_SPHERE;
+	const row = timeline.createDiv({ cls: ['mtm-tl-sphere', ...(section.collapsed ? ['is-collapsed'] : [])] });
+	const label = pressable(row.createDiv({ cls: 'mtm-tl-label' }), () => h.toggleSection(key));
+	appendIcon(label.createSpan({ cls: 'mtm-lane-toggle' }), 'chevron-down');
+	tileEl(label, section.sphere?.icon ?? NO_SPHERE_ICON, 'mod-neutral');
+	label.createSpan({ cls: 'mtm-tl-sphere-title', text: section.sphere?.label ?? sp.none });
+	const { open, late, waiting } = section.counts;
+	setTooltip(label, [sp.open(open), ...(late ? [sp.late(late)] : []), ...(waiting ? [sp.waiting(waiting)] : [])].join(' · '));
+	row.createDiv({ cls: 'mtm-tl-track' });
 }
 
 function barText(r: TimelineRow, today: Ymd): string | null {

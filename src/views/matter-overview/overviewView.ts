@@ -9,7 +9,8 @@ import { overviewModel } from '../../services/overviewModel';
 import { IconPickerModal } from '../../ui/modals/iconPickerModal';
 import { dismissOrphan } from '../../vault/actionWrites';
 import { allActionItems, backlinksTo, DEFAULT_MATTER_ICON, matterInfo, noteBody, peopleOf } from '../../vault/index';
-import { markReviewed, setMatterIcon, setMatterState, setReviewCadence } from '../../vault/matterWrites';
+import { markReviewed, setMatterIcon, setMatterSphere, setMatterState, setReviewCadence } from '../../vault/matterWrites';
+import { showSphereMenu } from '../../ui/components/menus';
 import { refreshViewTitle } from '../../vault/internal';
 import { frontmatterOf } from '../../vault/notes';
 import { renderMissing, renderOverview, type OverviewHandlers } from './overviewRender';
@@ -194,6 +195,12 @@ export class MatterOverviewView extends ItemView {
 	}
 
 	private handlers: OverviewHandlers = {
+		changeSphere: (anchor) => {
+			const file = this.file();
+			if (!file) return;
+			const current = matterInfo(this.app, file, this.plugin.settings, toYmd(new Date())).sphere;
+			showSphereMenu(anchor, this.plugin.settings.spheres, current, (id) => void this.write((f) => setMatterSphere(this.app, f, id)));
+		},
 		changeIcon: () => {
 			const file = this.file();
 			if (!file) return;

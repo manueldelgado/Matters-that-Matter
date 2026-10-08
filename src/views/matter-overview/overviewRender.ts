@@ -32,6 +32,8 @@ export interface OverviewData {
 
 export interface OverviewHandlers {
 	changeIcon: () => void;
+	/** Opens the Sphere menu under the chip. */
+	changeSphere: (anchor: HTMLElement) => void;
 	showOnBoard: () => void;
 	newAction: () => void;
 	openNote: (e: MouseEvent | KeyboardEvent) => void;
@@ -83,6 +85,16 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 		eyebrow.createSpan({ text: '·' });
 		eyebrow.createSpan({ text: o.inboxEyebrow });
 	} else {
+		const spheres = d.settings.spheres;
+		if (spheres.length) {
+			const sphere = spheres.find((x) => x.id === matter.sphere);
+			const chip = eyebrow.createSpan({ cls: ['mtm-sphere-chip', ...(sphere ? [] : ['mod-none'])] });
+			appendIcon(chip, sphere?.icon ?? 'circle-dashed');
+			chip.appendText(sphere?.label ?? STRINGS.spheres.none);
+			appendIcon(chip, 'chevron-down');
+			setTooltip(chip, STRINGS.spheres.change);
+			pressable(chip, () => h.changeSphere(chip));
+		}
 		eyebrow.createSpan({ text: o.matter });
 		eyebrow.createSpan({ text: '·' });
 		eyebrow.createSpan({ text: o.since(longDate(toYmd(new Date(d.file.stat.ctime)), d.today)) });

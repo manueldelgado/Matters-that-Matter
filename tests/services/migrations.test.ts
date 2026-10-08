@@ -34,6 +34,15 @@ describe('migrateSettings', () => {
 		expect(checkFlags(s.statuses, s.types)).toEqual([]);
 	});
 
+	it('adds an empty Sphere list from schema 1, and keeps valid Spheres', () => {
+		expect(migrateSettings({ schemaVersion: 1, setupDone: true }).spheres).toEqual([]);
+		const s = migrateSettings({ schemaVersion: 2, spheres: [{ id: 'home', label: 'Home', icon: 'house' }, { id: 'x', label: 'X' }, { nope: 1 }] });
+		expect(s.spheres).toEqual([
+			{ id: 'home', label: 'Home', icon: 'house' },
+			{ id: 'x', label: 'X', icon: 'circle-dot' },
+		]);
+	});
+
 	it('keeps data from a newer schema', () => {
 		expect(migrateSettings({ schemaVersion: CURRENT_SCHEMA + 1 }).schemaVersion).toBe(CURRENT_SCHEMA + 1);
 	});

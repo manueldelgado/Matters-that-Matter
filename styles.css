@@ -889,3 +889,51 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-note-banner-end>button .svg-icon{width:14px;height:14px}
 /* Type menu items: tile and label. */
 .mtm-menu-type{display:inline-flex;align-items:center;gap:8px}
+/* Sphere bands on the board: a full-width grid row above its lanes; the head sticks left, one count per column. */
+.mtm-sphere-band{grid-column:1/-1;display:grid;grid-template-columns:subgrid;background:var(--mtm-chrome);border-top:1px solid var(--mtm-line);border-bottom:1px solid var(--mtm-line)}
+.mtm-sphere-head{position:sticky;left:0;z-index:2;display:flex;align-items:center;gap:7px;min-height:40px;padding:6px 8px 6px 10px;background:var(--mtm-chrome);border-right:1px solid var(--mtm-line)}
+.mtm-sphere-head .mtm-lane-toggle{margin-top:0}
+.mtm-sphere-head .mtm-tile,.mtm-table-sphere .mtm-tile,.mtm-tl-sphere .mtm-tile{width:22px;height:22px;border-radius:7px}
+.mtm-sphere-head .mtm-tile .svg-icon,.mtm-table-sphere .mtm-tile .svg-icon,.mtm-tl-sphere .mtm-tile .svg-icon{width:13px;height:13px}
+.mtm-sphere-title{flex:1;min-width:0;font-family:var(--mtm-font-display);font-size:15px;font-weight:600;color:var(--text-normal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.mtm-sphere-head .mtm-lane-menu{opacity:0}
+.mtm-sphere-band:hover .mtm-lane-menu,.mtm-sphere-head .mtm-lane-menu.is-active,.is-mobile .mtm-sphere-head .mtm-lane-menu{opacity:1}
+.mtm-sphere-count{display:flex;align-items:center;gap:6px;padding:0 12px;font-size:11.5px;font-weight:700;color:var(--text-faint);font-variant-numeric:tabular-nums;border-right:1px solid var(--mtm-hairline)}
+.mtm-sphere-count .mtm-status-dot{width:7px;height:7px}
+.mtm-sphere-late{display:inline-flex;align-items:center;gap:3px;margin-left:auto;color:var(--mtm-due-overdue)}
+.mtm-sphere-late .svg-icon{width:11px;height:11px}
+.mtm-sphere-band.mod-none .mtm-sphere-title{font-family:var(--font-interface);font-size:13px;color:var(--text-muted)}
+:is(.mtm-sphere-band,.mtm-table-sphere,.mtm-tl-sphere).is-collapsed .mtm-lane-toggle .svg-icon{transform:rotate(-90deg)}
+.mtm-board.has-spheres .mtm-lane-header:not(.mod-inbox){padding-left:18px}
+/* Sphere chips in the toolbar: neutral (colour means type), with each Sphere's open count. */
+.mtm-toolbar-sep{width:1px;height:18px;margin:0 6px;background:var(--mtm-line)}
+@container (max-width:600px){.mtm-toolbar-sep{display:none}}
+.mtm-filter.mod-sphere .mtm-tile{background:var(--mtm-raised);box-shadow:inset 0 0 0 1px var(--mtm-line);color:var(--text-muted)}
+.mtm-filter-count{margin-left:2px;font-size:10.5px;font-weight:700;color:var(--text-faint);font-variant-numeric:tabular-nums}
+/* Sphere headings in the list, above their Matter groups (indented one step). */
+.mtm-table-sphere{display:flex;align-items:center;gap:8px;padding:14px 14px 6px;border-bottom:1px solid var(--mtm-line);background:var(--mtm-chrome)}
+.mtm-table-sphere .mtm-lane-toggle{margin-top:0}
+.mtm-table-sphere-title{font-family:var(--mtm-font-display);font-size:19px;font-weight:600;cursor:pointer}
+.mtm-table-sphere-meta{display:flex;gap:10px;font-size:11.5px;font-weight:600;color:var(--text-faint)}
+.mtm-table-sphere-meta .mod-waiting{color:var(--mtm-waiting-ink)}
+.mtm-table-sphere-meta .mod-late{color:var(--mtm-due-overdue)}
+.mtm-table .mtm-table-group.mod-in-sphere{padding-left:36px}
+/* Sphere rows on the timeline, above their Matters. */
+.mtm-tl-sphere{display:flex;height:36px;border-top:1px solid var(--mtm-line);border-bottom:1px solid var(--mtm-line);background:var(--mtm-chrome)}
+.mtm-tl-sphere .mtm-tl-label{gap:7px;padding-left:10px;background:var(--mtm-chrome);cursor:pointer}
+.mtm-tl-sphere .mtm-lane-toggle{margin-top:0}
+.mtm-tl-sphere-title{min-width:0;overflow:hidden;text-overflow:ellipsis;font-family:var(--mtm-font-display);font-size:15px;font-weight:600}
+.mtm-timeline.has-spheres .mtm-tl-group .mtm-tl-label{padding-left:24px}
+/* Sphere editor in settings: like the type editor, without tones or Default; with how many Matters use it. */
+.mtm-settings .setting-item>.mtm-editor-list{flex:1;min-width:0}
+.mtm-sphere-row{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 6px 4px 8px;border:1px solid var(--mtm-hairline);border-radius:10px;background:var(--mtm-raised)}
+.mtm-sphere-row.is-dragging{box-shadow:var(--mtm-card-shadow-hover);opacity:.85;transform:rotate(-.5deg)}
+.mtm-sphere-row input[type="text"]{flex:1;min-width:80px}
+.mtm-sphere-row .mtm-row-note{font-size:12px;color:var(--text-faint);white-space:nowrap}
+.mtm-sphere-row .clickable-icon:last-child{color:var(--text-faint)}
+.mtm-sphere-row .clickable-icon:last-child:hover{color:var(--mtm-danger)}
+/* The Sphere in the Matter overview eyebrow: opens the Sphere menu. */
+.mtm-sphere-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px 0 6px;border-radius:999px;background:var(--mtm-raised);box-shadow:inset 0 0 0 1px var(--mtm-line);font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer}
+.mtm-sphere-chip .svg-icon{width:13px;height:13px}
+.mtm-sphere-chip:hover{color:var(--text-normal)}
+.mtm-sphere-chip.mod-none{color:var(--text-faint)}

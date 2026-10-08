@@ -1,4 +1,4 @@
-// "Delete status / type" with a destination for the Actions that use it.
+// "Delete status / type / Sphere" with a destination for the Actions (or Matters) that use it.
 
 import { Modal, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
@@ -13,11 +13,11 @@ export interface Destination {
 }
 
 export interface DeleteOptions {
-	kind: 'status' | 'type';
+	kind: 'status' | 'type' | 'Sphere';
 	label: string;
 	count: number;
 	destinations: Destination[];
-	/** Preselected destination (the backlog status or the default type). */
+	/** Preselected destination (the backlog status, the default type, or No Sphere). */
 	preselect: string;
 	/** Moves the Actions, then removes the item. */
 	onConfirm(destinationId: string): Promise<void>;

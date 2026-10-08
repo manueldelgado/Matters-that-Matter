@@ -76,6 +76,7 @@ export const STRINGS = {
 		cannotDeleteFlagged: 'Move the Backlog, Done or Default marker to another item before deleting this one.',
 		lastItem: 'Keep at least one.',
 		moved: (n: number) => `Moved ${plural(n, 'Action', 'Actions')}.`,
+		movedMatters: (n: number) => `Moved ${plural(n, 'Matter', 'Matters')}.`,
 		inboxRestoredProperties: 'The Inbox always stays an active Matter, so its properties were restored.',
 		inboxRecreated: 'The Inbox note was deleted, so it was created again.',
 		inboxDuplicates: (paths: string[]) => `Possible copies of the Inbox: ${paths.join(', ')}. Move their Actions to the Inbox and delete them.`,
@@ -113,6 +114,22 @@ export const STRINGS = {
 		emptyText: 'Add the first Action for one of your Matters: a call to make, a message to send, something to buy.',
 		emptyHint: 'Or run “Quick add” from the command palette.',
 		newMatter: 'New Matter',
+	},
+
+	spheres: {
+		label: 'Spheres',
+		none: 'No Sphere',
+		chipTitle: (label: string, n: number) => `${label}: ${n} open`,
+		menu: 'Sphere menu',
+		moveTo: 'Move to Sphere',
+		showOnly: (label: string) => `Show only ${label}`,
+		showAll: 'Show all Spheres',
+		newMatterIn: (label: string) => `New Matter in ${label}`,
+		open: (n: number) => `${n} open`,
+		late: (n: number) => `${n} today or late`,
+		waiting: (n: number) => `${n} waiting`,
+		columnTitle: (n: number, status: string, late: number) => `${n} ${status}${late ? `, ${late} due today or late` : ''}`,
+		change: 'Change Sphere',
 	},
 
 	quickAdd: {
@@ -243,7 +260,7 @@ export const STRINGS = {
 		waitingOn: (name: string) => `Waiting on ${name}`,
 		priority: { 1: 'High', 2: 'Medium', 3: 'Low' } as Record<1 | 2 | 3, string>,
 		priorityTitle: (label: string) => `${label} priority`,
-		orphanLabels: { status: 'Status', matter: 'Matter', type: 'Type' },
+		orphanLabels: { status: 'Status', matter: 'Matter', type: 'Type', sphere: 'Sphere' },
 		orphanTitle: (field: string, value: string) => `Unrecognised ${field} “${value}”`,
 		dismiss: 'Dismiss',
 	},
@@ -323,6 +340,8 @@ export const STRINGS = {
 		placeholder: 'Kitchen renovation',
 		review: 'Review',
 		reviewHint: 'The board shows when a review is due.',
+		sphere: 'Sphere',
+		noSphere: 'None',
 		create: 'Create Matter',
 	},
 
@@ -366,6 +385,10 @@ export const STRINGS = {
 		addType: 'Add type',
 		newStatus: 'New status',
 		newType: 'New type',
+		deleteSphere: 'Delete Sphere',
+		addSphere: 'Add Sphere',
+		newSphere: 'New Sphere',
+		sphereMatters: (n: number) => (n === 0 ? 'No Matters yet' : plural(n, 'Matter', 'Matters')),
 	},
 
 	settings: {
@@ -397,6 +420,9 @@ export const STRINGS = {
 		types: 'Action types',
 		typesDesc: 'The colour and icon of every Action.',
 		typesAliases: ['colours', 'icons', 'default type'],
+		spheres: 'Spheres',
+		spheresDesc: 'Group related Matters: Home, Work, Family. Each Matter is in one Sphere or none. Boards show them as bands and can focus on some.',
+		spheresAliases: ['groups', 'areas', 'spheres of life'],
 	},
 
 	setup: {
@@ -467,8 +493,12 @@ export const STRINGS = {
 		searchIcons: 'Search icons',
 		useIcon: 'Use icon',
 		deleteTitle: (label: string) => `Delete “${label}”?`,
-		deleteNone: (kind: 'status' | 'type') => `No Actions use this ${kind}.`,
-		deleteCount: (n: number, kind: 'status' | 'type') => `${plural(n, 'Action uses', 'Actions use')} this ${kind}. Where should they go?`,
+		deleteNone: (kind: 'status' | 'type' | 'Sphere') =>
+			kind === 'Sphere' ? 'No Matters are in this Sphere.' : `No Actions use this ${kind}.`,
+		deleteCount: (n: number, kind: 'status' | 'type' | 'Sphere') =>
+			kind === 'Sphere'
+				? `${plural(n, 'Matter is', 'Matters are')} in this Sphere. Where should ${n === 1 ? 'it' : 'they'} go?`
+				: `${plural(n, 'Action uses', 'Actions use')} this ${kind}. Where should they go?`,
 		willMove: (n: number) => `${n} will move here`,
 		deleteAndMove: 'Delete and move',
 		delete: 'Delete',

@@ -7,6 +7,9 @@ import { STRINGS } from '../../strings';
 import { resolveInboxPosition, resolveShowDone } from '../../model/actions';
 import type { InboxPosition } from '../../model/matters';
 import type { ActionItem } from '../../services/actionItems';
+import { sphereKeysFor, type MatterInfo } from '../../services/boardModel';
+import { NO_SPHERE, sphereShown } from '../../services/spheres';
+import type { SphereChip } from './toolbar';
 import { dismissOrphan } from '../../vault/actionWrites';
 import { actionItem } from '../../vault/index';
 import { frontmatterOf } from '../../vault/notes';
@@ -21,7 +24,11 @@ export const OPTION_KEYS = {
 
 /** Type chips switched off, kept in the view config (so a newly added type starts on). */
 export const TYPES_OFF_KEY = 'mtmTypesOff';
+/** Sphere chips switched off, and Sphere bands collapsed, likewise. */
+export const SPHERES_OFF_KEY = 'mtmSpheresOff';
+export const SPHERES_COLLAPSED_KEY = 'mtmSpheresCollapsed';
 const CONFIG_DELAY = 800;
+export const NO_SPHERE_ICON = 'circle-dashed';
 
 export interface CollectionOptions {
 	inboxPosition: InboxPosition;
@@ -30,6 +37,10 @@ export interface CollectionOptions {
 	doneDays: number | null;
 	/** Type IDs switched off in the toolbar. When every type is off, all show. */
 	typesOff: ReadonlySet<string>;
+	/** Sphere chips switched off (NO_SPHERE for "No Sphere"). When every chip is off, all show. */
+	spheresOff: ReadonlySet<string>;
+	/** Sphere bands collapsed on this view. */
+	spheresCollapsed: ReadonlySet<string>;
 }
 
 export abstract class CollectionView extends BasesView {
@@ -81,9 +92,13 @@ export abstract class CollectionView extends BasesView {
 		this.pending.clear();
 	}
 
-	protected typesOff(): string[] {
-		const raw = this.configValue(TYPES_OFF_KEY);
+	private stringList(key: string): string[] {
+		const raw = this.configValue(key);
 		return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : [];
+	}
+
+	protected typesOff(): string[] {
+		return this.stringList(TYPES_OFF_KEY);
 	}
 
 	/** View options fall back to their declared defaults: config.get() returns nothing until changed. */
@@ -95,7 +110,39 @@ export abstract class CollectionView extends BasesView {
 			showDone: resolveShowDone(this.config.get(OPTION_KEYS.showDone), s.showDone),
 			doneDays: Number.isFinite(days) && days > 0 ? days : null,
 			typesOff: new Set(this.typesOff()),
+			spheresOff: new Set(this.stringList(SPHERES_OFF_KEY)),
+			spheresCollapsed: new Set(this.stringList(SPHERES_COLLAPSED_KEY)),
 		};
+	}
+
+	/** Toolbar chips for the Spheres, with each one's open Actions in this view's data; none without Spheres. */
+	protected sphereChips(matters: readonly MatterInfo[], actions: readonly ActionItem[], off: ReadonlySet<string>): SphereChip[] {
+		const spheres = this.plugin.settings.spheres;
+		const keys = sphereKeysFor(matters, spheres);
+		const sphereOf = new Map(matters.map((m) => [m.path, m.isInbox ? null : (m.sphere ?? NO_SPHERE)]));
+		const open = new Map<string, number>();
+		for (const a of actions) {
+			const key = sphereOf.get(a.effective.matterPath);
+			if (key === null || key === undefined || a.category === 'closed') continue;
+			open.set(key, (open.get(key) ?? 0) + 1);
+		}
+		return keys.map((key) => {
+			const sphere = spheres.find((s) => s.id === key);
+			return {
+				key,
+				label: sphere?.label ?? STRINGS.spheres.none,
+				icon: sphere?.icon ?? NO_SPHERE_ICON,
+				count: open.get(key) ?? 0,
+				on: !off.has(key),
+			};
+		});
+	}
+
+	/** Whether a Matter's lane, group or rows show under the Sphere chips (the Inbox always does). */
+	protected matterShown(matter: MatterInfo | undefined, matters: readonly MatterInfo[], off: ReadonlySet<string>): boolean {
+		if (!matter || matter.isInbox) return true;
+		const keys = sphereKeysFor(matters, this.plugin.settings.spheres);
+		return keys.length === 0 || sphereShown(matter.sphere, off, keys);
 	}
 
 	// ——— Data ———
@@ -131,6 +178,29 @@ export abstract class CollectionView extends BasesView {
 	}
 
 	// ——— Handlers every view shares ———
+
+	protected toggleSphere(key: string): void {
+		this.toggleIn(SPHERES_OFF_KEY, key);
+	}
+
+	protected toggleSphereCollapsed(key: string): void {
+		this.toggleIn(SPHERES_COLLAPSED_KEY, key);
+	}
+
+	/** Shows only one Sphere: every other chip off. */
+	protected showOnlySphere(key: string, keys: readonly string[]): void {
+		const off = keys.filter((k) => k !== key);
+		this.setConfigSoon(SPHERES_OFF_KEY, off.length ? off : null);
+		this.refresh(true);
+	}
+
+	private toggleIn(configKey: string, key: string): void {
+		const set = new Set(this.stringList(configKey));
+		if (set.has(key)) set.delete(key);
+		else set.add(key);
+		this.setConfigSoon(configKey, set.size ? [...set] : null);
+		this.refresh(true);
+	}
 
 	protected toggleType(typeId: string): void {
 		const off = new Set(this.typesOff());

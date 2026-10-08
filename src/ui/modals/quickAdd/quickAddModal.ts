@@ -49,6 +49,8 @@ export interface QuickAddInit {
 	statusId?: string;
 	/** Due date of the calendar day the modal was opened from ('YYYY-MM-DD'). */
 	due?: string;
+	/** The Sphere a board is focused on: a new Matter typed with # goes there. */
+	sphereId?: string | null;
 }
 
 export class QuickAddModal extends Modal {
@@ -59,6 +61,7 @@ export class QuickAddModal extends Modal {
 	private contextMatter: string | null;
 	private readonly contextStatus: string | null;
 	private contextDue: string | null;
+	private contextSphere: string | null;
 	private pickedType: string | null = null;
 	private ignoredDates: string[] = [];
 	/** Start of a token whose suggestions were closed with Escape. */
@@ -90,6 +93,7 @@ export class QuickAddModal extends Modal {
 		this.contextMatter = init.matterPath ?? null;
 		this.contextStatus = init.statusId ?? null;
 		this.contextDue = init.due ?? null;
+		this.contextSphere = init.sphereId ?? null;
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], 'Escape', () => {
@@ -435,7 +439,7 @@ export class QuickAddModal extends Modal {
 		try {
 			let matterPath = draft.matterPath;
 			if (isNewPath(matterPath)) {
-				const file = await createMatter(app, s, { name: newName(matterPath), icon: DEFAULT_MATTER_ICON, reviewEvery: null });
+				const file = await createMatter(app, s, { name: newName(matterPath), icon: DEFAULT_MATTER_ICON, reviewEvery: null, sphereId: this.contextSphere });
 				this.adopt(this.matters, matterPath, file);
 				matterPath = file.path;
 			}

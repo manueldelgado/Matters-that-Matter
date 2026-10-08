@@ -92,6 +92,8 @@ export function renderActionBanner(input: ActionBannerInput, h: ActionBannerHand
 
 export interface MatterBannerInput {
 	matter: MatterInfo;
+	/** The Matter's Sphere label, when it has one. */
+	sphere: string | null;
 	stats: OverviewStats;
 	review: { state: ReviewState; label: string } | null;
 }
@@ -106,7 +108,7 @@ export function renderMatterBanner(input: MatterBannerInput, openOverview: () =>
 	const text = banner.createDiv({ cls: 'mtm-note-banner-text' });
 	text.createSpan({
 		cls: 'mtm-note-banner-type',
-		text: matter.isInbox ? s.inbox : `${s.matter} · ${STRINGS.overview.states[matter.state]}`,
+		text: matter.isInbox ? s.inbox : [s.matter, ...(input.sphere ? [input.sphere] : []), STRINGS.overview.states[matter.state]].join(' · '),
 	});
 	if (review) {
 		const el = text.createSpan({ cls: ['mtm-review', `is-${review.state}`] });

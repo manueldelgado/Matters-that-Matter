@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings';
 import { toActionItem, initials } from '../../src/services/actionItems';
 import { buildBoard, isLaneCollapsed, typeShown, type BoardOptions, type MatterInfo } from '../../src/services/boardModel';
 import type { ResolveLink } from '../../src/services/effective';
-import { buildList } from '../../src/services/listModel';
+import { buildList, buildListLayout } from '../../src/services/listModel';
 
 const settings = DEFAULT_SETTINGS;
 const typeIds = settings.types.map((t) => t.id);
@@ -17,6 +17,8 @@ const matter = (name: string, extra: Partial<MatterInfo> = {}): MatterInfo => ({
 	icon: 'circle-dot',
 	state: 'active',
 	review: null,
+	sphere: null,
+	sphereOrphan: null,
 	...extra,
 });
 
@@ -51,6 +53,9 @@ const options = (over: Partial<BoardOptions> = {}): BoardOptions => ({
 	hideEmptyLanes: false,
 	typesOff: new Set(),
 	laneToggles: {},
+	spheres: [],
+	spheresOff: new Set(),
+	spheresCollapsed: new Set(),
 	...over,
 });
 
@@ -149,5 +154,56 @@ describe('buildList', () => {
 		const groups = buildList(board);
 		expect(groups.map((g) => g.lane.matter.name)).toEqual(['Inbox', 'Kitchen']);
 		expect(groups[1]?.rows.map((r) => r.title)).toEqual(['Call plumber', 'Buy tiles', 'Ask Ana', 'Ancient task', 'Old task']);
+	});
+});
+
+describe('Sphere bands', () => {
+	const spheres = [
+		{ id: 'home', label: 'Home', icon: 'house' },
+		{ id: 'work', label: 'Work', icon: 'briefcase' },
+	];
+	// Garden is in Home, Kitchen in Work (ahead of Garden by lane order), Shed in none.
+	const sphered = [{ ...kitchen, sphere: 'work' }, inbox, { ...garden, sphere: 'home' }, shed];
+	const build = (over: Partial<BoardOptions> = {}) =>
+		buildBoard(actions, sphered, settings.statuses, typeIds, options({ spheres, ...over }), today, new Date(2026, 9, 9, 12));
+
+	it('without Spheres there are no bands and no chips', () => {
+		const b = buildBoard(actions, sphered, settings.statuses, typeIds, options(), today);
+		expect(b.bands).toBeNull();
+		expect(b.sphereKeys).toEqual([]);
+	});
+
+	it('orders lanes by Sphere in settings order, No Sphere last, the Inbox at its position', () => {
+		const b = build();
+		expect(b.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Garden', 'Kitchen', 'Shed']);
+		expect(b.bands?.map((band) => band.sphere?.id ?? null)).toEqual(['home', 'work', null]);
+		expect(b.sphereKeys).toEqual(['home', 'work', '']);
+	});
+
+	it('counts each band per column, with what is due today or late', () => {
+		const work = build().bands?.find((band) => band.sphere?.id === 'work');
+		expect(work?.counts.open).toBe(3);
+		expect(work?.counts.waiting).toBe(1);
+		expect(work?.counts.byStatus.get('next')).toEqual({ count: 2, late: 0 });
+	});
+
+	it('focus hides other Spheres, never the Inbox', () => {
+		const b = build({ spheresOff: new Set(['home', '']) });
+		expect(b.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen']);
+		expect(b.columnCounts.get('next')).toBe(2);
+		// Every chip off shows everything, like type chips.
+		expect(build({ spheresOff: new Set(['home', 'work', '']) }).lanes).toHaveLength(4);
+	});
+
+	it('keeps collapsed bands with their lanes and counts', () => {
+		const b = build({ spheresCollapsed: new Set(['work']) });
+		expect(b.bands?.find((band) => band.sphere?.id === 'work')?.collapsed).toBe(true);
+		expect(b.columnCounts.get('next')).toBe(2);
+	});
+
+	it('gives the list Sphere sections and keeps the Inbox outside them', () => {
+		const layout = buildListLayout(build());
+		expect(layout.inbox?.lane.matter.name).toBe('Inbox');
+		expect(layout.sections?.map((s) => s.sphere?.id ?? null)).toEqual(['work']);
 	});
 });

@@ -33,7 +33,7 @@ export function avatarEl(parent: HTMLElement, name: string, mod?: string): HTMLE
 	return el;
 }
 
-const ORPHAN_ICONS = { status: 'circle-dashed', matter: 'folder-x', type: 'shapes' } as const;
+const ORPHAN_ICONS = { status: 'circle-dashed', matter: 'folder-x', type: 'shapes', sphere: 'orbit' } as const;
 export type OrphanField = keyof typeof ORPHAN_ICONS;
 
 export function orphanBadge(parent: HTMLElement, field: OrphanField, value: string, compact: boolean, onDismiss: () => void): HTMLElement {

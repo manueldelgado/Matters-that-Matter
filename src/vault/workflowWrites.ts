@@ -1,4 +1,4 @@
-// Moving Actions off a status or type that is being deleted. Notes first; the caller saves settings last.
+// Moving Actions off a status or type, and Matters off a Sphere, that is being deleted. Notes first; the caller saves settings last.
 
 import type { App, TFile } from 'obsidian';
 import type { StatusDef } from '../settings';
@@ -23,6 +23,22 @@ export async function moveType(app: App, files: readonly TFile[], toId: string):
 	for (const file of files) {
 		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
 			fm['mtm-type'] = toId;
+		});
+	}
+	return files.length;
+}
+
+/** Matters whose raw `mtm-sphere` is exactly the ID. */
+export function mattersInSphere(app: App, id: string): TFile[] {
+	return notesOfKind(app, 'matter').filter((f) => frontmatterOf(app, f)?.['mtm-sphere'] === id);
+}
+
+/** Moves Matters to another Sphere, or to none when `toId` is null. */
+export async function moveSphere(app: App, files: readonly TFile[], toId: string | null): Promise<number> {
+	for (const file of files) {
+		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+			if (toId) fm['mtm-sphere'] = toId;
+			else delete fm['mtm-sphere'];
 		});
 	}
 	return files.length;
