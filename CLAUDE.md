@@ -46,6 +46,10 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
   A definition with an empty `name` is not rendered at all; for a description-only row use `render: (s) => { s.setName('').setDesc(…); }`.
 - Type checks on DOM nodes use `el.instanceOf(X)`, not `instanceof` (cross-window safe; enforced by `obsidianmd/prefer-instanceof`).
 - Right after a write, `metadataCache.getFileCache(file)` returns `null` until the note is parsed again. Don't treat that as "not our note": wait for the `changed` event, and match on the path you care about rather than on cached view state.
+- `ItemView` state must not use a `file` key: Obsidian reads it as a note to open and swaps in a Markdown view.
+- An `ItemView`'s header title isn't refreshed after `setState`; call `refreshViewTitle` (`vault/internal.ts`).
+- Since Obsidian 1.13 a modal's close button is `.modal-header-button`, absolutely placed in `.modal`; `.modal-close-button` no longer exists.
+- Menus whose items carry colour or icons that matter use `menu.setUseNativeMenu(false)`: macOS native menus show plain text only.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies
