@@ -16,6 +16,7 @@ import { nextStepGhost, noNextActionHint } from '../../../ui/components/nextActi
 export interface ListHandlers {
 	openMatter: (path: string) => void;
 	newAction: (matterPath: string, statusId?: string) => void;
+	processInbox: () => void;
 	/** Quick add with a type (the "+" of a type group). */
 	newTypedAction: (typeId: string) => void;
 	/** The "No next Action" hint's menu. */
@@ -122,8 +123,20 @@ function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers
 	const header = table.createDiv({ cls: ['mtm-table-group', ...(inSphere ? ['mod-in-sphere'] : [])] });
 	setIcon(header.createSpan({ cls: 'mtm-matter-icon' }), matter.icon);
 	pressable(header.createSpan({ cls: 'mtm-table-group-title', text: matter.name }), () => h.openMatter(matter.path));
-	const meta = matter.isInbox ? l.notFiled : [l.open(openCount), ...(waitingCount ? [l.waiting(waitingCount)] : [])].join(' · ');
+	const toSort = matter.isInbox && openCount > 0;
+	const meta = matter.isInbox
+		? toSort
+			? STRINGS.process.laneMeta(openCount)
+			: l.notFiled
+		: [l.open(openCount), ...(waitingCount ? [l.waiting(waitingCount)] : [])].join(' · ');
 	header.createSpan({ cls: 'mtm-table-group-meta', text: meta });
+	// As on the board's Inbox lane: always shown while there is something to sort.
+	if (toSort) {
+		const button = header.createEl('button', { cls: 'mtm-process-button' });
+		appendIcon(button, 'list-checks');
+		button.appendText(STRINGS.process.laneButton);
+		button.addEventListener('click', () => h.processInbox());
+	}
 	if (group.lane.noNextAction) noNextActionHint(header, (el) => h.noNextActionMenu(group.lane, el));
 	if (matter.state !== 'active') {
 		const badge = header.createSpan({ cls: ['mtm-lane-state', `mod-${matter.state}`] });

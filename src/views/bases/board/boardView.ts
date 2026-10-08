@@ -10,7 +10,7 @@ import { focusedSphere, NO_SPHERE } from '../../../services/spheres';
 import { showNoNextActionMenu, showSphereMenu } from '../../../ui/components/menus';
 import { nextStepStatus } from '../../../services/nextAction';
 import { VIEW_TYPES } from '../../../services/baseFile';
-import { allMatters } from '../../../vault/index';
+import { allActionItems, allMatters } from '../../../vault/index';
 import { moveAction } from '../../../vault/actionWrites';
 import { markReviewed, setMatterSphere, setMatterState, writeLaneOrders } from '../../../vault/matterWrites';
 import { CollectionView, OPTION_KEYS, SPHERES_OFF_KEY } from '../collectionView';
@@ -81,7 +81,7 @@ export class BoardView extends CollectionView {
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
 
-		this.model = buildBoard(actions, this.matters, settings.statuses, options, today, now);
+		this.model = buildBoard(actions, this.matters, settings.statuses, options, today, now, allActionItems(this.plugin.app, settings));
 		this.chips = this.sphereChips(this.matters, actions, options.spheresOff);
 		this.render(this.model, options, now);
 	}
@@ -93,7 +93,7 @@ export class BoardView extends CollectionView {
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
 		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null };
 		renderToolbar(view, { ...input, spheres: this.chips, openCount: model.empty ? null : model.openCount }, this.handlers);
-		if (model.empty) {
+		if (this.noActionsYet(model.empty)) {
 			renderEmpty(view, this.handlers);
 			return;
 		}

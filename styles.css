@@ -1114,3 +1114,8 @@ body .mtm-process-button:not(.clickable-icon):hover{border-color:var(--backgroun
 .is-phone .mtm-process .mtm-process-title{font-size:18px}
 /* The Matter field's suggestions sit over the modal. */
 .mtm-process .mtm-process-matter{width:100%}
+/* Phones: the toolbar is one strip that scrolls sideways (contract); its chip groups must not wrap inside it, or they stack into columns. */
+.is-phone .mtm-toolbar .mtm-filters{flex:none;flex-wrap:nowrap}
+.is-phone .mtm-toolbar>*{flex-shrink:0}
+/* The list's Inbox group gets the same Process button as the board's Inbox lane, inline after its count. */
+body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center;margin-left:4px}

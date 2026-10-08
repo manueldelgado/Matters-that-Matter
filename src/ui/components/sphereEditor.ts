@@ -58,7 +58,7 @@ export class SphereEditor {
 	private renderRow(sphere: SphereDef, index: number): void {
 		let current = sphere;
 		const row = this.listEl.createDiv({ cls: 'mtm-sphere-row' });
-		reorderable(row, index, this.spheres.length, (from, to) => this.commit(moveItem(this.spheres, from, to)));
+		reorderable(row, index, this.spheres.length, (from, to) => this.commit(moveItem(this.spheres, from, to)), 'spheres');
 
 		const trigger = row.createEl('button', { cls: 'mtm-icon-trigger', attr: { 'aria-label': STRINGS.editors.icon } });
 		tileEl(trigger, sphere.icon, 'mod-neutral');

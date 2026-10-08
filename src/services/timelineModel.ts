@@ -116,10 +116,15 @@ const shift = (d: MtmDate, days: number): MtmDate => ({ ...d, date: addDays(d.da
 export function dragDates(start: MtmDate | null, due: MtmDate | null, edge: DragEdge, days: number): { start?: MtmDate; due?: MtmDate } {
 	if (edge === 'move') return { ...(start ? { start: shift(start, days) } : {}), ...(due ? { due: shift(due, days) } : {}) };
 	if (!start || !due) return {};
+	// An end pulled onto the other end's day also keeps its time on the right side of the other's.
 	if (edge === 'start') {
 		const next = shift(start, days);
-		return { start: next.date > due.date ? { ...next, date: due.date } : next };
+		const clamped = next.date > due.date ? { ...next, date: due.date } : next;
+		if (clamped.date === due.date && clamped.time && due.time && clamped.time > due.time) clamped.time = due.time;
+		return { start: clamped };
 	}
 	const next = shift(due, days);
-	return { due: next.date < start.date ? { ...next, date: start.date } : next };
+	const clamped = next.date < start.date ? { ...next, date: start.date } : next;
+	if (clamped.date === start.date && clamped.time && start.time && clamped.time < start.time) clamped.time = start.time;
+	return { due: clamped };
 }

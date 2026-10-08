@@ -17,6 +17,8 @@ import { renderToolbar } from '../toolbar';
 import { rangeLabel, renderNav, renderTimeline, type TimelineHandlers } from './timelineRender';
 
 const DAY_WIDTH = 30;
+/** Fewer days than this in view: open on this week rather than the week before. */
+const NARROW_DAYS = 14;
 /** Pointer travel below this is a click, not a drag. */
 const DRAG_THRESHOLD = 4;
 
@@ -81,6 +83,8 @@ export class TimelineView extends CollectionView {
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
 			matters.map((m) => [m.path, m.name, m.icon, m.sphere]),
 			items.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn]),
+			// The toolbar counts every Action in the result, shown or not.
+			all.map((a) => [a.path, a.category, a.effective.matterPath]),
 		]);
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
@@ -116,7 +120,7 @@ export class TimelineView extends CollectionView {
 				newAction: () => this.plugin.quickAdd(),
 			},
 		);
-		if (!all.length) {
+		if (this.noActionsYet(!all.length)) {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd(), newMatter: () => this.plugin.newMatter() });
 			return;
 		}
@@ -140,7 +144,7 @@ export class TimelineView extends CollectionView {
 			this.handlers,
 		);
 		this.scrollEl = scroll;
-		this.firstVisible ??= openingDay(today, settings.weekStart);
+		this.firstVisible ??= this.openingDay(today);
 		// After a change of week start, the view starts on the new first day of the week.
 		if (this.lastWeekStart && this.lastWeekStart !== settings.weekStart) {
 			const startDay = settings.weekStart === 'monday' ? 1 : 0;
@@ -188,6 +192,14 @@ export class TimelineView extends CollectionView {
 		const first = Math.max(0, Math.floor(scroll.scrollLeft / width));
 		const last = Math.min(range.days - 1, Math.floor((scroll.scrollLeft + scroll.clientWidth - this.labelWidth()) / width) - 1);
 		return { first: addDays(range.from, first), last: addDays(range.from, Math.max(first, last)) };
+	}
+
+	/** The week before today; when fewer than two weeks fit (a phone), this week, so today is in view. */
+	private openingDay(today: Ymd): Ymd {
+		const weekStart = this.plugin.settings.weekStart;
+		const scroll = this.scrollEl;
+		const fits = scroll && scroll.clientWidth > 0 ? (scroll.clientWidth - this.labelWidth()) / this.dayWidth() : Infinity;
+		return fits < NARROW_DAYS ? addDays(openingDay(today, weekStart), 7) : openingDay(today, weekStart);
 	}
 
 	/** Whether the scroll element has a box (a background tab has none). */
@@ -272,7 +284,7 @@ export class TimelineView extends CollectionView {
 	}
 
 	private handlers: TimelineHandlers = {
-		today: () => this.scrollToDay(openingDay(toYmd(new Date()), this.plugin.settings.weekStart), true),
+		today: () => this.scrollToDay(this.openingDay(toYmd(new Date())), true),
 		earlier: () => this.scrollEl?.scrollBy({ left: -7 * this.dayWidth(), behavior: 'smooth' }),
 		later: () => this.scrollEl?.scrollBy({ left: 7 * this.dayWidth(), behavior: 'smooth' }),
 		openMatter: (path) => void this.plugin.openMatter(path),

@@ -78,3 +78,12 @@ describe('dragDates', () => {
 		expect(dragDates(null, due, 'end', 1)).toEqual({});
 	});
 });
+
+describe('dragDates clamps times on the same day', () => {
+	it('keeps a timed start before a timed due', () => {
+		const r = dragDates({ date: '2026-10-10', time: '15:00' }, { date: '2026-10-12', time: '09:00' }, 'start', 5);
+		expect(r.start).toEqual({ date: '2026-10-12', time: '09:00' });
+		const e = dragDates({ date: '2026-10-10', time: '15:00' }, { date: '2026-10-12', time: '09:00' }, 'end', -5);
+		expect(e.due).toEqual({ date: '2026-10-10', time: '15:00' });
+	});
+});

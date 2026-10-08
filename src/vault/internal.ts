@@ -5,8 +5,8 @@ import type { App, View } from 'obsidian';
 
 type Fn = (...args: unknown[]) => unknown;
 
-/** A cross-window check for an unknown value read from Obsidian's internals. */
-function isHTMLElement(value: unknown): value is HTMLElement {
+/** A cross-window element check for an unknown value (Obsidian's internals, event targets). */
+export function isHTMLElement(value: unknown): value is HTMLElement {
 	return typeof value === 'object' && value !== null && typeof (value as Node).instanceOf === 'function' && (value as Node).instanceOf(HTMLElement);
 }
 

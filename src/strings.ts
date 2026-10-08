@@ -222,8 +222,12 @@ export const STRINGS = {
 		oldestFirst: 'oldest first',
 		newAction: (first: string) => `New Action with ${first}`,
 		showMore: (n: number) => `Show ${n} more`,
-		nothingOpen: (first: string, done: number, last: string | null) =>
-			`Nothing open with ${first}. ${plural(done, 'done Action', 'done Actions')}${last ? `, the last on ${last}` : ''}.`,
+		/** `last` is a day label; "Today" and "Yesterday" read as "the last today". */
+		nothingOpen: (first: string, done: number, last: string | null) => {
+			const relative = last === 'Today' || last === 'Yesterday';
+			const when = !last ? '' : relative ? `, the last ${last.toLowerCase()}` : `, the last on ${last}`;
+			return `Nothing open with ${first}. ${plural(done, 'done Action', 'done Actions')}${when}.`;
+		},
 	},
 
 	/** An active Matter with nothing in motion. The UI never says "stalled". */

@@ -61,7 +61,9 @@ export class CalendarView extends CollectionView {
 			settings.spheres,
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff] },
 			matters.map((m) => [m.path, m.name, m.sphere]),
-			items.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed]),
+			items.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
+			// The toolbar counts every Action in the result, shown or not.
+			all.map((a) => [a.path, a.category, a.effective.matterPath]),
 		]);
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
@@ -91,7 +93,7 @@ export class CalendarView extends CollectionView {
 				newAction: () => this.plugin.quickAdd(),
 			},
 		);
-		if (!all.length) {
+		if (this.noActionsYet(!all.length)) {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd(), newMatter: () => this.plugin.newMatter() });
 			return;
 		}

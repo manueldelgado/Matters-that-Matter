@@ -47,3 +47,22 @@ describe('migrateSettings', () => {
 		expect(migrateSettings({ schemaVersion: CURRENT_SCHEMA + 1 }).schemaVersion).toBe(CURRENT_SCHEMA + 1);
 	});
 });
+
+describe('settings repair', () => {
+	it('fills in a missing category, tone and icon and drops duplicate IDs', () => {
+		const s = migrateSettings({
+			schemaVersion: 3,
+			statuses: [{ id: 'a', label: 'A' }, { id: 'a', label: 'Again' }, { id: 'z', label: 'Z', category: 'closed', tone: 'mint' }],
+			types: [{ id: 't', label: 'T' }],
+		});
+		expect(s.statuses.map((x) => `${x.id}:${x.category}:${x.tone}`)).toEqual(['a:open:ink', 'z:closed:mint']);
+		expect(s.types[0]).toMatchObject({ id: 't', icon: 'circle-dot', tone: 'ink', default: true });
+		expect(checkFlags(s.statuses, s.types)).toEqual([]);
+	});
+
+	it('adds a Done status when none is closed, keeping the other IDs', () => {
+		const s = migrateSettings({ schemaVersion: 3, statuses: [{ id: 'todo', label: 'To do', category: 'open', tone: 'sky' }] });
+		expect(s.statuses.map((x) => x.id)).toEqual(['todo', 'done']);
+		expect(checkFlags(s.statuses, s.types)).toEqual([]);
+	});
+});

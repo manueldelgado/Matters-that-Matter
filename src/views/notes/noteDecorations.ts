@@ -69,7 +69,12 @@ export class NoteDecorations {
 		);
 		// Today and overdue change with the clock.
 		this.plugin.registerInterval(window.setInterval(() => this.refreshNotes(false), 60_000));
-		this.plugin.register(() => this.clear());
+		this.plugin.register(() => {
+			// A refresh still pending would put decorations back after they were removed.
+			this.refreshNotesSoon.cancel();
+			this.refreshExplorerSoon.cancel();
+			this.clear();
+		});
 		this.refreshExplorer();
 		this.refreshNotes(true);
 	}

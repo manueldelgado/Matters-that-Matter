@@ -3,7 +3,7 @@
 import { setIcon, setTooltip } from 'obsidian';
 import type { TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
-import { appendIcon, tileEl, typeClasses } from '../../ui/components/dom';
+import { appendIcon, pressable, tileEl, typeClasses } from '../../ui/components/dom';
 
 export interface SphereChip {
 	/** Sphere ID, or NO_SPHERE. */
@@ -85,7 +85,6 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 		toggleNote(bar, shown, shown ? b.backlogShown(label) : b.backlogHidden(label), shown ? b.hideBacklogHere(label) : b.showBacklogHere(label), h.toggleBacklog);
 	}
 	toggleNote(bar, input.showDone, input.showDone ? b.doneShown : b.doneHidden, input.showDone ? b.hideDoneHere : b.showDoneHere, () => h.toggleDone());
-	const add = bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } });
+	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
-	add.addEventListener('click', () => h.newAction());
 }

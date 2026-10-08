@@ -1,7 +1,7 @@
 import { Events, FileView, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import type { MattersSettings } from './settings';
 import { STRINGS } from './strings';
-import { migrateSettings } from './services/migrations';
+import { CURRENT_SCHEMA, migrateSettings } from './services/migrations';
 import { doneStatus } from './model/workflow';
 import { registerCommands } from './commands';
 import { Selection } from './selection';
@@ -77,7 +77,11 @@ export default class MattersPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = migrateSettings(await this.loadData());
+		const saved: unknown = await this.loadData();
+		this.settings = migrateSettings(saved);
+		// Store a migration at once, so data.json says which schema it holds.
+		const version = typeof saved === 'object' && saved !== null ? (saved as { schemaVersion?: unknown }).schemaVersion : undefined;
+		if (typeof version === 'number' && version < CURRENT_SCHEMA) await this.saveData(this.settings);
 	}
 
 	async saveSettings() {
@@ -88,6 +92,8 @@ export default class MattersPlugin extends Plugin {
 	async onExternalSettingsChange() {
 		await this.loadSettings();
 		this.events.trigger('settings-changed');
+		// Setup finished on another device: start what runs once setup is done (it starts only once).
+		if (this.settings.setupDone && this.app.workspace.layoutReady) this.onSetupDone();
 	}
 
 	/** The Inbox and the board are identified by their paths; follow renames. */
@@ -221,9 +227,15 @@ export default class MattersPlugin extends Plugin {
 			new Notice(STRINGS.overview.missing);
 			return;
 		}
-		const existing = workspace.getLeavesOfType(VIEW_MATTER_OVERVIEW).find((leaf) => leaf.view instanceof MatterOverviewView && leaf.view.path === path);
+		// A background tab may not be loaded yet (no view), so match on its saved state too.
+		const existing = workspace.getLeavesOfType(VIEW_MATTER_OVERVIEW).find((leaf) => {
+			if (leaf.view instanceof MatterOverviewView && leaf.view.path === path) return true;
+			const state = leaf.getViewState().state as { matter?: unknown } | undefined;
+			return state?.matter === path;
+		});
 		if (existing) {
 			await workspace.revealLeaf(existing);
+			workspace.setActiveLeaf(existing, { focus: true });
 			return;
 		}
 		const leaf = workspace.getLeaf('tab');

@@ -95,6 +95,8 @@ export class NewMatterModal extends Modal {
 		footer.createEl('button', { text: STRINGS.modals.cancel }).addEventListener('click', () => this.close());
 		const create = footer.createEl('button', { cls: 'mod-cta', text: t.create });
 		const submit = () => {
+			// A repeated Enter must not create the Matter twice.
+			if (create.disabled) return;
 			const name = input.value.trim();
 			if (!name) {
 				input.focus();

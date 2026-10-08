@@ -93,6 +93,8 @@ export function buildBoard(
 	options: BoardOptions,
 	today: Ymd,
 	now?: Date,
+	/** Every Action in the vault, for "No next Action" (a board's filter must not hide what keeps a Matter moving). */
+	everyAction: readonly ActionItem[] = actions,
 ): BoardModel {
 	const columns = statuses.filter((s) => options.showDone || s.category !== 'closed');
 	const columnIds = new Set(columns.map((c) => c.id));
@@ -106,7 +108,7 @@ export function buildBoard(
 	);
 
 	const allByMatter = new Map<string, ActionItem[]>();
-	for (const a of actions) {
+	for (const a of everyAction) {
 		const list = allByMatter.get(a.effective.matterPath) ?? [];
 		list.push(a);
 		allByMatter.set(a.effective.matterPath, list);

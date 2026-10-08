@@ -1,12 +1,11 @@
 // The banner on person notes: what's open with them, in two columns of the Matter overview's cards.
 // DOM only; the decorator supplies data and handlers.
 
-import { Keymap } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { dayLabel, toYmd } from '../../model/dates';
 import type { ActionItem } from '../../services/actionItems';
 import { firstName, PERSON_COLUMN_SIZE, type PersonModel } from '../../services/personModel';
-import { avatarEl, renderCard } from '../../ui/components/card';
+import { avatarEl, bindCardActions, renderCard } from '../../ui/components/card';
 import { appendIcon, pressable } from '../../ui/components/dom';
 import { BANNER_ATTR } from './noteBanner';
 
@@ -79,18 +78,7 @@ function column(parent: HTMLElement, title: string, aside: string, items: readon
 				onDismiss: (i) => h.dismiss(i),
 			});
 			card.removeAttribute('draggable');
-			card.addEventListener('click', (e) => {
-				if (Keymap.isModEvent(e)) h.open(item.path, e);
-				else h.select(item.path);
-			});
-			card.addEventListener('dblclick', (e) => h.open(item.path, e));
-			card.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') h.open(item.path, e);
-				else if (e.key === ' ') {
-					e.preventDefault();
-					h.select(item.path);
-				}
-			});
+			bindCardActions(card, item.path, h);
 		}
 	};
 	addCards(items.slice(0, PERSON_COLUMN_SIZE));

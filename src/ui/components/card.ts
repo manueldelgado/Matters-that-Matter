@@ -1,6 +1,6 @@
 // Action card and the atoms it shares with other views (due label, priority, avatar, orphan badge).
 
-import { setIcon, setTooltip } from 'obsidian';
+import { Keymap, setIcon, setTooltip } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { waitAge, type Priority, type WaitAge } from '../../model/actions';
 import { dateLabel, dayLabel, isOverdue, toYmd, type MtmDate } from '../../model/dates';
@@ -91,6 +91,30 @@ export interface CardContext {
 	/** The Matter's icon, before its name. */
 	matterIcon?: string;
 	onDismiss(item: ActionItem): void;
+}
+
+/**
+ * Selection and opening on a card (G4): click selects, Ctrl/Cmd-click or double-click opens; Enter opens and Space selects.
+ * Keys pressed on something inside the card (an orphan badge's dismiss) stay with it.
+ */
+export function bindCardActions(
+	card: HTMLElement,
+	path: string,
+	h: { select(path: string): void; open(path: string, e: MouseEvent | KeyboardEvent): void },
+): void {
+	card.addEventListener('click', (e) => {
+		if (Keymap.isModEvent(e)) h.open(path, e);
+		else h.select(path);
+	});
+	card.addEventListener('dblclick', (e) => h.open(path, e));
+	card.addEventListener('keydown', (e) => {
+		if (e.target !== card) return;
+		if (e.key === 'Enter') h.open(path, e);
+		else if (e.key === ' ') {
+			e.preventDefault();
+			h.select(path);
+		}
+	});
 }
 
 export function renderCard(parent: HTMLElement, item: ActionItem, ctx: CardContext): HTMLElement {

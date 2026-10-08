@@ -1,6 +1,6 @@
 // Matter overview: header (eyebrow, title, about, controls, stats) and Actions by status.
 
-import { Keymap, setIcon, setTooltip, type TFile } from 'obsidian';
+import { setIcon, setTooltip, type TFile } from 'obsidian';
 import type { MattersSettings } from '../../settings';
 import { backlogStatus } from '../../model/workflow';
 import { STRINGS } from '../../strings';
@@ -9,7 +9,7 @@ import { parseCadence, type Cadence, type MatterState } from '../../model/matter
 import type { ActionItem } from '../../services/actionItems';
 import type { MatterInfo } from '../../services/boardModel';
 import { reviewState, type OverviewModel } from '../../services/overviewModel';
-import { avatarEl, renderCard } from '../../ui/components/card';
+import { avatarEl, bindCardActions, renderCard } from '../../ui/components/card';
 import { cadenceFields } from '../../ui/components/cadenceFields';
 import { appendIcon, pressable, statusClasses, tileEl } from '../../ui/components/dom';
 
@@ -322,18 +322,7 @@ function renderSections(col: HTMLElement, d: OverviewData, h: OverviewHandlers):
 function renderOverviewCard(stack: HTMLElement, item: ActionItem, d: OverviewData, h: OverviewHandlers): void {
 	const card = renderCard(stack, item, { now: d.now, selected: item.path === d.selected, onDismiss: (i) => h.dismiss(i) });
 	card.setAttr('draggable', 'false');
-	card.addEventListener('click', (e) => {
-		if (Keymap.isModEvent(e)) h.open(item.path, e);
-		else h.select(item.path);
-	});
-	card.addEventListener('dblclick', (e) => h.open(item.path, e));
-	card.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter') h.open(item.path, e);
-		else if (e.key === ' ') {
-			e.preventDefault();
-			h.select(item.path);
-		}
-	});
+	bindCardActions(card, item.path, h);
 }
 
 function renderAside(col: HTMLElement, d: OverviewData, h: OverviewHandlers): void {

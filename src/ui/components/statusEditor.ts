@@ -60,7 +60,7 @@ export class StatusEditor {
 	private renderRow(status: StatusDef, index: number): void {
 		let current = status;
 		const row = this.listEl.createDiv({ cls: ['mtm-status-row', ...statusClasses(status)] });
-		reorderable(row, index, this.statuses.length, (from, to) => this.commit(moveItem(this.statuses, from, to)));
+		reorderable(row, index, this.statuses.length, (from, to) => this.commit(moveItem(this.statuses, from, to)), 'statuses');
 
 		const tone = row.createEl('button', { cls: 'mtm-tone-trigger', attr: { 'aria-label': STRINGS.editors.colour } });
 		tone.createSpan({ cls: 'mtm-status-dot' });

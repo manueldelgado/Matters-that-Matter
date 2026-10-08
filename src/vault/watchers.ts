@@ -11,14 +11,17 @@ import { WaitingCache, type PersonRef } from '../services/waitingSince';
 import { effectiveAction } from '../services/effective';
 import { inboxRepairs, isInboxDuplicate } from '../services/inboxGuard';
 import { linkedFile, resolverFor } from './index';
-import { createNote, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
+import { createNote, ensureFolder, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
 
 const INBOX_RESTORE_DELAY = 4000;
+/** Time for the re-created Inbox's own changes to pass before the guard watches it again. */
+const INBOX_SETTLE = 1500;
 
 export class Watchers {
 	private statuses = new StatusCache();
 	private waiting = new WaitingCache();
 	private ribbonEl: HTMLElement | null = null;
+	private restoringInbox = false;
 	private updateRibbon = debounce(() => this.renderRibbon(), 300, true);
 
 	constructor(private plugin: MattersPlugin) {}
@@ -79,7 +82,8 @@ export class Watchers {
 	private async onChanged(file: TFile, cache: CachedMetadata): Promise<void> {
 		const { app, settings } = this.plugin;
 		const fm = cache.frontmatter;
-		if (file.path === settings.inboxPath) await this.guardInbox(file, fm);
+		// While the Inbox is being re-created its first change has no properties yet: not a hand edit to repair.
+		if (file.path === settings.inboxPath && !this.restoringInbox) await this.guardInbox(file, fm);
 
 		if (fm?.['mtm-kind'] !== 'action') {
 			this.statuses.forget(file.path);
@@ -117,9 +121,16 @@ export class Watchers {
 		window.setTimeout(() => {
 			const { app, settings } = this.plugin;
 			if (settings.inboxPath !== path || app.vault.getAbstractFileByPath(normalizePath(path))) return;
-			void createNote(app, path, { 'mtm-kind': 'matter', 'mtm-icon': 'inbox', 'mtm-state': 'active' }).then(() =>
-				new Notice(STRINGS.notices.inboxRecreated),
-			);
+			const slash = path.lastIndexOf('/');
+			this.restoringInbox = true;
+			void (async () => {
+				// The folder may have gone with the note.
+				if (slash > 0) await ensureFolder(app, path.slice(0, slash));
+				await createNote(app, path, { 'mtm-kind': 'matter', 'mtm-icon': 'inbox', 'mtm-state': 'active' });
+				new Notice(STRINGS.notices.inboxRecreated);
+			})()
+				.catch((e) => new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e))))
+				.finally(() => window.setTimeout(() => (this.restoringInbox = false), INBOX_SETTLE));
 		}, INBOX_RESTORE_DELAY);
 	}
 

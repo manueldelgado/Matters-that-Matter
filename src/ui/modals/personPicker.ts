@@ -1,6 +1,6 @@
 // Picks a person note: notes in the people folder first, then every other note, or "New person …".
 
-import { normalizePath, SuggestModal, TFile, type App } from 'obsidian';
+import { normalizePath, Notice, SuggestModal, TFile, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { normalise, rank } from '../../services/fuzzy';
 import { sanitiseTitle } from '../../model/titles';
@@ -68,6 +68,8 @@ export class PersonPicker extends SuggestModal<Choice> {
 			void this.onPick(choice.file);
 			return;
 		}
-		void createPersonNote(this.app, this.peopleFolder, choice.create).then((file) => this.onPick(file));
+		void createPersonNote(this.app, this.peopleFolder, choice.create)
+			.then((file) => this.onPick(file))
+			.catch((e) => new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e))));
 	}
 }

@@ -11,7 +11,7 @@ import { focusedSphere } from '../../../services/spheres';
 import { nextStepStatus } from '../../../services/nextAction';
 import { showNoNextActionMenu, showStatusMenu } from '../../../ui/components/menus';
 import { moveAction } from '../../../vault/actionWrites';
-import { allMatters } from '../../../vault/index';
+import { allActionItems, allMatters } from '../../../vault/index';
 import { setMatterState } from '../../../vault/matterWrites';
 import { renderEmpty } from '../board/boardRender';
 import { CollectionView, OPTION_KEYS } from '../collectionView';
@@ -63,6 +63,7 @@ export class ListView extends CollectionView {
 			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres, showBacklog },
 			today,
 			now,
+			allActionItems(this.plugin.app, settings),
 		);
 		const focus = focusedSphere(options.spheresOff, board.sphereKeys);
 		this.sphereFocus = focus;
@@ -88,7 +89,7 @@ export class ListView extends CollectionView {
 				newAction: () => this.plugin.quickAdd({ sphereId: focus }),
 			},
 		);
-		if (board.empty) {
+		if (this.noActionsYet(board.empty)) {
 			renderEmpty(view, { newAction: () => this.plugin.quickAdd({ sphereId: focus }), newMatter: () => this.plugin.newMatter(focus) });
 			return;
 		}
@@ -124,6 +125,7 @@ export class ListView extends CollectionView {
 	private handlers: ListHandlers = {
 		openMatter: (path) => void this.plugin.openMatter(path),
 		newAction: (matterPath, statusId) => this.plugin.quickAdd({ matterPath, statusId }),
+		processInbox: () => this.plugin.processInbox(this.sphereFocus),
 		newTypedAction: (typeId) => this.plugin.quickAdd({ typeId, sphereId: this.sphereFocus }),
 		noNextActionMenu: (lane, anchor) => {
 			const m = lane.matter;

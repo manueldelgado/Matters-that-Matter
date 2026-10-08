@@ -36,7 +36,12 @@ export function registerCommands(plugin: MattersPlugin): void {
 	plugin.addCommand({
 		id: 'new-matter',
 		name: STRINGS.commands.newMatter,
-		callback: () => plugin.newMatter(),
+		// No writes before setup is done.
+		checkCallback: (checking) => {
+			if (!plugin.settings.setupDone) return false;
+			if (!checking) plugin.newMatter();
+			return true;
+		},
 	});
 
 	plugin.addCommand({

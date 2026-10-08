@@ -6,7 +6,7 @@ import { STRINGS } from '../../../strings';
 import { weekday, type Ymd } from '../../../model/dates';
 import type { ActionItem } from '../../../services/actionItems';
 import { DAY_CHIPS, type CalendarDay, type DayEntry, type WeekStart } from '../../../services/calendarModel';
-import { renderCard } from '../../../ui/components/card';
+import { bindCardActions, renderCard } from '../../../ui/components/card';
 import { appendIcon, typeClasses } from '../../../ui/components/dom';
 import { actionTooltip } from '../actionTooltip';
 
@@ -182,7 +182,6 @@ function renderAgenda(cal: HTMLElement, input: CalendarInput, h: CalendarHandler
 			onDismiss: (i) => h.dismiss(i),
 		});
 		card.setAttr('draggable', 'false');
-		card.addEventListener('click', () => h.select(item.path));
-		card.addEventListener('dblclick', (e) => h.open(item.path, e));
+		bindCardActions(card, item.path, h);
 	}
 }

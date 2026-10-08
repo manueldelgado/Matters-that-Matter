@@ -6,8 +6,8 @@ import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
 import type { BoardBand, BoardLane, BoardModel } from '../../../services/boardModel';
 import { NO_SPHERE } from '../../../services/spheres';
-import { appendIcon, statusClasses, tileEl, typeClasses } from '../../../ui/components/dom';
-import { orphanBadge, renderCard } from '../../../ui/components/card';
+import { appendIcon, pressable, statusClasses, tileEl, typeClasses } from '../../../ui/components/dom';
+import { bindCardActions, orphanBadge, renderCard } from '../../../ui/components/card';
 import { nextStepGhost, noNextActionHint } from '../../../ui/components/nextAction';
 import { NO_SPHERE_ICON } from '../collectionView';
 
@@ -83,13 +83,11 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 		const handle = row.createSpan({ cls: 'mtm-lane-handle', attr: { draggable: 'true', 'aria-label': b.dragLane } });
 		appendIcon(handle, 'grip-vertical');
 	}
-	const toggle = row.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': b.collapse, role: 'button' } });
+	const toggle = pressable(row.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': b.collapse } }), () => h.toggleLane(m.path));
 	appendIcon(toggle, 'chevron-down');
-	toggle.addEventListener('click', () => h.toggleLane(m.path));
 	setIcon(row.createSpan({ cls: 'mtm-matter-icon' }), m.icon);
-	const title = row.createSpan({ cls: 'mtm-lane-title', text: m.name });
+	const title = pressable(row.createSpan({ cls: 'mtm-lane-title', text: m.name }), () => h.openMatter(m.path));
 	if (m.outcome) setTooltip(title, `${STRINGS.overview.outcome}: ${m.outcome}`);
-	title.addEventListener('click', () => h.openMatter(m.path));
 	if (!m.isInbox) {
 		const menu = row.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': b.laneMenu } });
 		appendIcon(menu, 'ellipsis');
@@ -158,26 +156,14 @@ function renderCell(board: HTMLElement, lane: BoardLane, column: StatusDef, inpu
 	}
 	for (const item of cards) {
 		const card = renderCard(cell, item, { now: input.now, selected: item.path === input.selected, onDismiss: (i) => h.dismiss(i) });
-		card.addEventListener('click', (e) => {
-			if (e.metaKey || e.ctrlKey) h.open(item.path, e);
-			else h.select(item.path);
-		});
-		card.addEventListener('dblclick', (e) => h.open(item.path, e));
-		card.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') h.open(item.path, e);
-			else if (e.key === ' ') {
-				e.preventDefault();
-				h.select(item.path);
-			}
-		});
+		bindCardActions(card, item.path, h);
 	}
 	if (lane.noNextAction && column.id === input.nextStepId) {
 		nextStepGhost(cell, () => h.newAction(column.id, lane.matter.path));
 	} else if (!closedColumn && lane.matter.state !== 'closed') {
-		const add = cell.createDiv({ cls: 'mtm-cell-add', attr: { tabindex: 0, role: 'button' } });
+		const add = pressable(cell.createDiv({ cls: 'mtm-cell-add' }), () => h.newAction(column.id, lane.matter.path));
 		appendIcon(add, 'plus');
 		add.appendText(STRINGS.board.addAction);
-		add.addEventListener('click', () => h.newAction(column.id, lane.matter.path));
 	}
 }
 
@@ -235,12 +221,10 @@ function renderBand(board: HTMLElement, band: BoardBand, model: BoardModel, h: B
 		attr: { 'data-sphere': key },
 	});
 	const head = el.createDiv({ cls: 'mtm-sphere-head' });
-	const toggle = head.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': STRINGS.board.collapse, role: 'button' } });
+	const toggle = pressable(head.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': STRINGS.board.collapse } }), () => h.toggleBand(key));
 	appendIcon(toggle, 'chevron-down');
-	toggle.addEventListener('click', () => h.toggleBand(key));
 	tileEl(head, band.sphere?.icon ?? NO_SPHERE_ICON, 'mod-neutral');
-	const title = head.createSpan({ cls: 'mtm-sphere-title', text: band.sphere?.label ?? STRINGS.spheres.none });
-	title.addEventListener('click', () => h.toggleBand(key));
+	pressable(head.createSpan({ cls: 'mtm-sphere-title', text: band.sphere?.label ?? STRINGS.spheres.none }), () => h.toggleBand(key));
 	const menu = head.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': STRINGS.spheres.menu } });
 	appendIcon(menu, 'ellipsis');
 	menu.addEventListener('click', (e) => h.bandMenu(band, e, menu));

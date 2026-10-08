@@ -12,7 +12,8 @@ import { NO_SPHERE, sphereShown } from '../../services/spheres';
 import type { SphereChip } from './toolbar';
 import { dismissOrphan } from '../../vault/actionWrites';
 import { actionItem } from '../../vault/index';
-import { frontmatterOf } from '../../vault/notes';
+import { frontmatterOf, notesOfKind } from '../../vault/notes';
+import { isHTMLElement } from '../../vault/internal';
 
 /** Option keys stored in the .base view config. */
 export const OPTION_KEYS = {
@@ -62,18 +63,49 @@ export abstract class CollectionView extends BasesView {
 		protected plugin: MattersPlugin,
 	) {
 		super(controller);
-		this.registerEvent(plugin.events.on('settings-changed', () => this.refresh(true)));
+		this.registerEvent(plugin.events.on('settings-changed', () => this.update(true)));
 		this.registerEvent(plugin.selection.on('changed', () => this.markSelection()));
 		// Labels such as Today and overdue states change with the clock.
-		this.registerInterval(window.setInterval(() => this.refresh(false), 60_000));
+		this.registerInterval(window.setInterval(() => this.update(false), 60_000));
+
+		// A re-render during a drag would drop it: updates wait until the drag ends.
+		const doc = containerEl.ownerDocument;
+		const start = () => (this.dragging = true);
+		const end = () => {
+			if (!this.dragging) return;
+			this.dragging = false;
+			const force = this.deferredUpdate;
+			this.deferredUpdate = null;
+			if (force !== null) window.setTimeout(() => this.refresh(force), 0);
+		};
+		this.registerDomEvent(containerEl, 'dragstart', start, true);
+		this.registerDomEvent(containerEl, 'pointerdown', (e) => {
+			if (isHTMLElement(e.target) && e.target.closest('.mtm-tl-bar')) start();
+		}, true);
+		this.registerDomEvent(doc, 'dragend', end, true);
+		this.registerDomEvent(doc, 'pointerup', end, true);
+		this.registerDomEvent(doc, 'pointercancel', end, true);
 	}
+
+	private dragging = false;
+	/** An update that came during a drag (forced or not); null when none is waiting. */
+	private deferredUpdate: boolean | null = null;
 
 	/** Re-renders when what the view shows has changed (always when forced). */
 	protected abstract refresh(force: boolean): void;
 
+	/** Updates from outside the view (data, settings, the clock) wait for a drag to end. */
+	private update(force: boolean): void {
+		if (this.dragging) {
+			this.deferredUpdate = (this.deferredUpdate ?? false) || force;
+			return;
+		}
+		this.refresh(force);
+	}
+
 	onDataUpdated(): void {
 		this.ready = true;
-		this.refresh(false);
+		this.update(false);
 	}
 
 	onunload(): void {
@@ -192,6 +224,14 @@ export abstract class CollectionView extends BasesView {
 	}
 
 	// ——— Data ———
+
+	/**
+	 * The welcome ("Your board is ready") only when the vault has no Actions at all: a board whose filter
+	 * matches nothing still shows its lanes.
+	 */
+	protected noActionsYet(resultEmpty: boolean): boolean {
+		return resultEmpty && notesOfKind(this.plugin.app, 'action').length === 0;
+	}
 
 	/** The Actions in the Bases result. */
 	protected actions(): ActionItem[] {

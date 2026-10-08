@@ -1,6 +1,6 @@
 // Settings loading: schema migrations, defaults for missing keys, and flag repair.
 
-import { DEFAULT_SETTINGS, type MattersSettings, type SphereDef } from '../settings';
+import { DEFAULT_SETTINGS, TONES, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
 export const CURRENT_SCHEMA = 3;
@@ -24,6 +24,37 @@ function validItems<T>(items: unknown): T[] | null {
 	return valid.length ? valid : null;
 }
 
+/** The first item with each ID. */
+function unique<T extends { id: string }>(items: readonly T[]): T[] {
+	const seen = new Set<string>();
+	return items.filter((i) => !seen.has(i.id) && !!seen.add(i.id));
+}
+
+const CATEGORIES: readonly StatusCategory[] = ['open', 'active', 'closed'];
+
+/**
+ * Statuses with a valid category and tone, and at least one closed status for "Mark as done".
+ * Existing IDs are kept, so notes keep their status.
+ */
+function repairStatuses(items: readonly StatusDef[]): StatusDef[] {
+	const statuses = unique(items).map((s) => ({
+		...s,
+		category: CATEGORIES.includes(s.category) ? s.category : 'open',
+		tone: TONES.includes(s.tone) ? s.tone : 'ink',
+	}));
+	if (!statuses.some((s) => s.category === 'closed')) {
+		const done = DEFAULT_SETTINGS.statuses.find((s) => s.done);
+		if (done) statuses.push({ ...done, id: uniqueId(done.id, statuses) });
+	}
+	return statuses;
+}
+
+function uniqueId(base: string, items: readonly { id: string }[]): string {
+	let id = base;
+	for (let n = 2; items.some((i) => i.id === id); n++) id = `${base}-${n}`;
+	return id;
+}
+
 /** Turns whatever loadData returned into valid settings. Data from a newer schema is kept as is. */
 export function migrateSettings(saved: unknown): MattersSettings {
 	const defaults = structuredClone(DEFAULT_SETTINGS);
@@ -43,8 +74,12 @@ export function migrateSettings(saved: unknown): MattersSettings {
 		schemaVersion: Math.max(version, CURRENT_SCHEMA),
 		folders: { ...defaults.folders, ...(isObject(data.folders) ? data.folders : {}) },
 	};
-	settings.statuses = validItems(settings.statuses) ?? defaults.statuses;
-	settings.types = validItems(settings.types) ?? defaults.types;
+	settings.statuses = repairStatuses(validItems<StatusDef>(settings.statuses) ?? defaults.statuses);
+	settings.types = unique(validItems<TypeDef>(settings.types) ?? defaults.types).map((t) => ({
+		...t,
+		icon: typeof t.icon === 'string' && t.icon ? t.icon : 'circle-dot',
+		tone: TONES.includes(t.tone) ? t.tone : 'ink',
+	}));
 	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 
 	return { ...settings, ...normaliseFlags(settings.statuses, settings.types) };

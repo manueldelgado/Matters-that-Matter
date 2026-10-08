@@ -60,7 +60,7 @@ export class TypeEditor {
 	private renderRow(type: TypeDef, index: number): void {
 		let current = type;
 		const row = this.listEl.createDiv({ cls: ['mtm-type-row', ...typeClasses(type)] });
-		reorderable(row, index, this.types.length, (from, to) => this.commit(moveItem(this.types, from, to)));
+		reorderable(row, index, this.types.length, (from, to) => this.commit(moveItem(this.types, from, to)), 'types');
 
 		const trigger = row.createEl('button', { cls: 'mtm-icon-trigger', attr: { 'aria-label': STRINGS.editors.icon } });
 		tileEl(trigger, type.icon);

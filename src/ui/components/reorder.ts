@@ -4,14 +4,17 @@ import { Menu } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { appendIcon } from './dom';
 
-const ROW_TYPE = 'application/x-mtm-row';
+/** Each list has its own drag type, so a status row can't be dropped on the type list. */
+const rowType = (list: string) => `application/x-mtm-row-${list}`;
 
 export function reorderable(
 	row: HTMLElement,
 	index: number,
 	count: number,
 	move: (from: number, to: number) => void,
+	list: 'statuses' | 'types' | 'spheres',
 ): HTMLElement {
+	const ROW_TYPE = rowType(list);
 	const handle = row.createSpan({ cls: 'mtm-drag-handle' });
 	appendIcon(handle, 'grip-vertical');
 	handle.setAttr('aria-label', STRINGS.editors.dragHint);
