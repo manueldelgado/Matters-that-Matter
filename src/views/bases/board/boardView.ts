@@ -284,6 +284,7 @@ export class BoardView extends CollectionView {
 		newMatter: () => this.plugin.newMatter(this.focus()),
 		openMatter: (path) => void this.plugin.openMatter(path),
 		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),
+		processInbox: () => this.plugin.processInbox(this.focus()),
 		noNextActionMenu: (lane, anchor) => {
 			const m = lane.matter;
 			showNoNextActionMenu(anchor, {

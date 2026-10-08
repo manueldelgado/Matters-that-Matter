@@ -22,6 +22,7 @@ export interface BoardHandlers {
 	laneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void;
 	/** The "No next Action" hint's menu. */
 	noNextActionMenu(lane: BoardLane, anchor: HTMLElement): void;
+	processInbox(): void;
 	markReviewed(path: string): void;
 	/** Collapses or expands a Sphere band (NO_SPHERE for "No Sphere"). */
 	toggleBand(key: string): void;
@@ -97,7 +98,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 
 	const meta = header.createDiv({ cls: 'mtm-lane-meta' });
 	if (m.isInbox) {
-		meta.createSpan({ text: b.notFiled });
+		meta.createSpan({ text: lane.openCount ? STRINGS.process.laneMeta(lane.openCount) : b.notFiled });
 	} else {
 		meta.createSpan({ text: b.open(lane.openCount) });
 		if (lane.waitingCount) meta.createSpan({ cls: 'mod-waiting', text: b.waiting(lane.waitingCount) });
@@ -116,6 +117,13 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 			el.appendText(kind === 'ontime' ? b.reviewedAgo(r.daysSince ?? 0) : kind === 'overdue' ? b.reviewDue : b.notReviewed);
 			setTooltip(el, r.daysSince === null ? b.neverReviewed : b.reviewedAgo(r.daysSince));
 		}
+	}
+	// Always shown while the Inbox has open Actions (unlike "Mark as reviewed", which shows on hover).
+	if (m.isInbox && lane.openCount > 0) {
+		const button = header.createEl('button', { cls: 'mtm-process-button' });
+		appendIcon(button, 'list-checks');
+		button.appendText(STRINGS.process.laneButton);
+		button.addEventListener('click', () => h.processInbox());
 	}
 	if (m.review && m.state === 'active' && !lane.collapsed) {
 		const button = header.createEl('button', { cls: 'mtm-review-button' });

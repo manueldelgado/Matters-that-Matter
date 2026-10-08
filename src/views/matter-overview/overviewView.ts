@@ -212,6 +212,7 @@ export class MatterOverviewView extends ItemView {
 		newAction: () => {
 			if (this.path) this.plugin.quickAdd({ matterPath: this.path });
 		},
+		processInbox: () => this.plugin.processInbox(),
 		newNextAction: () => {
 			if (this.path) this.plugin.quickAdd({ matterPath: this.path, statusId: nextStepStatus(this.plugin.settings.statuses)?.id });
 		},

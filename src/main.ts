@@ -8,6 +8,7 @@ import { Selection } from './selection';
 import { MattersSettingTab } from './ui/settingsTab';
 import { BoardPicker } from './ui/modals/boardPicker';
 import { NewMatterModal } from './ui/modals/newMatterModal';
+import { ProcessInboxModal } from './ui/modals/processInbox/processInboxModal';
 import { QuickAddModal, type QuickAddInit } from './ui/modals/quickAdd/quickAddModal';
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
@@ -146,6 +147,12 @@ export default class MattersPlugin extends Plugin {
 	quickAdd(init: QuickAddInit = {}): void {
 		if (!this.settings.setupDone) return;
 		new QuickAddModal(this, init).open();
+	}
+
+	/** Steps through the Inbox's open Actions; from a board focused on one Sphere, new Matters start in it. */
+	processInbox(sphereId: string | null = null): void {
+		if (!this.settings.setupDone) return;
+		new ProcessInboxModal(this, { sphereId }).open();
 	}
 
 	/** The New Matter dialog; from a board focused on one Sphere it starts in that Sphere. */

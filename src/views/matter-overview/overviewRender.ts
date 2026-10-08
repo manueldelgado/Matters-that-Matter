@@ -41,6 +41,7 @@ export interface OverviewHandlers {
 	newAction: () => void;
 	/** Quick add in this Matter, starting in the next-step status. */
 	newNextAction: () => void;
+	processInbox: () => void;
 	openNote: (e: MouseEvent | KeyboardEvent) => void;
 	renderAbout: (el: HTMLElement, markdown: string) => void;
 	setState: (state: MatterState) => void;
@@ -115,7 +116,10 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 	setTooltip(tile, o.changeIcon);
 	row.createEl('h1', { cls: 'mtm-overview-title', text: matter.name });
 	row.createEl('button', { text: o.showOnBoard }).addEventListener('click', () => h.showOnBoard());
-	row.createEl('button', { cls: 'mod-cta', text: o.newAction }).addEventListener('click', () => h.newAction());
+	// The Inbox's primary button processes it while it has open Actions.
+	const processing = matter.isInbox && d.model.stats.open > 0;
+	row.createEl('button', { cls: processing ? undefined : 'mod-cta', text: o.newAction }).addEventListener('click', () => h.newAction());
+	if (processing) row.createEl('button', { cls: 'mod-cta', text: STRINGS.process.title }).addEventListener('click', () => h.processInbox());
 
 	if (!matter.isInbox) renderOutcome(header, matter.outcome, h);
 

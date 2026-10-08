@@ -1032,3 +1032,84 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .is-phone .mtm-person-banner{padding:12px}
 .mtm-person-banner.mod-quiet{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;box-shadow:none;background:transparent;border-style:dashed;font-size:12.5px;color:var(--text-muted)}
 .mtm-person-banner.mod-quiet>.svg-icon{flex:none;width:15px;height:15px;color:var(--text-faint)}
+/* Process Inbox (V1). */
+/* The modal: modalEl gets mtm-modal mtm-process and the current item's mtm-type-* mtm-tone-*. */
+.modal.mtm-modal.mtm-process{width:600px}
+/* Progress: eyebrow, bar, “3 of 7”. The bar reuses .mtm-progress, slimmer. */
+.mtm-process-bar{display:flex;align-items:center;gap:10px;padding:16px 20px 0}
+.mtm-process-bar .mtm-eyebrow{flex:none;align-items:center;gap:5px}
+.mtm-process-bar .mtm-eyebrow .svg-icon{width:13px;height:13px}
+.mtm-process-bar .mtm-progress{flex:1;height:5px}
+.mtm-process-count{flex:none;font-size:11px;font-weight:600;color:var(--text-faint);font-variant-numeric:tabular-nums}
+/* The item: its type tile, its title (editable, takes quick add tokens), what it already has. */
+.mtm-process-item{display:flex;align-items:flex-start;gap:12px;padding:14px 20px 4px}
+.mtm-process-main{display:flex;flex:1;flex-direction:column;gap:6px;min-width:0}
+.mtm-process-title{padding:2px 0;outline:none;font-family:var(--mtm-font-display);font-size:21px;line-height:1.25;color:var(--text-normal);overflow-wrap:anywhere}
+.mtm-process-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--text-faint)}
+.mtm-process-meta>.svg-icon{width:13px;height:13px}
+.mtm-process-meta .mtm-token{height:22px;font-size:11.5px}
+.mtm-process-details{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.5;color:var(--text-muted)}
+.mtm-process-open{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:11.5px;font-weight:600;color:var(--text-faint);cursor:pointer}
+.mtm-process-open .svg-icon{width:12px;height:12px}
+/* The question, in the display face. */
+.mtm-process-question{margin:14px 20px 0;padding-top:14px;border-top:1px solid var(--mtm-hairline);font-family:var(--mtm-font-display);font-size:16px;color:var(--text-normal)}
+/* Decisions: two groups (not actionable / actionable), one button each, with a key. */
+.mtm-decisions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;padding:10px 20px 18px}
+.mtm-decision-group{display:flex;flex-direction:column;gap:6px}
+.mtm-decision-group>.mtm-label{margin:0 0 2px}
+body .mtm-decision:not(.clickable-icon){display:flex;align-items:center;gap:10px;width:100%;height:auto;min-height:46px;padding:6px 10px 6px 7px;border:1px solid var(--mtm-line);border-radius:10px;background:var(--mtm-raised);box-shadow:none;text-align:left;font-family:var(--font-interface);color:var(--text-normal);cursor:pointer}
+body .mtm-decision:not(.clickable-icon):hover{border-color:var(--background-modifier-border-hover);background:var(--mtm-raised)}
+body .mtm-decision.is-active:not(.clickable-icon){border-color:var(--mtm-today-top);box-shadow:0 0 0 3px var(--mtm-drop-bg)}
+.mtm-decision>.mtm-tile{width:30px;height:30px}
+.mtm-decision>.mtm-tile .svg-icon{width:16px;height:16px}
+.mtm-decision-text{display:flex;flex:1;flex-direction:column;min-width:0;line-height:1.3}
+.mtm-decision-label{font-size:13px;font-weight:600}
+.mtm-decision-sub{font-size:11.5px;color:var(--text-faint)}
+/* Done now borrows the Mark as done gel; Trash turns danger on hover. */
+.mtm-decision.mod-done>.mtm-tile{background:var(--mtm-gloss),linear-gradient(180deg,var(--mtm-done-top),var(--mtm-done-bottom));box-shadow:inset 0 0 0 1px var(--mtm-done-bottom);color:var(--mtm-done-text)}
+.mtm-decision.mod-done>.mtm-tile .svg-icon{stroke-width:2.5}
+.mtm-decision.mod-trash:hover>.mtm-tile{background:var(--mtm-danger-bg);color:var(--mtm-danger)}
+/* The step for the chosen decision replaces the groups. */
+.mtm-process-step{display:flex;flex-direction:column;gap:14px;padding:10px 20px 18px}
+.mtm-process-step-head{display:flex;align-items:center;gap:8px}
+.mtm-process-step-head .mtm-tile{width:24px;height:24px;border-radius:7px}
+.mtm-process-step-head .mtm-tile .svg-icon{width:14px;height:14px}
+.mtm-process-step-title{font-size:13px;font-weight:700;color:var(--text-normal)}
+.mtm-process-step-head .mtm-field-hint{margin-left:auto}
+.mtm-process-step .mtm-type-picker.mod-row{gap:6px}
+.mtm-process-date{display:flex;align-items:center;gap:8px}
+.mtm-process-date .mtm-input-icon{flex:1}
+.mtm-process-first{display:flex;align-items:center;gap:8px}
+.mtm-process-first .mtm-input-icon{flex:1}
+body .mtm-process-first input{height:34px;font-family:var(--mtm-font-display);font-size:15px}
+/* Footer hints on the left. */
+.mtm-process-hints{display:flex;align-items:center;gap:10px;margin-right:auto;font-size:11.5px;color:var(--text-faint)}
+.mtm-process-hints>span{display:inline-flex;align-items:center;gap:4px}
+/* Undo after Trash or Done now, above the next item. */
+.mtm-notice.mtm-process-undo{align-items:center;margin:12px 20px 0;padding:6px 8px 6px 12px}
+.mtm-process-undo>div{flex:1}
+body .mtm-process-undo button:not(.clickable-icon){height:24px;padding:0 10px;font-size:12px}
+/* Inbox zero. */
+.mtm-process-zero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 28px 26px;text-align:center}
+.mtm-process-zero-title{margin:2px 0 0;font-family:var(--mtm-font-display);font-size:26px;font-weight:400;line-height:1.15;color:var(--text-normal)}
+.mtm-process-zero-text{max-width:380px;margin:0;font-size:13.5px;line-height:1.5;color:var(--text-muted);text-wrap:balance}
+.mtm-process-tally{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:440px;margin-top:4px}
+.mtm-process-zero .mtm-board-empty-actions{margin-top:8px}
+.mtm-process-zero .mtm-field-hint{margin-top:2px}
+/* The filed stack: three cards, already put away. */
+.mtm-process-zero .mtm-empty-stack{width:240px;height:90px}
+.mtm-process-zero .mtm-empty-stack .mtm-card .mtm-card-check{color:var(--mtm-review-ok)}
+/* Entry point on the Inbox lane header: always shown while the Inbox has open Actions. */
+body .mtm-process-button:not(.clickable-icon){display:inline-flex;align-items:center;gap:4px;align-self:flex-start;height:22px;margin-left:44px;padding:0 8px;border:1px solid var(--mtm-line);border-radius:999px;background:var(--mtm-raised);box-shadow:none;font-family:var(--font-interface);font-size:11px;font-weight:600;color:var(--text-normal);white-space:nowrap;cursor:pointer}
+body .mtm-process-button:not(.clickable-icon):hover{border-color:var(--background-modifier-border-hover)}
+.mtm-process-button .svg-icon{width:12px;height:12px}
+/* Phones: a bottom sheet; decisions in one column of compact rows, keys hidden. */
+.is-phone .modal.mtm-modal.mtm-process{width:100%;max-width:none}
+.is-phone .mtm-process .mtm-decisions{grid-template-columns:1fr;gap:12px;padding-bottom:14px}
+.is-phone .mtm-process .mtm-decision-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.is-phone .mtm-process .mtm-decision-group>.mtm-label{grid-column:1/-1}
+.is-phone .mtm-process .mtm-decision .mtm-kbd,.is-phone .mtm-process .mtm-decision-sub,.is-phone .mtm-process .mtm-process-hints{display:none}
+.is-phone .mtm-process .mtm-process-details{-webkit-line-clamp:1}
+.is-phone .mtm-process .mtm-process-title{font-size:18px}
+/* The Matter field's suggestions sit over the modal. */
+.mtm-process .mtm-process-matter{width:100%}

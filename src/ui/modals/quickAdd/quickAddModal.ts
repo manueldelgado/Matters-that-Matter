@@ -23,9 +23,10 @@ import {
 } from '../../../services/quickAdd';
 import { parseQuickAdd, type QuickAddContext, type QuickAddResult, type TypeCandidate } from '../../../services/quickAddParser';
 import { createAction } from '../../../vault/actionWrites';
-import { allActionItems, allMatters, DEFAULT_MATTER_ICON } from '../../../vault/index';
+import { DEFAULT_MATTER_ICON } from '../../../vault/index';
 import { createMatter } from '../../../vault/matterWrites';
-import { createPersonNote, frontmatterOf } from '../../../vault/notes';
+import { createPersonNote } from '../../../vault/notes';
+import { loadCandidates } from '../../../vault/candidates';
 import { appendIcon, swapClasses, tileEl, typeClasses } from '../../components/dom';
 import {
 	isSuggestion,
@@ -171,36 +172,7 @@ export class QuickAddModal extends Modal {
 	// ——— Candidates ———
 
 	private loadCandidates(): void {
-		const { app } = this;
-		const s = this.settings;
-		const today = toYmd(new Date());
-		this.types = s.types.map((t) => ({ id: t.id, names: [t.label, t.id] }));
-
-		const open = new Map<string, number>();
-		for (const item of allActionItems(app, s)) {
-			if (item.category !== 'closed') open.set(item.effective.matterPath, (open.get(item.effective.matterPath) ?? 0) + 1);
-		}
-		const q = STRINGS.quickAdd;
-		this.matters = allMatters(app, s, today).map((m) => ({
-			path: m.path,
-			name: m.name,
-			names: [m.name],
-			icon: m.icon,
-			// The Inbox first among equal matches.
-			rank: m.isInbox ? 0 : 1,
-			meta: m.state === 'closed' ? q.closed : m.state === 'dormant' ? q.dormant : open.get(m.path) ? q.open(open.get(m.path) ?? 0) : '',
-		}));
-
-		const folder = normalizePath(s.folders.people) + '/';
-		// People are ordinary notes; Actions and Matters are never people.
-		this.people = app.vault
-			.getMarkdownFiles()
-			.filter((f) => frontmatterOf(app, f)?.['mtm-kind'] === undefined)
-			.map((f) => {
-				const inPeople = f.path.startsWith(folder);
-				const parent = f.parent?.path ?? '';
-				return { path: f.path, name: f.basename, names: [f.basename], rank: inPeople ? 0 : 1, inPeople, folder: parent === '/' ? '' : parent };
-			});
+		({ types: this.types, matters: this.matters, people: this.people } = loadCandidates(this.app, this.settings));
 	}
 
 	private parserContext(): QuickAddContext {

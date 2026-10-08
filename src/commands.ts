@@ -24,6 +24,16 @@ export function registerCommands(plugin: MattersPlugin): void {
 	});
 
 	plugin.addCommand({
+		id: 'process-inbox',
+		name: STRINGS.commands.processInbox,
+		checkCallback: (checking) => {
+			if (!plugin.settings.setupDone) return false;
+			if (!checking) plugin.processInbox();
+			return true;
+		},
+	});
+
+	plugin.addCommand({
 		id: 'new-matter',
 		name: STRINGS.commands.newMatter,
 		callback: () => plugin.newMatter(),
