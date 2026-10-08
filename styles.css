@@ -827,3 +827,21 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 /* A collapsed lane's cells expand it when clicked (the dots still select their Action). */
 .mtm-cell.is-collapsed{cursor:pointer}
 .mtm-cell.is-collapsed:hover{background:var(--background-modifier-hover)}
+/* Timeline navigation: the dates in view, "Today", a week back or forward. */
+.mtm-tl-nav{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--mtm-hairline)}
+.mtm-tl-range{font-family:var(--mtm-font-display);font-size:18px;white-space:nowrap}
+.mtm-tl-nav button{height:26px;font-size:12px}
+/* Timeline weekends shaded down every track (Monday-first pattern, shifted a day for a Sunday start). */
+.mtm-tl-track{background-image:repeating-linear-gradient(90deg,transparent 0 calc(var(--mtm-day-width) * 5),var(--mtm-cell-muted-bg) calc(var(--mtm-day-width) * 5) calc(var(--mtm-day-width) * 7));background-position-x:calc(var(--mtm-weekend-shift,0) * var(--mtm-day-width))}
+/* The group title opens the Matter overview; row labels select. */
+.mtm-tl-group .mtm-tl-label,.mtm-tl-row .mtm-tl-label{cursor:pointer}
+/* Timeline dragging: move a bar, or pull an end (handles on hover) to change start or due; a dashed outline shows where it lands. */
+.mtm-tl-bar{cursor:grab;touch-action:pan-y}
+.mtm-tl-handle{position:absolute;top:0;bottom:0;z-index:1;width:7px;cursor:ew-resize}
+.mtm-tl-handle.mod-start{left:-1px}
+.mtm-tl-handle.mod-end{right:-1px}
+.mtm-tl-bar:hover .mtm-tl-handle::after{content:"";position:absolute;top:5px;bottom:5px;left:2px;width:3px;border-radius:2px;background:var(--mtm-bar-ink);opacity:.35}
+.mtm-tl-bar.is-dragging{opacity:.45}
+.mtm-tl-ghost{position:absolute;top:5px;left:calc(var(--mtm-start,0) * var(--mtm-day-width) + 2px);width:calc(var(--mtm-span,1) * var(--mtm-day-width) - 4px);height:22px;box-sizing:border-box;border:1.5px dashed var(--mtm-strong);border-radius:7px;pointer-events:none}
+/* Timeline when narrow: slimmer labels and days. */
+@container (max-width:600px){.mtm-timeline{--mtm-tl-label:120px;--mtm-day-width:24px}.mtm-tl-label{padding-left:12px}.mtm-tl-nav{padding:8px 12px}.mtm-tl-range{font-size:16px}}

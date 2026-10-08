@@ -3,11 +3,12 @@
 import { Keymap, setTooltip } from 'obsidian';
 import type { TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
-import { dayLabel, weekday, type Ymd } from '../../../model/dates';
+import { weekday, type Ymd } from '../../../model/dates';
 import type { ActionItem } from '../../../services/actionItems';
 import { DAY_CHIPS, type CalendarDay, type DayEntry, type WeekStart } from '../../../services/calendarModel';
 import { renderCard } from '../../../ui/components/card';
 import { appendIcon, typeClasses } from '../../../ui/components/dom';
+import { actionTooltip } from '../actionTooltip';
 
 export interface CalendarInput {
 	month: Ymd;
@@ -49,19 +50,6 @@ function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEvent) => 
 }
 
 const day = (ymd: Ymd) => Number(ymd.slice(8, 10));
-
-/** "Confirm the worktop · Kitchen renovation · Call · Today 10:00" (or a day range for a bar). */
-export function chipTooltip(item: ActionItem, matter: string, today: Ymd): string {
-	const c = STRINGS.calendar;
-	const parts = [item.title, matter, item.effective.type.label];
-	const { start, due } = item;
-	if (start && due && start.date < due.date) parts.push(`${dayLabel(start.date, today)}${c.rangeSep}${dayLabel(due.date, today)}`);
-	else {
-		const d = due ?? start;
-		if (d) parts.push(d.time ? `${dayLabel(d.date, today)} ${d.time}` : dayLabel(d.date, today));
-	}
-	return parts.join(c.tipSep);
-}
 
 export function renderCalendar(view: HTMLElement, input: CalendarInput, h: CalendarHandlers): HTMLElement {
 	const c = STRINGS.calendar;
@@ -150,7 +138,7 @@ function renderEntry(cell: HTMLElement, entry: DayEntry, input: CalendarInput, h
 	if (time) chip.createSpan({ cls: 'mtm-chip-time', text: time });
 	else appendIcon(chip, type.icon);
 	chip.createSpan({ cls: 'mtm-chip-text', text: item.title });
-	setTooltip(chip, chipTooltip(item, input.matterName(item.effective.matterPath), input.today));
+	setTooltip(chip, actionTooltip(item, input.matterName(item.effective.matterPath), input.today));
 
 	chip.addEventListener('click', (e) => {
 		e.stopPropagation();

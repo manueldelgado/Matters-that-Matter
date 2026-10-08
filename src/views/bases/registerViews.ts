@@ -1,7 +1,6 @@
 // Registers the board, list, calendar and timeline as custom Bases views.
-// The timeline is a placeholder until it is built.
 
-import { BasesView, type BasesAllOptions, type QueryController } from 'obsidian';
+import type { BasesAllOptions } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
 import { VIEW_TYPES, type CollectionView } from '../../services/baseFile';
@@ -9,6 +8,7 @@ import { BoardView } from './board/boardView';
 import { OPTION_KEYS } from './collectionView';
 import { ListView } from './list/listView';
 import { CalendarView } from './calendar/calendarView';
+import { TimelineView } from './timeline/timelineView';
 
 const ICONS: Record<CollectionView, string> = {
 	board: 'square-kanban',
@@ -48,24 +48,9 @@ function boardOptions(): BasesAllOptions[] {
 	return [inboxOption(), ...doneOptions(), { type: 'toggle', key: OPTION_KEYS.hideEmptyLanes, displayName: o.hideEmptyLanes, default: false }];
 }
 
-/** The list never shows empty Matters, so it has no "Hide empty lanes". */
+/** The list and timeline never show empty Matters, so they have no "Hide empty lanes". */
 function listOptions(): BasesAllOptions[] {
 	return [inboxOption(), ...doneOptions()];
-}
-
-class PlaceholderView extends BasesView {
-	constructor(
-		controller: QueryController,
-		private containerEl: HTMLElement,
-		readonly type: string,
-	) {
-		super(controller);
-	}
-
-	onDataUpdated(): void {
-		this.containerEl.empty();
-		this.containerEl.createDiv({ cls: 'mtm-view' }).createDiv({ cls: 'mtm-empty', text: STRINGS.views.placeholder });
-	}
 }
 
 /** Returns false when the Bases core plugin is off. */
@@ -83,8 +68,8 @@ export function registerCollectionViews(plugin: MattersPlugin): boolean {
 						? new ListView(controller, containerEl, plugin)
 						: key === 'calendar'
 							? new CalendarView(controller, containerEl, plugin)
-							: new PlaceholderView(controller, containerEl, type),
-			options: key === 'board' ? boardOptions : key === 'list' ? listOptions : doneOptions,
+							: new TimelineView(controller, containerEl, plugin),
+			options: key === 'board' ? boardOptions : key === 'calendar' ? doneOptions : listOptions,
 		});
 		ok &&= registered;
 	}

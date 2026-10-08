@@ -35,7 +35,6 @@ export const STRINGS = {
 		calendar: 'Calendar',
 		timeline: 'Timeline',
 		setup: 'Set up Matters',
-		placeholder: 'This view is not available yet.',
 		options: {
 			inboxPosition: 'Inbox lane',
 			inherit: 'Inherit',
@@ -177,6 +176,18 @@ export const STRINGS = {
 		agendaEmpty: 'Nothing on this day.',
 		rangeSep: ' → ',
 		tipSep: ' · ',
+	},
+
+	timeline: {
+		corner: 'Matters',
+		today: 'Today',
+		earlier: 'A week earlier',
+		later: 'A week later',
+		rangeSep: ' – ',
+		waitingOn: (name: string) => `Waiting on ${name}`,
+		dateSep: ' · ',
+		noDated: 'No Actions with dates in this view. Give an Action a start or due date to see it here.',
+		weekdayLetters: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
 	},
 
 	overview: {
