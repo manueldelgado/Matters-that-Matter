@@ -45,6 +45,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Settings tab: declarative `getSettingDefinitions()`, no `display()` (`minAppVersion` 1.13.0 or later). Custom UI goes in `render` rows.
   A definition with an empty `name` is not rendered at all; for a description-only row use `render: (s) => { s.setName('').setDesc(…); }`.
 - Type checks on DOM nodes use `el.instanceOf(X)`, not `instanceof` (cross-window safe; enforced by `obsidianmd/prefer-instanceof`).
+- Right after a write, `metadataCache.getFileCache(file)` returns `null` until the note is parsed again. Don't treat that as "not our note": wait for the `changed` event, and match on the path you care about rather than on cached view state.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies
