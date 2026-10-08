@@ -824,3 +824,6 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-cal-agenda-title{display:flex;align-items:baseline;gap:8px;font-family:var(--mtm-font-display);font-size:17px}
 .mtm-cal-agenda-title .mtm-section-aside{font-family:var(--font-interface)}
 }
+/* A collapsed lane's cells expand it when clicked (the dots still select their Action). */
+.mtm-cell.is-collapsed{cursor:pointer}
+.mtm-cell.is-collapsed:hover{background:var(--background-modifier-hover)}

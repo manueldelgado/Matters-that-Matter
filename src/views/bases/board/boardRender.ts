@@ -112,12 +112,17 @@ function renderCell(board: HTMLElement, lane: BoardLane, column: StatusDef, inpu
 	});
 	const cards = lane.cells.get(column.id) ?? [];
 	if (lane.collapsed) {
+		// Clicking anywhere in a collapsed lane's cells expands it; the dots still select their Action.
+		cell.addEventListener('click', () => h.toggleLane(lane.matter.path));
 		if (!cards.length) return;
 		const dots = cell.createDiv({ cls: 'mtm-lane-dots' });
 		for (const item of cards) {
 			const dot = dots.createSpan({ cls: ['mtm-lane-dot', ...typeClasses(item.effective.type)], attr: { 'data-path': item.path } });
 			setTooltip(dot, item.title);
-			dot.addEventListener('click', () => h.select(item.path));
+			dot.addEventListener('click', (e) => {
+				e.stopPropagation();
+				h.select(item.path);
+			});
 		}
 		return;
 	}
