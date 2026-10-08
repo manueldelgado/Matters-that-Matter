@@ -51,6 +51,12 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Since Obsidian 1.13 a modal's close button is `.modal-header-button`, absolutely placed in `.modal`; `.modal-close-button` no longer exists.
 - Menus whose items carry colour or icons that matter use `menu.setUseNativeMenu(false)`: macOS native menus show plain text only.
 - There is no public submenu API: a "Move to …" item opens a second `Menu` at the same position.
+- Don't name a view member `focus`: it shadows `View.focus()`, which Obsidian calls.
+- A hidden tab reads `scrollLeft`/`scrollTop` as 0 and ignores writes: save and restore scroll only when `clientWidth > 0` (see `CollectionView.captureScroll`).
+- Background tabs may be deferred (no view): find a leaf by `getViewState().state`, not by `leaf.view`.
+- File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`.
+- Notes may use CRLF: body edits keep the note's line ending.
+- Quick add parses dates on the text with tokens removed (mapped back by index), never masked with spaces, so chrono can't join across a token.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies
