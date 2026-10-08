@@ -190,3 +190,42 @@ describe('dates', () => {
 		expect(chip).toMatchObject({ kind: 'date', text: 'tomorrow 10am', startDate: null, due: '2026-10-10T10:00' });
 	});
 });
+
+describe('unmatched names', () => {
+	it('keep the surname of a new person', () => {
+		const r = parse('Confirm the quote with @Ana García tomorrow');
+		expect(r.chips.find((c) => c.kind === 'person')).toMatchObject({ text: '@Ana García', query: 'Ana García', path: null });
+		expect(r.title).toBe('Confirm the quote with');
+	});
+
+	it('take particles between capitalised words', () => {
+		expect(parse('@Juan de la Cruz about the van').chips[0]).toMatchObject({ query: 'Juan de la Cruz' });
+		expect(parse('Visit @Ana de').chips[0]).toMatchObject({ query: 'Ana' });
+	});
+
+	it('stop at lowercase words, conjunctions, date words and punctuation', () => {
+		expect(parse('@Ana call her back').title).toBe('call her back');
+		expect(parse('@Ana y Marco').chips[0]).toMatchObject({ query: 'Ana' });
+		const monday = parse('@Ana Monday');
+		expect(monday.chips[0]).toMatchObject({ query: 'Ana' });
+		expect(monday.due).toBe('2026-10-12');
+		expect(parse('@Ana, Pedro').chips[0]).toMatchObject({ query: 'Ana,' });
+	});
+
+	it('are someone else when the name runs on past a match on its first words', () => {
+		// "Ana Gil" exists; "Ana García" is a different person.
+		expect(parse('@Ana García').people).toEqual([]);
+		expect(parse('@Ana Gil').people).toEqual(['P/Ana Gil.md']);
+		expect(parse('@Ana about it').people).toEqual(['P/Ana Gil.md']);
+	});
+
+	it('prefer a strong match, and leave types to one word', () => {
+		expect(parse('@Marco Rossi Tomorrow').people).toEqual(['P/Marco Rossi.md']);
+		expect(parse('/shop Paint').chips[0]).toMatchObject({ text: '/shop', id: null });
+		expect(parse('/shop Paint').title).toBe('Paint');
+	});
+
+	it('also apply to new Matters', () => {
+		expect(parse('Paint #Garden Shed').chips[0]).toMatchObject({ query: 'Garden Shed', path: null });
+	});
+});

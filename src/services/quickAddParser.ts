@@ -6,7 +6,7 @@ import { casual as chronoEs } from 'chrono-node/es';
 import type { ParsedResult } from 'chrono-node/en';
 import { addDays, formatMtmDate, toHm, toYmd, type MtmDate } from '../model/dates';
 import type { Priority } from '../model/actions';
-import { bestStrong, type Candidate } from './fuzzy';
+import { bestStrong, normalise, type Candidate } from './fuzzy';
 
 export type DateLanguage = 'en' | 'es';
 
@@ -79,11 +79,38 @@ function followingWords(text: string, from: number): [string, number, number][] 
 	return out;
 }
 
-/** Longest run of words with a strong match; quotes force the span. */
+// Unmatched names (people and Matters still to be created) run on over the words that continue a name.
+const NAME_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'da', 'das', 'do', 'dos', 'di', 'du', 'van', 'von', 'der', 'den', 'le', 'bin', 'al']);
+const DATE_WORDS = new Set([
+	...['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'mon', 'tue', 'tues', 'wed', 'thu', 'thur', 'thurs', 'fri', 'sat', 'sun'],
+	...['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'],
+	...['jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec'],
+	...['today', 'tomorrow', 'tonight', 'yesterday', 'next', 'this', 'noon', 'midnight'],
+	...['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo', 'hoy', 'manana', 'pasado', 'ayer', 'proximo', 'proxima', 'este', 'esta'],
+	...['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre'],
+]);
+const isCapitalised = (word: string) => /^\p{Lu}/u.test(word);
+const endsClause = (word: string) => /[,;:.!?)]$/.test(word);
+
+/**
+ * Whether `word` continues a name: a capitalised word that is not a date word ("García", but not "Monday"),
+ * or a particle followed by one ("de la Cruz"). While typing (`next` undefined and `typing`), a particle may end the text.
+ */
+export function continuesName(word: string, next: string | undefined, typing = false): boolean {
+	const plain = normalise(word.replace(/[,;:.!?)]+$/, ''));
+	if (DATE_WORDS.has(plain)) return false;
+	if (isCapitalised(word)) return true;
+	if (!NAME_PARTICLES.has(word)) return false;
+	return next === undefined ? typing : isCapitalised(next) || NAME_PARTICLES.has(next);
+}
+
+/** Longest run of words with a strong match; quotes force the span. Unmatched names keep the words that continue them. */
 function matchName<T extends Candidate>(
 	text: string,
 	at: number,
 	candidates: readonly T[],
+	/** Whether an unmatched name runs on over the words that continue it (Matters and people, not types). */
+	extend: boolean,
 ): { end: number; query: string; item: T | null } | null {
 	const from = at + 1;
 	if (text[from] === '"') {
@@ -96,14 +123,20 @@ function matchName<T extends Candidate>(
 	const words = followingWords(text, from);
 	const first = words[0];
 	if (!first) return null;
-	for (let k = words.length; k >= 1; k--) {
+	// The run of words that read as one name ("Ana García"); a match on fewer words ("Ana Gil") is someone else.
+	let run = 1;
+	while (extend && run < words.length && !endsClause(words[run - 1]?.[0] ?? '') && continuesName(words[run]?.[0] ?? '', words[run + 1]?.[0])) run++;
+	// A run that ends on a particle ("Ana de") gives the particle back to the title.
+	while (run > 1 && !isCapitalised(words[run - 1]?.[0] ?? '')) run--;
+	for (let k = words.length; k >= run; k--) {
 		const last = words[k - 1];
 		if (!last) continue;
 		const query = text.slice(from, last[2]);
 		const item = bestStrong(query, candidates);
 		if (item) return { end: last[2], query, item };
 	}
-	return { end: first[2], query: first[0], item: null };
+	const last = words[run - 1] ?? first;
+	return { end: last[2], query: text.slice(from, last[2]), item: null };
 }
 
 function findTokens(text: string, ctx: QuickAddContext): Chip[] {
@@ -122,7 +155,7 @@ function findTokens(text: string, ctx: QuickAddContext): Chip[] {
 		}
 		if (ch === '/' || ch === '#' || ch === '@') {
 			const list = ch === '/' ? ctx.types : ch === '#' ? ctx.matters : ctx.people;
-			const m = matchName<Candidate>(text, i, list);
+			const m = matchName<Candidate>(text, i, list, ch !== '/');
 			if (m) {
 				const span = { text: text.slice(i, m.end), start: i, end: m.end, query: m.query };
 				if (ch === '/') chips.push({ ...span, kind: 'type', id: (m.item as TypeCandidate | null)?.id ?? null });

@@ -4,6 +4,7 @@
 import { normalizePath, TFile, type App } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { toYmd } from '../model/dates';
+import type { Priority } from '../model/actions';
 import { insertTask, setDetails, toggleTask } from '../model/body';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { applyFieldEdit, type FieldEdit } from '../services/actionEdit';
@@ -60,7 +61,11 @@ export interface NewAction {
 	statusId: string;
 	matterPath: string;
 	typeId: string;
-	extra?: Frontmatter;
+	priority?: Priority | null;
+	/** As written: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm'. */
+	start?: string | null;
+	due?: string | null;
+	people?: readonly TFile[];
 }
 
 /** Creates an Action note in the Actions folder with explicit status, Matter and type. */
@@ -76,8 +81,11 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 		'mtm-type': init.typeId,
 		'mtm-status': init.statusId,
 		'mtm-matter': matterLink(app, init.matterPath, path),
-		...init.extra,
 	};
+	if (init.start) fm['mtm-start'] = init.start;
+	if (init.due) fm['mtm-due'] = init.due;
+	if (init.priority) fm['mtm-priority'] = init.priority;
+	if (init.people?.length) fm['mtm-people'] = init.people.map((p) => linkTo(app, p, path));
 	if (status?.category === 'closed') fm['mtm-completed'] = toYmd(new Date());
 	return createNote(app, path, fm);
 }

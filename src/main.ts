@@ -2,18 +2,19 @@ import { Events, FileView, normalizePath, Notice, Plugin, TFile, TFolder } from 
 import type { MattersSettings } from './settings';
 import { STRINGS } from './strings';
 import { migrateSettings } from './services/migrations';
-import { backlogStatus, defaultType, doneStatus } from './model/workflow';
+import { doneStatus } from './model/workflow';
 import { registerCommands } from './commands';
 import { Selection } from './selection';
 import { MattersSettingTab } from './ui/settingsTab';
 import { BoardPicker } from './ui/modals/boardPicker';
 import { NewMatterModal } from './ui/modals/newMatterModal';
+import { QuickAddModal, type QuickAddInit } from './ui/modals/quickAdd/quickAddModal';
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
 import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
 import { ensureDateTimeTypes } from './vault/internal';
 import { frontmatterOf } from './vault/notes';
-import { createAction, editAction } from './vault/actionWrites';
+import { editAction } from './vault/actionWrites';
 import { effectiveAction } from './services/effective';
 import { resolverFor } from './vault/index';
 import { createMatter } from './vault/matterWrites';
@@ -137,26 +138,10 @@ export default class MattersPlugin extends Plugin {
 		else new Notice(STRINGS.notices.boardMissing(this.settings.boardPath));
 	}
 
-	/**
-	 * Creates an Action and opens it. Without a status or Matter it lands in the backlog of the Inbox.
-	 * Quick add will take over this entry point.
-	 */
-	async newAction(init: { statusId?: string; matterPath?: string; typeId?: string } = {}): Promise<void> {
-		const s = this.settings;
-		const statusId = init.statusId ?? backlogStatus(s.statuses)?.id ?? s.statuses[0]?.id ?? '';
-		const typeId = init.typeId ?? defaultType(s.types)?.id ?? s.types[0]?.id ?? '';
-		try {
-			const file = await createAction(this.app, s, {
-				title: STRINGS.untitledAction,
-				statusId,
-				typeId,
-				matterPath: init.matterPath ?? s.inboxPath,
-			});
-			this.selection.set(file.path);
-			await this.app.workspace.getLeaf('tab').openFile(file);
-		} catch (e) {
-			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
-		}
+	/** Opens quick add; from a board cell it starts in that lane's Matter and that column's status. */
+	quickAdd(init: QuickAddInit = {}): void {
+		if (!this.settings.setupDone) return;
+		new QuickAddModal(this, init).open();
 	}
 
 	newMatter(): void {

@@ -711,3 +711,32 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .mtm-empty-pointer .svg-icon{width:15px;height:15px}
 .mtm-field-hint .mtm-kbd{vertical-align:-4px;margin:0 1px}
 .mtm-kbd > .svg-icon{width:12px;height:12px}
+/* Quick add: destination tokens that are only defaults (dashed, faint) and the status token. */
+.mtm-token.mod-ghost{background:transparent;box-shadow:none;outline:1px dashed var(--mtm-line);outline-offset:-1px;font-weight:500;color:var(--text-faint)}
+.mtm-token.mod-ghost .svg-icon{color:var(--text-faint)}
+.mtm-token.mod-ghost .mtm-status-dot{opacity:.6}
+.mtm-token.mod-status .mtm-status-dot{width:7px;height:7px}
+.mtm-qa-tokens-sep{align-self:center;width:1px;height:14px;margin:0 2px;background:var(--mtm-hairline)}
+/* Quick add: the cleaned title under the input (indented past the 40px tile). */
+.mtm-qa-title{display:flex;align-items:center;gap:6px;min-width:0;padding:0 16px 10px 66px;margin-top:-4px;font-size:12px;color:var(--text-faint)}
+.mtm-qa-title .svg-icon{flex:none;width:13px;height:13px}
+.mtm-qa-title b{overflow:hidden;font-weight:600;color:var(--text-muted);white-space:nowrap;text-overflow:ellipsis}
+/* Suggestion rows: the label rule (flex:1) also caught the avatar. */
+.mtm-suggest-item>span.mtm-avatar{flex:none}
+/* Notice after quick add: type tile, title, destination. */
+.mtm-added{display:flex;align-items:center;gap:8px}
+.mtm-added-text{display:flex;flex-direction:column;line-height:1.35}
+.mtm-added-title{font-weight:600}
+.mtm-added-dest{font-size:12px;opacity:.75}
+/* Quick add on phones: a compact type row (icons only; the selected type keeps its name) and no syntax hint. */
+.is-phone .mtm-quick-add .mtm-qa-section{padding:6px 0}
+.is-phone .mtm-quick-add .mtm-type-picker.mod-row{display:flex;justify-content:space-between;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 16px}
+.is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-type-option{flex:none;flex-direction:row;gap:6px;height:36px;padding:0 12px 0 5px;border-radius:999px;font-size:13px}
+.is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-tile{width:26px;height:26px;border-radius:999px}
+.is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-type-option:not(.is-active){width:40px;padding:0;justify-content:center;gap:0;font-size:0;border-color:transparent;background:transparent}
+.is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-type-option:not(.is-active) .mtm-tile{width:30px;height:30px}
+.is-phone .mtm-quick-add .mtm-qa-footer>span:first-child{display:none}
+/* Quick add has its own Cancel button. Since Obsidian 1.13 the close button is .modal-header-button (absolutely placed), not .modal-close-button. */
+body .modal.mtm-quick-add > .modal-header-button{display:none}
+/* The input sits inside .mtm-qa-field (for the suggestions), so the contract's flex:1 no longer sizes it. */
+body .mtm-quick-add .mtm-qa-field > input.mtm-qa-input{width:100%}

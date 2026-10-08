@@ -9,6 +9,16 @@ import { frontmatterOf } from './vault/notes';
 
 export function registerCommands(plugin: MattersPlugin): void {
 	plugin.addCommand({
+		id: 'quick-add',
+		name: STRINGS.commands.quickAdd,
+		checkCallback: (checking) => {
+			if (!plugin.settings.setupDone) return false;
+			if (!checking) plugin.quickAdd();
+			return true;
+		},
+	});
+
+	plugin.addCommand({
 		id: 'new-matter',
 		name: STRINGS.commands.newMatter,
 		callback: () => plugin.newMatter(),

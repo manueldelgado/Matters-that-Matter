@@ -3,8 +3,8 @@
 import { normalizePath, SuggestModal, TFile, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { normalise, rank } from '../../services/fuzzy';
-import { sanitiseTitle, uniqueTitle } from '../../model/titles';
-import { ensureFolder, frontmatterOf } from '../../vault/notes';
+import { sanitiseTitle } from '../../model/titles';
+import { createPersonNote, frontmatterOf } from '../../vault/notes';
 
 type Choice = { file: TFile; inPeople: boolean } | { create: string };
 
@@ -68,14 +68,6 @@ export class PersonPicker extends SuggestModal<Choice> {
 			void this.onPick(choice.file);
 			return;
 		}
-		void this.createPerson(choice.create).then((file) => this.onPick(file));
-	}
-
-	/** A plain note in the people folder: people get no MTM properties. */
-	private async createPerson(name: string): Promise<TFile> {
-		const folder = normalizePath(this.peopleFolder);
-		await ensureFolder(this.app, folder);
-		const title = uniqueTitle(name, (t) => this.app.vault.getAbstractFileByPath(`${folder}/${t}.md`) !== null);
-		return this.app.vault.create(`${folder}/${title}.md`, '');
+		void createPersonNote(this.app, this.peopleFolder, choice.create).then((file) => this.onPick(file));
 	}
 }

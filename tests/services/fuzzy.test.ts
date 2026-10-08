@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestStrong, matchScore, normalise, rank } from '../../src/services/fuzzy';
+import { bestStrong, matchRanges, matchScore, normalise, rank } from '../../src/services/fuzzy';
 
 describe('matchScore', () => {
 	it('ignores case and accents', () => {
@@ -32,5 +32,29 @@ describe('rank and bestStrong', () => {
 	it('returns only strong matches', () => {
 		expect(bestStrong('mrc', people)).toBeNull();
 		expect(bestStrong('rossi', people)?.names[0]).toBe('Marco Rossi');
+	});
+});
+
+describe('matchRanges', () => {
+	it('marks the prefix', () => {
+		expect(matchRanges('kitch', 'Kitchen renovation')).toEqual([[0, 5]]);
+	});
+
+	it('marks word prefixes', () => {
+		expect(matchRanges('kit ren', 'Kitchen renovation')).toEqual([
+			[0, 3],
+			[8, 11],
+		]);
+		expect(matchRanges('ross', 'Marco Rossi')).toEqual([[6, 10]]);
+	});
+
+	it('ignores accents and keeps offsets in the original name', () => {
+		expect(matchRanges('luc', 'Lucía Romero')).toEqual([[0, 3]]);
+		expect(matchRanges('lucia', 'Lucía Romero')).toEqual([[0, 5]]);
+	});
+
+	it('marks nothing for letters in order or no match', () => {
+		expect(matchRanges('ktchn', 'Kitchen')).toEqual([]);
+		expect(matchRanges('', 'Kitchen')).toEqual([]);
 	});
 });

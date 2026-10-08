@@ -262,7 +262,7 @@ export class BoardView extends BasesView {
 			this.flushConfig();
 			this.refresh(true);
 		},
-		newAction: (statusId, matterPath) => void this.plugin.newAction({ statusId, matterPath }),
+		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath }),
 		newMatter: () => this.plugin.newMatter(),
 		openMatter: (path) => void this.plugin.openMatter(path),
 		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),

@@ -74,3 +74,45 @@ export function bestStrong<T extends Candidate>(query: string, candidates: reado
 	const top = rank(query, candidates)[0];
 	return top && top.score >= STRONG_MATCH ? top.item : null;
 }
+
+const SEPARATOR = /[\s\-_/.]/;
+
+/**
+ * Where the query matches the name, as [start, end) offsets into the name, for highlighting:
+ * the prefix, or the word prefixes. Letters-in-order matches are not highlighted.
+ */
+export function matchRanges(query: string, name: string): [number, number][] {
+	const q = normalise(query);
+	if (!q) return [];
+	// Normalised text with a map back to UTF-16 offsets in the name.
+	let flat = '';
+	const from: number[] = [];
+	const to: number[] = [];
+	let offset = 0;
+	for (const ch of Array.from(name)) {
+		const n = ch
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase();
+		for (const c of n) {
+			flat += c;
+			from.push(offset);
+			to.push(offset + ch.length);
+		}
+		offset += ch.length;
+	}
+	const span = (start: number, length: number): [number, number] => [from[start] ?? 0, to[start + length - 1] ?? offset];
+	if (flat.startsWith(q)) return [span(0, q.length)];
+
+	const starts: number[] = [];
+	for (let i = 0; i < flat.length; i++) {
+		if (!SEPARATOR.test(flat[i] ?? '') && (i === 0 || SEPARATOR.test(flat[i - 1] ?? ''))) starts.push(i);
+	}
+	const qWords = words(q);
+	for (let k = 0; k + qWords.length <= starts.length; k++) {
+		if (qWords.every((w, j) => flat.startsWith(w, starts[k + j] ?? -1))) {
+			return qWords.map((w, j) => span(starts[k + j] ?? 0, w.length));
+		}
+	}
+	return [];
+}

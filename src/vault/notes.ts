@@ -2,6 +2,7 @@
 
 import { normalizePath, TFile, type App } from 'obsidian';
 import { parseLaneOrder } from '../model/matters';
+import { sanitiseTitle, uniqueTitle } from '../model/titles';
 
 export type Frontmatter = Record<string, unknown>;
 
@@ -48,4 +49,12 @@ export async function createNote(app: App, path: string, frontmatter: Frontmatte
 /** The text of a link to `target` from `sourcePath`, shortest unambiguous form, in brackets. */
 export function linkTo(app: App, target: TFile, sourcePath: string): string {
 	return `[[${app.metadataCache.fileToLinktext(target, sourcePath, true)}]]`;
+}
+
+/** A person is a plain note in the people folder: people get no MTM properties. */
+export async function createPersonNote(app: App, peopleFolder: string, name: string): Promise<TFile> {
+	const folder = normalizePath(peopleFolder);
+	await ensureFolder(app, folder);
+	const title = uniqueTitle(sanitiseTitle(name) || name, (t) => app.vault.getAbstractFileByPath(`${folder}/${t}.md`) !== null);
+	return app.vault.create(`${folder}/${title}.md`, '');
 }
