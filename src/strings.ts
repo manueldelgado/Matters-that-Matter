@@ -2,6 +2,8 @@
 // Sentence case, except Matter, Action and Inbox, which are always capitalised.
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** "Done", "Done and Cancelled", "Done, Cancelled and Dropped". */
+const andList = (items: readonly string[]) => (items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
 
 export const STRINGS = {
 	pluginName: 'Matters that Matter',
@@ -94,12 +96,12 @@ export const STRINGS = {
 		actionTypes: 'Action types',
 		open: (n: number) => `${n} open`,
 		waiting: (n: number) => `${n} waiting`,
-		showDone: 'Show done',
-		hideDone: 'Hide done',
+		showDone: (label: string) => `Show ${label}`,
+		hideDone: (label: string) => `Hide ${label}`,
 		showBacklog: (label: string) => `Show ${label}`,
 		hideBacklog: (label: string) => `Hide ${label}`,
-		doneShownHere: 'Done Actions are shown on this board',
-		doneHiddenHere: 'Done Actions are hidden on this board',
+		doneShownHere: (labels: readonly string[]) => `${andList(labels)} Actions are shown on this board`,
+		doneHiddenHere: (labels: readonly string[]) => `${andList(labels)} Actions are hidden on this board`,
 		backlogShownHere: (label: string) => `${label} Actions are shown in this list`,
 		backlogHiddenHere: (label: string) => `${label} Actions are hidden in this list`,
 		newAction: 'New Action',

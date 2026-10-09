@@ -92,7 +92,7 @@ export class BoardView extends CollectionView {
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
 		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null };
-		renderToolbar(view, { ...input, spheres: this.chips, openCount: model.empty ? null : model.openCount }, this.handlers);
+		renderToolbar(view, { ...input, statuses: this.plugin.settings.statuses, spheres: this.chips, openCount: model.empty ? null : model.openCount }, this.handlers);
 		if (this.noActionsYet(model.empty)) {
 			renderEmpty(view, this.handlers);
 			return;

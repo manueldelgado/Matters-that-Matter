@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type StatusDef, type TypeDef } from '../../src/settings';
 import {
+	closedStatuses,
 	addStatus,
 	addType,
 	backlogStatus,
@@ -124,3 +125,16 @@ describe('adding and ordering', () => {
 		expect(moveItem(['a', 'b'], 0, 9)).toEqual(['b', 'a']);
 	});
 });
+
+describe('closedStatuses', () => {
+	it('lists every closed status, the done status first', () => {
+		const statuses: StatusDef[] = [
+			{ id: 'later', label: 'Later', tone: 'ink', category: 'open', backlog: true },
+			{ id: 'dropped', label: 'Dropped', tone: 'ink', category: 'closed' },
+			{ id: 'done', label: 'Completed', tone: 'mint', category: 'closed', done: true },
+		];
+		expect(closedStatuses(statuses).map((s) => s.label)).toEqual(['Completed', 'Dropped']);
+		expect(closedStatuses(DEFAULT_SETTINGS.statuses).map((s) => s.label)).toEqual(['Done']);
+	});
+});
+

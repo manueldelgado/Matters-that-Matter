@@ -78,6 +78,7 @@ export class ListView extends CollectionView {
 				typesOff: options.typesOff,
 				spheres: this.sphereChips(matters, actions, options.spheresOff),
 				showDone: options.showDone,
+				statuses: settings.statuses,
 				backlog: backlog ? { label: backlog.label, shown: showBacklog } : undefined,
 				openCount: board.empty ? null : board.openCount,
 			},

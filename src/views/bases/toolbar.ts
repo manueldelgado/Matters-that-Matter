@@ -1,7 +1,8 @@
 // The slim toolbar every MTM collection view shows above its content.
 
 import { setIcon, setTooltip } from 'obsidian';
-import type { TypeDef } from '../../settings';
+import type { StatusDef, TypeDef } from '../../settings';
+import { closedStatuses } from '../../model/workflow';
 import { STRINGS } from '../../strings';
 import { appendIcon, pressable, tileEl, typeClasses } from '../../ui/components/dom';
 
@@ -21,6 +22,8 @@ export interface ToolbarInput {
 	/** Sphere chips; empty without Spheres. */
 	spheres?: readonly SphereChip[];
 	showDone: boolean;
+	/** The workflow: the Done toggle is named after the done status and hides every closed one. */
+	statuses: readonly StatusDef[];
 	/** The list's backlog toggle, named after the backlog status; absent elsewhere. */
 	backlog?: { label: string; shown: boolean };
 	/** Null hides the count (nothing to count yet). */
@@ -85,7 +88,9 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 		const { label, shown } = backlog;
 		toggleNote(bar, shown, shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
 	}
-	toggleNote(bar, input.showDone, input.showDone ? b.hideDone : b.showDone, input.showDone ? b.doneShownHere : b.doneHiddenHere, () => h.toggleDone());
+	const closed = closedStatuses(input.statuses).map((s) => s.label);
+	const done = closed[0] ?? '';
+	toggleNote(bar, input.showDone, input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
 	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
 }

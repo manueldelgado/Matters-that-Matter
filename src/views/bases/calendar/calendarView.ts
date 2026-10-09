@@ -84,6 +84,7 @@ export class CalendarView extends CollectionView {
 				typesOff: options.typesOff,
 				spheres: this.sphereChips(matters, all, options.spheresOff),
 				showDone: options.showDone,
+				statuses: settings.statuses,
 				openCount: all.length ? openCount : null,
 			},
 			{

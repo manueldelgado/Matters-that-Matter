@@ -12,6 +12,11 @@ export function doneStatus(statuses: readonly StatusDef[]): StatusDef | undefine
 	return statuses.find((s) => s.done);
 }
 
+/** What the Done toggle hides: every closed status, the done status first. */
+export function closedStatuses(statuses: readonly StatusDef[]): StatusDef[] {
+	return statuses.filter((s) => s.category === 'closed').sort((a, b) => Number(!!b.done) - Number(!!a.done));
+}
+
 export function defaultType(types: readonly TypeDef[]): TypeDef | undefined {
 	return types.find((t) => t.default);
 }
