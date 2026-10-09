@@ -22,9 +22,9 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - `src/settings.ts`: settings types and defaults. `src/strings.ts`: all UI strings.
 - `src/commands.ts`: command palette entries. `src/selection.ts`: the selected Action.
 - `src/model/`: pure rules (workflow flags, Matters, Actions, dates, titles, note body).
-- `src/services/`: pure services (effective values, completion dates, Inbox rules, path settings after renames, settings migrations, IDs, fuzzy matching, quick-add parsing, setup planning, the sample package).
+- `src/services/`: pure services (effective values, completion dates, Inbox rules, path settings after renames, settings migrations, IDs, fuzzy matching, quick-add parsing, setup planning, the sample package, the new tab panel's model).
 - `src/vault/`: reads and writes through the Obsidian API. Undocumented internals live only in `vault/internal.ts`, guarded.
-- `src/views/`: Bases views and `ItemView`s. `src/ui/`: settings tab, modals and shared components.
+- `src/views/`: Bases views, `ItemView`s, the note banners and the new tab panel. `src/ui/`: settings tab, modals and shared components.
 - `tests/`: Vitest unit tests mirroring `src/`. `model/` and `services/` must not import `obsidian` (it has no runtime outside the app), so they stay testable.
 - `styles.css`: generated outside this repository. Never edit it by hand; style changes are made at the source and the file is regenerated.
 - Keep files focused; split modules that grow beyond a few hundred lines.
@@ -61,6 +61,8 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Notes may use CRLF: body edits keep the note's line ending.
 - Quick add parses dates on the text with tokens removed (mapped back by index), never masked with spaces, so chrono can't join across a token.
 - Matter notes open as their overview through a guarded `setViewState` wrapper (`vault/internal.ts`). To open a Matter as a note on purpose, call `plugin.openMatterNote(file, leaf)`; a plain `openFile` shows the overview.
+- The new tab panel lives in Obsidian's empty view, which has no API: it is added and removed in `views/today/` like the note banners, guarded, and Obsidian's own commands run through `runCommand` (`vault/internal.ts`).
+- `workspace.iterateRootLeaves` stops at the first callback that returns a truthy value: collect leaves with `(leaf) => void list.push(leaf)`.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies
