@@ -1131,4 +1131,8 @@ body .mtm-process-button:not(.clickable-icon):hover{border-color:var(--backgroun
 .mtm-process .mtm-process-matter{width:100%}
 /* The list's Inbox group gets the same Process button as the board's Inbox lane, inline after its count. */
 body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center;margin-left:4px}
-
+/* Sphere boards indent their lanes one step; the lane column grows by the same amount, so the lane meta keeps its width. */
+.mtm-board.has-spheres{grid-template-columns:calc(var(--mtm-lane-width) + 18px) repeat(var(--mtm-cols,5),minmax(var(--mtm-col-min),1fr));min-width:calc(var(--mtm-lane-width) + 18px + var(--mtm-cols,5) * var(--mtm-col-min))}
+/* A review label that still doesn't fit (wide fonts, "Reviewed 29 days ago") wraps on a balanced second line instead of overflowing the lane. */
+.mtm-lane-meta .mtm-review{white-space:normal;text-wrap:balance}
+.mtm-lane-meta .mtm-review .svg-icon{flex:none;align-self:flex-start;margin-top:1px}
