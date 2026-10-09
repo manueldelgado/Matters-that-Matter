@@ -1145,3 +1145,46 @@ body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center
 .mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:4px}
 /* Two-line rows keep the cell at its natural size. */
 @container (max-width:600px){.mtm-table-meta>span:has(>.mtm-link-chip){flex:none;min-width:auto}}
+/* ——— "What matters today?" in a new tab: the plugin's panel in Obsidian's empty view ——— */
+/* The host: Obsidian's heading and actions give way to the panel, which scrolls and measures its own width. */
+.empty-state.mtm-has-today{display:block;height:100%;overflow-y:auto;container-type:inline-size;text-align:left}
+.empty-state.mtm-has-today>.empty-state-container{display:none}
+/* Two columns: the day on the left (date, question, counts, actions), its Actions on the right. */
+.mtm-today{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:start;gap:28px 40px;width:min(1040px,100%);margin:0 auto;padding:52px 32px 40px;box-sizing:border-box;font-family:var(--font-interface)}
+/* The day stays in view while the Actions scroll. */
+.mtm-today-side{position:sticky;top:24px;display:flex;flex-direction:column;gap:22px;min-width:0}
+.mtm-today-head{display:flex;flex-direction:column;gap:6px}
+.mtm-today-eyebrow{font-size:12px;font-weight:700;color:var(--text-faint);font-variant-numeric:tabular-nums}
+.mtm-today-title{margin:0;font-family:var(--mtm-font-display);font-size:42px;font-weight:400;line-height:1.08;letter-spacing:-.01em;color:var(--text-normal)}
+/* Three counts as the overview's statistic tiles, each a way in. */
+.mtm-today .mtm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mtm-today .mtm-stat{min-width:0;cursor:pointer;transition:box-shadow 160ms var(--mtm-ease),transform 160ms var(--mtm-spring)}
+.mtm-today .mtm-stat:hover,.mtm-today .mtm-stat:focus-visible{box-shadow:var(--mtm-card-shadow-hover);transform:translateY(-1px)}
+.mtm-today .mtm-stat-label{align-items:center;gap:5px}
+.mtm-today .mtm-stat-label .svg-icon{width:12px;height:12px}
+.mtm-today .mtm-stat.mod-inbox .mtm-stat-value{color:var(--mtm-sky-icon)}
+.mtm-today .mtm-stat.mod-review .mtm-stat-value{color:var(--mtm-review-late)}
+.mtm-today .mtm-stat.mod-waiting .mtm-stat-value{color:var(--mtm-waiting-ink)}
+.mtm-today-stat-note{margin-top:2px;font-size:11px;font-weight:600;color:var(--mtm-review-late)}
+/* The actions in a 2×2 grid: Quick add, Open board, then Obsidian's New note and Go to file. */
+.mtm-today-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+body .mtm-today-action:not(.clickable-icon){display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 15px;border:0;border-radius:999px;background:var(--mtm-raised);box-shadow:var(--mtm-card-shadow),inset 0 0 0 1px var(--mtm-line);font-family:var(--font-interface);font-size:13px;font-weight:600;color:var(--mtm-ink);cursor:pointer}
+body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shadow-hover),inset 0 0 0 1px var(--mtm-edge)}
+.mtm-today-action .svg-icon{width:15px;height:15px}
+/* The right column: due today or late; else "Next up"; else an invitation. */
+.mtm-today-section{min-width:0}
+.mtm-today-cards{display:flex;flex-direction:column;gap:8px}
+.mtm-today-lead{margin:0 0 10px;font-family:var(--mtm-font-display);font-size:17px;color:var(--text-normal)}
+.mtm-today-more{display:inline-block;margin-top:10px;font-size:12px;font-weight:600;color:var(--text-faint);cursor:pointer}
+.mtm-today-more:hover,.mtm-today-more:focus-visible{color:var(--text-normal)}
+.mtm-today-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 0 4px;text-align:center}
+.mtm-today-empty .mtm-empty-stack{width:200px;height:84px;margin-bottom:4px}
+.mtm-today-empty-title{font-family:var(--mtm-font-display);font-size:18px;color:var(--text-normal)}
+.mtm-today-empty-text{max-width:320px;font-size:13px;line-height:1.5;color:var(--text-muted)}
+/* Narrower tabs: one column, the day first. */
+@container (max-width:820px){.mtm-today{display:flex;flex-direction:column;align-items:stretch;width:min(640px,100%);gap:24px;padding:40px 24px 32px}.mtm-today-side{position:static}}
+/* Phones: tighter; the tiles stay three across. */
+.is-phone .mtm-today{gap:18px;padding:26px 16px 24px}
+.is-phone .mtm-today-title{font-size:30px}
+.is-phone .mtm-today .mtm-stat{padding:8px 10px}
+.is-phone .mtm-today .mtm-stat-value{font-size:20px}

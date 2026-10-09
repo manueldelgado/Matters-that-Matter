@@ -24,6 +24,7 @@ import { createMatter } from './vault/matterWrites';
 import { Watchers } from './vault/watchers';
 import { pathSettingsAfterRename } from './services/renames';
 import { NoteDecorations } from './views/notes/noteDecorations';
+import { TodayPanels } from './views/today/todayPanels';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
@@ -92,6 +93,7 @@ export default class MattersPlugin extends Plugin {
 		this.watchers = new Watchers(this);
 		this.watchers.start(this.ribbonEl);
 		new NoteDecorations(this).start();
+		new TodayPanels(this).start();
 	}
 
 	async loadSettings() {

@@ -68,6 +68,11 @@ export class MattersSettingTab extends PluginSettingTab {
 						control: { type: 'dropdown', key: 'weekStart', options: { monday: s.monday, sunday: s.sunday } },
 					},
 					{ name: s.openMattersAsOverview, desc: s.openMattersAsOverviewDesc, control: { type: 'toggle', key: 'openMattersAsOverview' } },
+					{
+						name: s.todayInNewTabs,
+						desc: s.todayInNewTabsDesc,
+						control: { type: 'dropdown', key: 'todayInNewTabs', options: { every: s.todayEvery, alone: s.todayAlone, off: s.todayOff } },
+					},
 				],
 			},
 			{
@@ -106,6 +111,7 @@ export class MattersSettingTab extends PluginSettingTab {
 		if (key === 'defaultInboxPosition') settings.defaultInboxPosition = value === 'bottom' ? 'bottom' : 'top';
 		else if (key === 'showDone') settings.showDone = value === true;
 		else if (key === 'openMattersAsOverview') settings.openMattersAsOverview = value === true;
+		else if (key === 'todayInNewTabs') settings.todayInNewTabs = value === 'alone' || value === 'off' ? value : 'every';
 		else if (key === 'weekStart') settings.weekStart = value === 'sunday' ? 'sunday' : 'monday';
 		else return;
 		return this.plugin.saveSettings();

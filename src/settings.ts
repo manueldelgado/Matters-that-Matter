@@ -49,10 +49,14 @@ export interface MattersSettings {
 	dateLanguages: ('en' | 'es')[];
 	/** Opening a Matter note shows its overview. */
 	openMattersAsOverview: boolean;
+	/** "What matters today?" in new tabs: every new tab, only when no other tab is open, or never. */
+	todayInNewTabs: TodayInNewTabs;
 }
 
+export type TodayInNewTabs = 'every' | 'alone' | 'off';
+
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 4,
+	schemaVersion: 5,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',
@@ -83,4 +87,5 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 	weekStart: 'monday',
 	dateLanguages: ['en', 'es'],
 	openMattersAsOverview: true,
+	todayInNewTabs: 'every',
 };

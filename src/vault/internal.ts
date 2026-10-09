@@ -125,3 +125,14 @@ export function rewriteViewStates(rewrite: (leaf: WorkspaceLeaf, state: ViewStat
 	}
 }
 
+/** Runs one of Obsidian's commands by ID (New note, Go to file); false when it can't. */
+export function runCommand(app: App, id: string): boolean {
+	try {
+		const run = method((app as unknown as Record<string, unknown>).commands, 'executeCommandById');
+		return run ? run(id) === true : false;
+	} catch (e) {
+		console.warn('Matters that Matter: could not run a command', e);
+		return false;
+	}
+}
+

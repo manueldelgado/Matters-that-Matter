@@ -3,7 +3,7 @@
 import { DEFAULT_SETTINGS, TONES, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
-export const CURRENT_SCHEMA = 4;
+export const CURRENT_SCHEMA = 5;
 
 type Data = Record<string, unknown>;
 
@@ -15,6 +15,8 @@ const STEPS: Record<number, (data: Data) => Data> = {
 	2: (data) => data,
 	// 4: Matters open as their overview, on by default.
 	3: (data) => ({ ...data, openMattersAsOverview: true }),
+	// 5: "What matters today?" in every new tab.
+	4: (data) => ({ ...data, todayInNewTabs: 'every' }),
 };
 
 const isObject = (v: unknown): v is Data => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -82,6 +84,7 @@ export function migrateSettings(saved: unknown): MattersSettings {
 		icon: typeof t.icon === 'string' && t.icon ? t.icon : 'circle-dot',
 		tone: TONES.includes(t.tone) ? t.tone : 'ink',
 	}));
+	if (!['every', 'alone', 'off'].includes(settings.todayInNewTabs)) settings.todayInNewTabs = defaults.todayInNewTabs;
 	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 
 	return { ...settings, ...normaliseFlags(settings.statuses, settings.types) };
