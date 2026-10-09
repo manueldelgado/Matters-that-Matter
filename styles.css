@@ -1136,3 +1136,12 @@ body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center
 /* A review label that still doesn't fit (wide fonts, "Reviewed 29 days ago") wraps on a balanced second line instead of overflowing the lane. */
 .mtm-lane-meta .mtm-review{white-space:normal;text-wrap:balance}
 .mtm-lane-meta .mtm-review .svg-icon{flex:none;align-self:flex-start;margin-top:1px}
+/* List rows, Waiting on: one line, the short age ("2w", as on cards) and a name that shortens (the tooltip has it whole). */
+.mtm-table-meta>span:has(>.mtm-link-chip){display:flex;align-items:center;min-width:0;white-space:nowrap}
+.mtm-table-meta .mtm-link-chip.mod-waiting{min-width:0;max-width:100%}
+.mtm-table-meta .mtm-table-waiting-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mtm-table-meta .mtm-link-chip.mod-waiting>.mtm-avatar,.mtm-table-meta .mtm-waiting-age{flex:none}
+.mtm-table-meta .mtm-waiting-age.mod-long{display:none}
+.mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:4px}
+/* Two-line rows keep the cell at its natural size. */
+@container (max-width:600px){.mtm-table-meta>span:has(>.mtm-link-chip){flex:none;min-width:auto}}
