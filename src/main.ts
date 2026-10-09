@@ -1,4 +1,4 @@
-import { Events, FileView, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import { Events, FileView, normalizePath, Notice, Plugin, TFile, TFolder, type ViewState, type WorkspaceLeaf } from 'obsidian';
 import type { MattersSettings } from './settings';
 import { STRINGS } from './strings';
 import { CURRENT_SCHEMA, migrateSettings } from './services/migrations';
@@ -14,7 +14,8 @@ import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
 import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
 import { MatterOverviewView, VIEW_MATTER_OVERVIEW } from './views/matter-overview/overviewView';
-import { ensureDateTimeTypes } from './vault/internal';
+import { ensureDateTimeTypes, rewriteViewStates } from './vault/internal';
+import { matterOpenDecision } from './services/matterOpening';
 import { frontmatterOf } from './vault/notes';
 import { editAction } from './vault/actionWrites';
 import { effectiveAction } from './services/effective';
@@ -32,6 +33,8 @@ export default class MattersPlugin extends Plugin {
 	basesAvailable = false;
 	private watchers: Watchers | null = null;
 	private ribbonEl: HTMLElement | null = null;
+	/** Tabs asked to show a Matter as a note ("Open note"), with that Matter's path. */
+	private notePaths = new WeakMap<WorkspaceLeaf, string>();
 
 	async onload() {
 		await this.loadSettings();
@@ -46,6 +49,20 @@ export default class MattersPlugin extends Plugin {
 		this.ribbonEl.addClass('mtm-ribbon');
 
 		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => void this.onRename(file.path, oldPath)));
+		// Matters open as their overview; "Open as note" in the tab menu (or "Open note") shows the note instead.
+		this.register(rewriteViewStates((leaf, state) => this.matterViewState(leaf, state)));
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file, source, leaf) => {
+				if (source !== 'more-options' || !leaf || !(file instanceof TFile) || !this.isMatter(file)) return;
+				if (leaf.view.getViewType() !== 'markdown') return;
+				menu.addItem((item) =>
+					item
+						.setTitle(STRINGS.overview.openAsOverview)
+						.setIcon('layout-dashboard')
+						.onClick(() => void this.showMatterOverview(leaf, file.path)),
+				);
+			}),
+		);
 		this.registerEvent(
 			this.app.vault.on('delete', (file) => {
 				if (file.path === this.selection.path) this.selection.set(null);
@@ -236,6 +253,30 @@ export default class MattersPlugin extends Plugin {
 		const leaf = workspace.getLeaf('tab');
 		await leaf.setViewState({ type: VIEW_MATTER_OVERVIEW, state: { matter: path }, active: true });
 		await workspace.revealLeaf(leaf);
+	}
+
+	/** A Matter note asked for in a tab becomes its overview, unless that tab was asked to show the note. */
+	private matterViewState(leaf: WorkspaceLeaf, state: ViewState): ViewState {
+		const file = (state.state as { file?: unknown } | undefined)?.file;
+		const decision = matterOpenDecision(state.type, file, {
+			enabled: this.settings.setupDone && this.settings.openMattersAsOverview,
+			isMatter: (path) => this.isMatter(this.app.vault.getFileByPath(path)),
+			notePath: this.notePaths.get(leaf) ?? null,
+		});
+		if (!decision.keepNote) this.notePaths.delete(leaf);
+		return decision.overview ? { ...state, type: VIEW_MATTER_OVERVIEW, state: { matter: decision.overview } } : state;
+	}
+
+	/** Shows a Matter as a plain note in this tab; it stays a note there until the tab shows something else. */
+	async openMatterNote(file: TFile, leaf: WorkspaceLeaf): Promise<void> {
+		this.notePaths.set(leaf, file.path);
+		await leaf.openFile(file);
+	}
+
+	/** Shows a Matter's overview in this tab. */
+	async showMatterOverview(leaf: WorkspaceLeaf, path: string): Promise<void> {
+		this.notePaths.delete(leaf);
+		await leaf.setViewState({ type: VIEW_MATTER_OVERVIEW, state: { matter: path }, active: true });
 	}
 
 	isMatter(file: TFile | null): file is TFile {

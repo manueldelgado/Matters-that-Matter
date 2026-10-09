@@ -1,6 +1,6 @@
 // The Matter overview: one Matter's about, review, stats and Actions, in a tab.
 
-import { Component, debounce, ItemView, Keymap, MarkdownRenderer, normalizePath, Notice, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
+import { Component, debounce, ItemView, Keymap, MarkdownRenderer, normalizePath, Notice, type Menu, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
 import { toYmd } from '../../model/dates';
@@ -36,6 +36,8 @@ export class MatterOverviewView extends ItemView {
 		private plugin: MattersPlugin,
 	) {
 		super(leaf);
+		// A Matter opens as this view, so it navigates like a note: Back and Forward, links opening in place.
+		this.navigation = true;
 	}
 
 	getViewType(): string {
@@ -66,6 +68,18 @@ export class MatterOverviewView extends ItemView {
 		}
 		await super.setState(state, result);
 		await this.refresh();
+	}
+
+	onPaneMenu(menu: Menu, source: string): void {
+		super.onPaneMenu(menu, source);
+		const file = this.file();
+		if (source !== 'more-options' || !file) return;
+		menu.addItem((item) =>
+			item
+				.setTitle(STRINGS.overview.openAsNote)
+				.setIcon('file-text')
+				.onClick(() => void this.plugin.openMatterNote(file, this.leaf)),
+		);
 	}
 
 	private file(): TFile | null {
@@ -216,9 +230,10 @@ export class MatterOverviewView extends ItemView {
 		newNextAction: () => {
 			if (this.path) this.plugin.quickAdd({ matterPath: this.path, statusId: nextStepStatus(this.plugin.settings.statuses)?.id });
 		},
+		// The note, in this tab (Ctrl/Cmd-click: a new one); it stays a note there until the tab shows something else.
 		openNote: (e) => {
 			const file = this.file();
-			if (file) void this.openLeaf(e).openFile(file);
+			if (file) void this.plugin.openMatterNote(file, Keymap.isModEvent(e) ? this.openLeaf(e) : this.leaf);
 		},
 		renderAbout: (el, markdown) => {
 			const component = new Component();

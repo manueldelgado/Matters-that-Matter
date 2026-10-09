@@ -337,7 +337,7 @@ export class NoteDecorations {
 		const path = item.effective.matterPath;
 		if (e.instanceOf(MouseEvent) && Keymap.isModEvent(e)) {
 			const target = this.plugin.app.vault.getFileByPath(path);
-			if (target) void this.plugin.app.workspace.getLeaf(Keymap.isModEvent(e)).openFile(target);
+			if (target) void this.plugin.openMatterNote(target, this.plugin.app.workspace.getLeaf(Keymap.isModEvent(e)));
 			return;
 		}
 		void this.plugin.openMatter(path);

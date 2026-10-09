@@ -60,6 +60,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Renaming a folder fires `rename` for the folder and for every file inside it; rules that follow paths must be idempotent across those events.
 - Notes may use CRLF: body edits keep the note's line ending.
 - Quick add parses dates on the text with tokens removed (mapped back by index), never masked with spaces, so chrono can't join across a token.
+- Matter notes open as their overview through a guarded `setViewState` wrapper (`vault/internal.ts`). To open a Matter as a note on purpose, call `plugin.openMatterNote(file, leaf)`; a plain `openFile` shows the overview.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies

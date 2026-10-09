@@ -3,7 +3,7 @@
 import { DEFAULT_SETTINGS, TONES, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
-export const CURRENT_SCHEMA = 3;
+export const CURRENT_SCHEMA = 4;
 
 type Data = Record<string, unknown>;
 
@@ -13,6 +13,8 @@ const STEPS: Record<number, (data: Data) => Data> = {
 	1: (data) => ({ ...data, spheres: [] }),
 	// 3: new properties mtm-waiting-since (Actions) and mtm-outcome (Matters); nothing to convert.
 	2: (data) => data,
+	// 4: Matters open as their overview, on by default.
+	3: (data) => ({ ...data, openMattersAsOverview: true }),
 };
 
 const isObject = (v: unknown): v is Data => typeof v === 'object' && v !== null && !Array.isArray(v);

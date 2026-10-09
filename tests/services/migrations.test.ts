@@ -66,3 +66,16 @@ describe('settings repair', () => {
 		expect(checkFlags(s.statuses, s.types)).toEqual([]);
 	});
 });
+
+describe('schema 4', () => {
+	it('turns on opening Matters as their overview for settings from schema 3', () => {
+		const s = migrateSettings({ schemaVersion: 3, setupDone: true });
+		expect(s.openMattersAsOverview).toBe(true);
+		expect(s.schemaVersion).toBe(4);
+	});
+
+	it('keeps the choice once made', () => {
+		expect(migrateSettings({ schemaVersion: 4, openMattersAsOverview: false }).openMattersAsOverview).toBe(false);
+	});
+});
+

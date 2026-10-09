@@ -1,7 +1,8 @@
 // Undocumented Obsidian internals, isolated and guarded. Every function degrades to a no-op
 // or null when the internal shape changes.
 
-import type { App, View } from 'obsidian';
+import { WorkspaceLeaf, type App, type View, type ViewState } from 'obsidian';
+import { around } from 'monkey-around';
 
 type Fn = (...args: unknown[]) => unknown;
 
@@ -97,3 +98,30 @@ export function explorerTitleEls(app: App, path: string): HTMLElement[] {
 	}
 	return out;
 }
+
+/**
+ * Rewrites the view state a tab is asked to show, before it renders, so a Matter note opens as its overview with no flash
+ * and with Back and Forward intact. Wrapping WorkspaceLeaf.setViewState is not a public API: if it fails, tabs open as usual.
+ * Returns the uninstaller.
+ */
+export function rewriteViewStates(rewrite: (leaf: WorkspaceLeaf, state: ViewState) => ViewState): () => void {
+	try {
+		return around(WorkspaceLeaf.prototype, {
+			setViewState(next) {
+				return function (this: WorkspaceLeaf, state: ViewState, eState?: unknown) {
+					let out = state;
+					try {
+						out = rewrite(this, state);
+					} catch (e) {
+						console.warn('Matters that Matter: could not redirect a Matter to its overview', e);
+					}
+					return next.call(this, out, eState);
+				};
+			},
+		});
+	} catch (e) {
+		console.warn('Matters that Matter: Matters will open as notes', e);
+		return () => {};
+	}
+}
+

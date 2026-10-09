@@ -47,10 +47,12 @@ export interface MattersSettings {
 	showDone: boolean;
 	weekStart: 'monday' | 'sunday';
 	dateLanguages: ('en' | 'es')[];
+	/** Opening a Matter note shows its overview. */
+	openMattersAsOverview: boolean;
 }
 
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 3,
+	schemaVersion: 4,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',
@@ -80,4 +82,5 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 	showDone: true,
 	weekStart: 'monday',
 	dateLanguages: ['en', 'es'],
+	openMattersAsOverview: true,
 };

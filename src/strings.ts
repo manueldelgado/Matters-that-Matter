@@ -349,6 +349,8 @@ export const STRINGS = {
 
 	overview: {
 		title: 'Matter',
+		openAsNote: 'Open as note',
+		openAsOverview: 'Open as overview',
 		outcome: 'Outcome',
 		outcomeEmpty: 'What does done look like? Or, if it never ends, what do you want to keep up?',
 		editOutcome: 'Edit outcome',
@@ -559,6 +561,8 @@ export const STRINGS = {
 		showDoneDesc: 'Keep closed Actions visible. Each board can override this.',
 		weekStart: 'Week starts on',
 		weekStartDesc: 'For the calendar and timeline.',
+		openMattersAsOverview: 'Open Matters as their overview',
+		openMattersAsOverviewDesc: 'Opening a Matter note shows its overview. “Open note” in the overview, or “Open as note” in the tab menu, shows the note itself.',
 		monday: 'Monday',
 		sunday: 'Sunday',
 		folderRequired: 'Enter a folder path inside the vault.',
