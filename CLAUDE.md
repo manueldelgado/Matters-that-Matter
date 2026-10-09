@@ -42,8 +42,9 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Keep startup light: `onload` registers things and loads settings; heavier work waits for `workspace.onLayoutReady` or first use. Debounce work triggered by vault events.
 - Commands via `this.addCommand` with stable IDs (never rename after release); no default hotkeys.
 - Persist settings with `loadData`/`saveData`.
-- Settings tab: declarative `getSettingDefinitions()`, no `display()` (`minAppVersion` 1.13.0 or later). Custom UI goes in `render` rows.
+- Settings tab: declarative `getSettingDefinitions()`, no `display()` (`minAppVersion` 1.13.0 or later). Custom UI goes in `render` rows. Re-render an open tab with `this.update()` (it re-runs `render` rows too); `display()` doesn't refresh declarative tabs.
   A definition with an empty `name` is not rendered at all; for a description-only row use `render: (s) => { s.setName('').setDesc(…); }`.
+- Settings from sync replace the settings object: anything holding the old arrays (an open settings tab, caches) must re-read them on `settings-changed` with `external`.
 - Type checks on DOM nodes and UI events use `x.instanceOf(X)`, not `instanceof` (cross-window safe). `obsidianmd/prefer-instanceof` misses some cases (`instanceof HTMLElement`, `instanceof MouseEvent`), so grep for `instanceof` before committing. A value of unknown type needs a guard before `.instanceOf` (see `isHTMLElement` in `vault/internal.ts`).
 - Right after a write, `metadataCache.getFileCache(file)` returns `null` until the note is parsed again. Don't treat that as "not our note": wait for the `changed` event, and match on the path you care about rather than on cached view state.
 - `ItemView` state must not use a `file` key: Obsidian reads it as a note to open and swaps in a Markdown view.
@@ -55,6 +56,8 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - A hidden tab reads `scrollLeft`/`scrollTop` as 0 and ignores writes: save and restore scroll only when `clientWidth > 0` (see `CollectionView.captureScroll`).
 - Background tabs may be deferred (no view): find a leaf by `getViewState().state`, not by `leaf.view`.
 - File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`.
+- Obsidian rejects `\ / :` in file names even where the OS allows them: run every generated name through `sanitiseTitle`.
+- Renaming a folder fires `rename` for the folder and for every file inside it; rules that follow paths must be idempotent across those events.
 - Notes may use CRLF: body edits keep the note's line ending.
 - Quick add parses dates on the text with tokens removed (mapped back by index), never masked with spaces, so chrono can't join across a token.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
