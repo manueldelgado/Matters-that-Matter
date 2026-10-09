@@ -201,8 +201,9 @@ export class SetupView extends ItemView {
 		this.render();
 		const plan = this.plan();
 		try {
-			await executePlan(this.app, plan);
+			// Before any note exists: Obsidian would otherwise type the dates from the first date-only value it sees.
 			ensureDateTimeTypes(this.app);
+			await executePlan(this.app, plan);
 			Object.assign(this.plugin.settings, {
 				folders: { ...this.state.folders },
 				statuses: this.state.statuses,

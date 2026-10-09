@@ -21,11 +21,12 @@ import { effectiveAction } from './services/effective';
 import { resolverFor } from './vault/index';
 import { createMatter } from './vault/matterWrites';
 import { Watchers } from './vault/watchers';
+import { pathSettingsAfterRename } from './services/renames';
 import { NoteDecorations } from './views/notes/noteDecorations';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
-	/** "settings-changed" fires after every save and after settings arrive from sync. */
+	/** "settings-changed" fires after every save and after settings arrive from sync (then with `true`). */
 	events = new Events();
 	selection = new Selection();
 	basesAvailable = false;
@@ -91,23 +92,17 @@ export default class MattersPlugin extends Plugin {
 
 	async onExternalSettingsChange() {
 		await this.loadSettings();
-		this.events.trigger('settings-changed');
+		this.events.trigger('settings-changed', true);
 		// Setup finished on another device: start what runs once setup is done (it starts only once).
 		if (this.settings.setupDone && this.app.workspace.layoutReady) this.onSetupDone();
 	}
 
-	/** The Inbox and the board are identified by their paths; follow renames. */
+	/** The Inbox, the board and the folders are identified by their paths; follow renames, folders included. */
 	private async onRename(path: string, oldPath: string): Promise<void> {
-		let changed = false;
-		if (oldPath === this.settings.inboxPath) {
-			this.settings.inboxPath = path;
-			changed = true;
-		}
-		if (oldPath === this.settings.boardPath) {
-			this.settings.boardPath = path;
-			changed = true;
-		}
-		if (changed) await this.saveSettings();
+		const next = pathSettingsAfterRename(this.settings, oldPath, path);
+		if (!next) return;
+		Object.assign(this.settings, next);
+		await this.saveSettings();
 	}
 
 	async openSetup(): Promise<void> {

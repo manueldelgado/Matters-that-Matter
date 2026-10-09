@@ -9,7 +9,7 @@ import { hasCompletedValue, StatusCache } from '../services/completion';
 import { linkText } from '../services/effective';
 import { WaitingCache, type PersonRef } from '../services/waitingSince';
 import { effectiveAction } from '../services/effective';
-import { inboxRepairs, isInboxDuplicate } from '../services/inboxGuard';
+import { inboxRepairs, isInboxDuplicate, renamedInbox } from '../services/inboxGuard';
 import { linkedFile, resolverFor } from './index';
 import { createNote, ensureFolder, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
 
@@ -22,6 +22,8 @@ export class Watchers {
 	private waiting = new WaitingCache();
 	private ribbonEl: HTMLElement | null = null;
 	private restoringInbox = false;
+	/** Notes created while a deleted Inbox may still come back; null when no restore is pending. */
+	private createdWhileInboxMissing: string[] | null = null;
 	private updateRibbon = debounce(() => this.renderRibbon(), 300, true);
 
 	constructor(private plugin: MattersPlugin) {}
@@ -41,6 +43,11 @@ export class Watchers {
 				this.waiting.forget(file.path);
 				if (file.path === this.plugin.settings.inboxPath) this.restoreInboxLater(file.path);
 				this.updateRibbon();
+			}),
+		);
+		this.plugin.registerEvent(
+			app.vault.on('create', (file) => {
+				if (file instanceof TFile && file.extension === 'md') this.createdWhileInboxMissing?.push(file.path);
 			}),
 		);
 		this.plugin.registerEvent(
@@ -116,11 +123,28 @@ export class Watchers {
 		new Notice(STRINGS.notices.inboxRestoredProperties);
 	}
 
-	/** Waits for a sync restore; re-creates the Inbox if it does not come back. */
+	/**
+	 * Waits for a sync restore; re-creates the Inbox if it does not come back. A rename on another device can arrive as a
+	 * deletion plus a new note before the settings that name it: that note becomes the Inbox instead.
+	 */
 	private restoreInboxLater(path: string): void {
+		this.createdWhileInboxMissing = [];
 		window.setTimeout(() => {
 			const { app, settings } = this.plugin;
+			const created = this.createdWhileInboxMissing ?? [];
+			this.createdWhileInboxMissing = null;
 			if (settings.inboxPath !== path || app.vault.getAbstractFileByPath(normalizePath(path))) return;
+			const renamed = renamedInbox(
+				created.flatMap((p) => {
+					const file = app.vault.getFileByPath(p);
+					return file ? [{ path: p, fm: frontmatterOf(app, file) }] : [];
+				}),
+			);
+			if (renamed) {
+				settings.inboxPath = renamed;
+				void this.plugin.saveSettings();
+				return;
+			}
 			const slash = path.lastIndexOf('/');
 			this.restoringInbox = true;
 			void (async () => {

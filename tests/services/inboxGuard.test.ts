@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inboxPathAfterRename, inboxRepairs, isInboxDuplicate } from '../../src/services/inboxGuard';
+import { inboxRepairs, isInboxDuplicate, renamedInbox } from '../../src/services/inboxGuard';
 
 describe('inboxRepairs', () => {
 	it('needs nothing for a healthy Inbox', () => {
@@ -19,9 +19,13 @@ describe('inboxRepairs', () => {
 });
 
 describe('Inbox paths', () => {
-	it('follows a rename of the Inbox only', () => {
-		expect(inboxPathAfterRename('MTM/Matters/Inbox.md', 'MTM/Matters/Capture.md', 'MTM/Matters/Inbox.md')).toBe('MTM/Matters/Capture.md');
-		expect(inboxPathAfterRename('MTM/Matters/Other.md', 'x.md', 'MTM/Matters/Inbox.md')).toBeNull();
+	it('finds the Inbox renamed elsewhere among the notes created while it was missing', () => {
+		const inbox = { 'mtm-kind': 'matter', 'mtm-icon': 'inbox', 'mtm-state': 'active' };
+		const other = { 'mtm-kind': 'matter', 'mtm-icon': 'house' };
+		expect(renamedInbox([{ path: 'a.md', fm: other }, { path: 'MTM/Matters/Capture.md', fm: inbox }])).toBe('MTM/Matters/Capture.md');
+		expect(renamedInbox([{ path: 'a.md', fm: other }, { path: 'b.md', fm: null }])).toBeNull();
+		expect(renamedInbox([{ path: 'a.md', fm: inbox }, { path: 'b.md', fm: inbox }])).toBeNull();
+		expect(renamedInbox([{ path: 'a.md', fm: { 'mtm-kind': 'action', 'mtm-icon': 'inbox' } }])).toBeNull();
 	});
 
 	it('detects numbered duplicates next to the Inbox', () => {

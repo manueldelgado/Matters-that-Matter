@@ -219,8 +219,8 @@ const WEAK_DATES = new Set([
 	...['mediodia', 'medianoche', 'tarde', 'noche', 'fin de semana'],
 ]);
 
-/** Words left before a date that only introduce it ("on", "by", Spanish "el", "para"); they leave the title with the date. */
-const DATE_LEAD = /(?:^|\s)(on|by|el|para)\s+$/i;
+/** Words left before a date that only introduce it ("on", "by", "before", Spanish "el", "para"); they leave the title with the date. */
+const DATE_LEAD = /(?:^|\s)(on|by|before|el|para)\s+$/i;
 
 /**
  * Applies the quick-add rules on top of chrono:
@@ -306,6 +306,50 @@ function spanishSpans(text: string, now: Date): DateSpan[] {
 	return out;
 }
 
+/**
+ * A day of the month with no month: "on the 1st", "by the 21st", Spanish "el día 5". It needs the lead word and must not run
+ * into another word ("on the 2nd floor"), except a time ("on the 1st at 10am", "el día 5 a las 10").
+ */
+const DAY_OF_MONTH: Record<DateLanguage, RegExp> = {
+	en: /(?:^|\s)(?:on|by|before)\s+(the\s+(\d{1,2})(?:st|nd|rd|th))(?=\s*$|\s*[,.;!?)]|\s+(?:at\s+)?\d)/gi,
+	es: /(?:^|\s)el\s+(d[ií]a\s+(\d{1,2}))(?=\s*$|\s*[,.;!?)]|\s+(?:a\s+las?\s+)?\d)/giu,
+};
+
+/** The next date after today that falls on this day of the month, skipping months too short for it; null if no such day. */
+export function nextDayOfMonth(now: Date, day: number): string | null {
+	if (day < 1 || day > 31) return null;
+	let month = now.getMonth() + (day <= now.getDate() ? 1 : 0);
+	for (let i = 0; i < 13; i++, month++) {
+		const d = new Date(now.getFullYear(), month, day);
+		if (d.getDate() === day) return toYmd(d);
+	}
+	return null;
+}
+
+function dayOfMonthSpans(text: string, now: Date, lang: DateLanguage): DateSpan[] {
+	const out: DateSpan[] = [];
+	for (const m of text.matchAll(DAY_OF_MONTH[lang])) {
+		const date = nextDayOfMonth(now, Number(m[2]));
+		if (!date) continue;
+		const start = (m.index ?? 0) + m[0].indexOf(m[1] ?? '');
+		let end = start + (m[1] ?? '').length;
+		// A time right after it joins the date.
+		const parser = lang === 'en' ? chronoEnDayFirst : chronoEs;
+		const tail = text.slice(end);
+		const gap = /^\s+/.exec(tail)?.[0].length ?? 0;
+		// chrono keeps "at" in an English time but starts a Spanish one after "a" ("a las 10" reads "las 10").
+		const lead = /^\s+(?:(?:at|a)\s+)?/i.exec(tail)?.[0].length ?? 0;
+		const next = gap ? parser.parse(tail, now)[0] : undefined;
+		const joins = next && next.index >= gap && next.index <= lead && !next.end;
+		const time = joins && next.start.isCertain('hour') && !next.start.isCertain('day') && !next.start.isCertain('weekday')
+			? toMtmDate(next.start, now).time
+			: undefined;
+		if (next && time) end += next.index + next.text.length;
+		out.push({ text: text.slice(start, end), start, end, from: time ? { date, time } : { date }, to: null });
+	}
+	return out;
+}
+
 const plainWords = (text: string) => normalise(text).replace(/\s+/g, ' ').trim();
 
 /** A part of the day or "weekend" that chrono folds into a longer date ("Weekend 20-22 oct") stays in the title. */
@@ -323,6 +367,7 @@ function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	for (const lang of languages) {
 		const parser = lang === 'en' ? chronoEnDayFirst : chronoEs;
 		spans.push(...toSpans(text, parser.parse(text, ctx.now, { forwardDate: true }), ctx.now));
+		spans.push(...dayOfMonthSpans(text, ctx.now, lang));
 	}
 	if (languages.includes('es')) spans.push(...spanishSpans(text, ctx.now));
 	// A removed chip ignores its text, and any smaller date inside it ("10am" inside "friday 10am").

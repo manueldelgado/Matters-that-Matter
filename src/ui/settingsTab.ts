@@ -25,6 +25,12 @@ export class MattersSettingTab extends PluginSettingTab {
 	constructor(app: App, private plugin: MattersPlugin) {
 		super(app, plugin);
 		this.containerEl.addClass('mtm-settings');
+		// Settings from sync replace the settings object: an open tab re-renders, so its editors don't save old arrays over them.
+		plugin.registerEvent(
+			plugin.events.on('settings-changed', (external: unknown) => {
+				if (external === true && this.containerEl.isConnected) this.update();
+			}),
+		);
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {

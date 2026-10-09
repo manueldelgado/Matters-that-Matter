@@ -14,9 +14,13 @@ export function inboxRepairs(fm: Readonly<Record<string, unknown>> | null | unde
 	return out;
 }
 
-/** The new inboxPath after a rename, or null if the renamed file was not the Inbox. */
-export function inboxPathAfterRename(oldPath: string, newPath: string, inboxPath: string): string | null {
-	return oldPath === inboxPath ? newPath : null;
+/**
+ * A rename that arrives through sync as a deletion plus a new note: of the notes created while the Inbox was missing,
+ * the one that looks like it (a Matter with the Inbox icon). Null when there is none, or more than one.
+ */
+export function renamedInbox(created: readonly { path: string; fm: Readonly<Record<string, unknown>> | null | undefined }[]): string | null {
+	const matches = created.filter((c) => c.fm?.['mtm-kind'] === 'matter' && c.fm['mtm-icon'] === 'inbox');
+	return matches.length === 1 ? (matches[0]?.path ?? null) : null;
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

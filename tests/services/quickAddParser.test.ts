@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseQuickAdd, type QuickAddContext } from '../../src/services/quickAddParser';
+import { nextDayOfMonth, parseQuickAdd, type QuickAddContext } from '../../src/services/quickAddParser';
 
 // Friday 9 October 2026, 12:00 local time.
 const now = new Date(2026, 9, 9, 12, 0);
@@ -278,6 +278,28 @@ describe('QA 8 October 2026', () => {
 	it('drops a word that only introduces the date', () => {
 		expect(date('Prepare taxes by end of month').title).toBe('Prepare taxes');
 		expect(date('Pay rent on friday').title).toBe('Pay rent');
+	});
+
+	it('reads a day of the month with no month as the next one after today', () => {
+		expect(date('Pay rent on the 1st')).toEqual({ title: 'Pay rent', start: null, due: '2026-11-01' });
+		expect(date('Send the report by the 21st')).toEqual({ title: 'Send the report', start: null, due: '2026-10-21' });
+		expect(date('Book the hall before the 9th').due).toBe('2026-11-09');
+		expect(date('Pay rent on the 1st at 10am')).toEqual({ title: 'Pay rent', start: null, due: '2026-11-01T10:00' });
+		expect(date('Pay rent on the 1st #Kitchen')).toMatchObject({ title: 'Pay rent', due: '2026-11-01' });
+		expect(date('Pagar el alquiler el día 1')).toEqual({ title: 'Pagar el alquiler', start: null, due: '2026-11-01' });
+		expect(date('Pagar el alquiler el día 15 a las 10').due).toBe('2026-10-15T10:00');
+	});
+
+	it('skips months too short for the day', () => {
+		expect(nextDayOfMonth(new Date(2027, 0, 31), 31)).toBe('2027-03-31');
+		expect(nextDayOfMonth(new Date(2027, 0, 30), 30)).toBe('2027-03-30');
+		expect(nextDayOfMonth(now, 32)).toBeNull();
+	});
+
+	it('needs the lead word and no word after the day', () => {
+		for (const t of ['Write the 2nd draft', 'Fix the light on the 2nd floor', 'Tickets for the 1st night']) {
+			expect(date(t)).toEqual({ title: t, start: null, due: null });
+		}
 	});
 
 	it('keeps punctuation after a token out of the name', () => {
