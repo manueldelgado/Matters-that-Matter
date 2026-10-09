@@ -10,6 +10,7 @@ import {
 	samplePlan,
 	sampleStatus,
 	sampleType,
+	sampleTypeFallbacks,
 	spheresWithoutSample,
 	withSampleSpheres,
 } from '../../src/services/samplePackage';
@@ -116,10 +117,31 @@ describe('sample package in another workflow', () => {
 		expect(sampleStatus('waiting', simple)?.category).toBe('active');
 	});
 
-	it('maps unknown types to the default type', () => {
+	it('keeps its own types with the default types', () => {
+		for (const id of ['call', 'message', 'write', 'meet', 'buy', 'visit'] as const) expect(sampleType(id, DEFAULT_SETTINGS.types)?.id).toBe(id);
+		expect(sampleTypeFallbacks(DEFAULT_SETTINGS.types)).toBe(0);
+	});
+
+	it('maps to the contexts of "Get stuff done"', () => {
 		const contexts = presetTypes('next');
-		expect(sampleType('meet', contexts)?.default).toBe(true);
-		expect(sampleType('call', DEFAULT_SETTINGS.types)?.id).toBe('call');
+		const map = Object.fromEntries((['call', 'message', 'write', 'meet', 'buy', 'visit'] as const).map((id) => [id, sampleType(id, contexts)?.id]));
+		expect(map).toEqual({ call: 'calls', message: 'computer', write: 'computer', meet: 'agendas', buy: 'errands', visit: 'errands' });
+		expect(sampleTypeFallbacks(contexts)).toBe(0);
+	});
+
+	it('follows type IDs, so renamed or recoloured types still map', () => {
+		const renamed = presetTypes('next').map((t) => ({ ...t, label: `My ${t.label}`, tone: 'ink' as const }));
+		expect(sampleType('meet', renamed)?.id).toBe('agendas');
+		expect(sampleTypeFallbacks(renamed)).toBe(0);
+	});
+
+	it('falls back to the default type for missing types, and counts them for the warning', () => {
+		const noVisit = DEFAULT_SETTINGS.types.filter((t) => t.id !== 'visit');
+		expect(sampleType('visit', noVisit)?.default).toBe(true);
+		expect(sampleTypeFallbacks(noVisit)).toBe(SAMPLE_ACTIONS.filter((a) => a.type === 'visit').length);
+		const custom = [{ id: 'deep-work', label: 'Deep work', icon: 'brain', tone: 'sky' as const, default: true }];
+		expect(sampleType('call', custom)?.id).toBe('deep-work');
+		expect(sampleTypeFallbacks(custom)).toBe(SAMPLE_ACTIONS.length);
 	});
 
 	it('writes every Action whatever the workflow', () => {

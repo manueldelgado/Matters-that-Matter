@@ -200,9 +200,28 @@ export function sampleStatus(id: SampleStatus, statuses: readonly StatusDef[]): 
 	return statuses.find((s) => s.category === category && !s.backlog) ?? statuses.find((s) => s.backlog);
 }
 
-/** The same type, else the default one. */
+/** The two type sets the presets bring: the default types (the package's own IDs) and the contexts of "Get stuff done". */
+const TYPE_SETS: readonly Record<SampleType, string>[] = [
+	{ call: 'call', message: 'message', write: 'write', meet: 'meet', buy: 'buy', visit: 'visit' },
+	{ call: 'calls', message: 'computer', write: 'computer', meet: 'agendas', buy: 'errands', visit: 'errands' },
+];
+
+/** The type set the settings' types follow (by ID, so renaming or recolouring a type changes nothing): the one with more of its IDs present. */
+function typeSet(types: readonly TypeDef[]): Record<SampleType, string> {
+	const hits = (set: Record<SampleType, string>) => [...new Set(Object.values(set))].filter((id) => types.some((t) => t.id === id)).length;
+	return TYPE_SETS.reduce((best, set) => (hits(set) > hits(best) ? set : best));
+}
+
+/** The sample type's counterpart in the settings' type set, else the default type. */
 export function sampleType(id: SampleType, types: readonly TypeDef[]): TypeDef | undefined {
-	return types.find((t) => t.id === id) ?? types.find((t) => t.default);
+	const target = typeSet(types)[id];
+	return types.find((t) => t.id === target) ?? types.find((t) => t.default);
+}
+
+/** How many sample Actions would fall back to the default type because their counterpart is missing (setup warns). */
+export function sampleTypeFallbacks(types: readonly TypeDef[]): number {
+	const set = typeSet(types);
+	return SAMPLE_ACTIONS.filter((a) => !types.some((t) => t.id === set[a.type])).length;
 }
 
 /** The settings' Spheres plus the package's ones they lack (matched by ID). */

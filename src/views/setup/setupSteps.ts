@@ -4,7 +4,7 @@ import { getAllTags, normalizePath, prepareFuzzySearch, TFile, TFolder, type App
 import type { StatusDef, TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { areContexts, matchPreset, PRESET_IDS, presetStatuses, presetTypes, type PresetId, type WorkflowLosses } from '../../services/presets';
-import { SAMPLE_COUNTS, SAMPLE_FOLDER } from '../../services/samplePackage';
+import { SAMPLE_COUNTS, SAMPLE_FOLDER, sampleTypeFallbacks } from '../../services/samplePackage';
 import type { Folders, SetupPlan } from '../../services/setupPlan';
 import { appendIcon, statusChip, tileEl, typeClasses } from '../../ui/components/dom';
 import { StatusEditor } from '../../ui/components/statusEditor';
@@ -308,6 +308,15 @@ export function renderSummary(body: HTMLElement, state: SetupState, plan: SetupP
 		state.sample = box.checked;
 		onSample();
 	});
+	// The sample is written for the presets' types; others leave some Actions on the default type.
+	const fallbacks = state.sample ? sampleTypeFallbacks(state.types) : 0;
+	if (fallbacks) {
+		const notice = summary.createDiv({ cls: 'mtm-notice mod-warning' });
+		appendIcon(notice, 'triangle-alert');
+		const div = notice.createDiv();
+		div.createEl('b', { text: t.sampleTypesTitle });
+		div.appendText(` ${t.sampleTypes(fallbacks, state.types.find((x) => x.default)?.label ?? '')}`);
+	}
 
 	const { losses } = warnings;
 	if (losses.actions) {

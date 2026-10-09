@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import { matterNames, planSetup, SAMPLE_FOLDER, type SetupChoices, type VaultSnapshot } from '../../src/services/setupPlan';
 import { SAMPLE_ACTIONS, SAMPLE_MATTERS } from '../../src/services/samplePackage';
+import { presetStatuses, presetTypes } from '../../src/services/presets';
 import { boardBaseContent } from '../../src/services/baseFile';
 
 const choices = (over: Partial<SetupChoices> = {}): SetupChoices => ({
@@ -117,6 +118,13 @@ describe('sample content', () => {
 
 	it('sets mtm-completed only on closed Actions', () => {
 		for (const a of actions) expect('mtm-completed' in a.frontmatter).toBe(a.frontmatter['mtm-status'] === 'done');
+	});
+
+	it('maps to the "Get stuff done" contexts', () => {
+		const p = planSetup(choices({ sample: true, statuses: presetStatuses('next'), types: presetTypes('next') }), vault());
+		const acts = p.create.filter((n) => n.kind === 'action');
+		expect(new Set(acts.map((n) => n.frontmatter['mtm-type']))).toEqual(new Set(['calls', 'computer', 'agendas', 'errands']));
+		expect(acts.find((n) => n.path.endsWith('/Renew the passport.md'))?.frontmatter).toMatchObject({ 'mtm-type': 'errands', 'mtm-status': 'someday' });
 	});
 
 	it('maps to a smaller workflow and other types', () => {

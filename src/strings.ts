@@ -635,6 +635,9 @@ export const STRINGS = {
 			sampleContents: (c: { matters: number; actions: number; people: number; notes: number }) =>
 				`sample content: ${c.matters} Matters, ${c.actions} Actions, ${c.people} people, ${c.notes} notes`,
 			settings: 'Settings',
+			sampleTypesTitle: 'Your Action types differ from the presets’.',
+			sampleTypes: (n: number, type: string) =>
+				`${plural(n, 'sample Action', 'sample Actions')} will use your default type${type ? `, ${type}` : ''}, so the sample won’t show its variety of types.`,
 			addsSpheres: (labels: string[]) => `adds the Spheres ${labels.join(', ')}`,
 			linksOffTitle: '“Automatically update internal links” is off.',
 			linksOff: 'If you rename a Matter, its Actions will lose their link to it. We recommend turning it on.',
