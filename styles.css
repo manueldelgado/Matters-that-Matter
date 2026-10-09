@@ -1,4 +1,4 @@
-/* Matters that Matter — Obsidian plugin styles. Style revision 4.
+/* Matters that Matter — Obsidian plugin styles. Style revision 5.
    Generated file: do not edit by hand. Works with any theme: tokens fall back to Obsidian's own variables. */
 .theme-light{
 --mtm-mint-ink:#186643;--mtm-mint-icon:#218A5B;--mtm-mint-strong:#2FAA72;--mtm-mint-dot:#52C790;--mtm-mint-edge:#AEEDCD;--mtm-mint-soft:#D5F6E5;--mtm-mint-faint:#EEFBF4;--mtm-mint-ring:#AEEDCD;--mtm-mint-bar-top:#AEEDCD;--mtm-mint-bar-bottom:#7FDDAF;--mtm-mint-bar-ink:#186643;
@@ -87,6 +87,10 @@ body{
 .mtm-toolbar-title{margin-right:8px;font-family:var(--mtm-font-display);font-size:1.3em;font-weight:400;line-height:1.2;white-space:nowrap}
 .mtm-toolbar-label{margin-right:2px;font-size:11px;font-weight:700;color:var(--text-faint)}
 .mtm-toolbar-note{font-size:12px;color:var(--text-muted);white-space:nowrap}
+/* A toolbar note that is a toggle ("Done hidden" / "Done shown"). */
+.mtm-toolbar-note.mod-toggle{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:var(--radius-s);cursor:pointer}
+.mtm-toolbar-note.mod-toggle:hover,.mtm-toolbar-note.mod-toggle:focus-visible{color:var(--text-normal);background:var(--background-modifier-hover)}
+.mtm-toolbar-note.mod-toggle > .svg-icon{width:14px;height:14px}
 .mtm-spacer{flex:1}
 .mtm-divider{flex:none;width:1px;height:16px;margin:0 4px;background:var(--mtm-line)}
 .mtm-seg{display:inline-flex;gap:2px;padding:2px;border-radius:9px;background:var(--background-modifier-hover);box-shadow:inset 0 1px 2px rgba(27,27,34,.06)}
@@ -308,11 +312,14 @@ body .mtm-button-done:not(.clickable-icon):active{filter:brightness(.94);transfo
 @container (max-width:640px){.mtm-overview-columns{grid-template-columns:minmax(0,1fr)}.mtm-overview-inner{padding:20px 18px 40px}}
 /* ——— Quick-add modal ——— */
 .modal.mtm-quick-add{width:560px;max-width:calc(100vw - 32px);padding:0;overflow:hidden}
-.mtm-quick-add .modal-close-button{display:none}
+/* Quick add has its own Cancel button: no corner close button (.modal-header-button since Obsidian 1.13). */
+body .modal.mtm-quick-add > .modal-header-button{display:none}
 .mtm-quick-add .modal-content{padding:0}
 .mtm-qa-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
 body .mtm-quick-add input.mtm-qa-input{flex:1;height:auto;padding:4px 0;border:0;background:transparent;box-shadow:none;font-family:var(--mtm-font-display);font-size:20px;color:var(--text-normal)}
 body .mtm-quick-add input.mtm-qa-input:focus{box-shadow:none}
+/* The input sits inside .mtm-qa-field, which holds the suggestions. */
+body .mtm-quick-add .mtm-qa-field > input.mtm-qa-input{width:100%}
 .mtm-qa-tokens{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
 .mtm-token{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px 0 6px;border-radius:999px;background:var(--background-modifier-hover);box-shadow:inset 0 0 0 1px var(--mtm-hairline);font-size:12px;font-weight:600;color:var(--text-muted)}
 .mtm-token .svg-icon{width:13px;height:13px}
@@ -322,7 +329,8 @@ body .mtm-quick-add input.mtm-qa-input:focus{box-shadow:none}
 .mtm-qa-footer b{font-weight:600;color:var(--text-normal)}
 .mtm-qa-footer .mtm-spacer+*{margin-left:auto}
 /* ——— Settings tab ——— */
-.mtm-settings-hero{display:flex;align-items:center;gap:14px;padding:4px 0 18px;margin-bottom:8px;border-bottom:1px solid var(--mtm-line)}
+/* The hero sits in a declarative render row (.setting-item): it fills the row, and the group card frames it. */
+.mtm-settings .setting-item > .mtm-settings-hero{display:flex;flex:1;align-items:center;gap:14px;padding:4px 0}
 .mtm-settings-hero-title{font-family:var(--mtm-font-display);font-size:22px;line-height:1.2}
 .mtm-settings-hero-sub{font-size:13px;color:var(--text-muted)}
 .mtm-settings .setting-item-heading .setting-item-name{font-family:var(--mtm-font-display);font-size:1.15em;font-weight:400}
@@ -348,9 +356,11 @@ body .mtm-quick-add input.mtm-qa-input:focus{box-shadow:none}
 .mtm-action-note.mtm-due-overdue .metadata-property[data-property-key="mtm-due"] :is(input,.metadata-input-text){color:var(--mtm-due-overdue);font-weight:600}
 .mtm-action-note.mtm-due-today .metadata-property[data-property-key="mtm-due"] :is(input,.metadata-input-text){color:var(--mtm-due-today);font-weight:600}
 .mtm-action-note .metadata-property[data-property-key="mtm-waiting-on"] .metadata-property-value{color:var(--mtm-waiting-ink);font-weight:600}
-.mtm-action-note.mtm-status-done .inline-title{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--mtm-dot);text-decoration-thickness:2px}
+/* Done: any status in category closed (mtm-is-done), not only the status with ID "done". */
+.mtm-action-note.mtm-is-done .inline-title{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--mtm-dot);text-decoration-thickness:2px}
+.mtm-action-note.mtm-is-done .mtm-note-banner>.mtm-tile{opacity:.7}
 .nav-file-title.mtm-nav-action .nav-file-title-content::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:2px;background:var(--mtm-dot);vertical-align:1px}
-.nav-file-title.mtm-nav-action.mtm-status-done .nav-file-title-content{color:var(--text-faint);text-decoration:line-through}
+.nav-file-title.mtm-nav-action.mtm-is-done .nav-file-title-content{color:var(--text-faint);text-decoration:line-through}
 /* ——— Inline action chips & embeds in notes ——— */
 .mtm-inline{display:inline-flex;align-items:center;gap:5px;max-width:100%;margin:0 1px;padding:1px 8px 1px 2px;border-radius:999px;background:linear-gradient(180deg,var(--mtm-soft),var(--mtm-faint));box-shadow:inset 0 0 0 1px var(--mtm-edge);font-size:.92em;line-height:1.5;vertical-align:baseline;white-space:nowrap}
 .mtm-inline .mtm-tile{width:18px;height:18px;border-radius:999px;box-shadow:none;background:var(--mtm-raised)}
@@ -383,6 +393,9 @@ body .mtm-fab:not(.clickable-icon){position:absolute;right:18px;bottom:calc(18px
 .is-mobile .mtm-tile .svg-icon{width:17px;height:17px}
 .is-mobile .mtm-cell-add{opacity:1}
 .is-phone .mtm-toolbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+/* Its chip groups don't wrap inside the strip, or they stack into columns. */
+.is-phone .mtm-toolbar .mtm-filters{flex:none;flex-wrap:nowrap}
+.is-phone .mtm-toolbar>*{flex-shrink:0}
 body.is-phone .mtm-seg .mtm-seg-item:not(.clickable-icon){height:32px;font-size:13px}
 .is-phone .mtm-inspector-footer{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 .is-phone .mtm-inspector-footer .mtm-button-done{flex:1;height:44px;font-size:15px}
@@ -493,6 +506,8 @@ body .mtm-tone-trigger:not(.clickable-icon):hover,body .mtm-icon-trigger:not(.cl
 .mtm-status-row .clickable-icon:last-child,.mtm-type-row .clickable-icon:last-child{color:var(--text-faint)}
 .mtm-status-row .clickable-icon:last-child:hover,.mtm-type-row .clickable-icon:last-child:hover{color:var(--mtm-danger)}
 .mtm-swatches.mod-popover{padding:8px;border-radius:12px;background:var(--mtm-raised);box-shadow:var(--shadow-l,var(--mtm-card-shadow-hover))}
+/* The popover is appended to body, below its trigger; the plugin sets --mtm-popover-x / --mtm-popover-y. */
+.mtm-swatches.mod-popover{position:fixed;z-index:var(--layer-popover);left:var(--mtm-popover-x,0);top:var(--mtm-popover-y,0)}
 .mtm-swatch.mod-ink{background:linear-gradient(180deg,var(--mtm-ink-soft),var(--mtm-ink-dot))}
 /* ——— Setup wizard (ItemView mtm-setup) ——— */
 .mtm-setup{height:100%;overflow:auto;background:var(--mtm-overview-bg);font-family:var(--font-interface);color:var(--text-normal)}
@@ -563,7 +578,10 @@ body .mtm-setup textarea,body .mtm-textarea{width:100%;min-height:110px;padding:
 .mtm-notice-actions{display:flex;gap:8px;margin-top:8px}
 /* ——— Modals: new Matter, delete status/type, icon picker ——— */
 .modal.mtm-modal{width:480px;max-width:calc(100vw - 32px);padding:0;overflow:hidden}
-.mtm-modal .modal-close-button{top:14px}
+/* The close button (.modal-header-button since Obsidian 1.13, absolutely placed) sits on the head's title row on desktop;
+   a head that starts with a 40px tile has a taller row. Phones lay out modals their own way. */
+body:not(.is-phone) .modal.mtm-modal > .modal-header-button{top:29px;right:16px}
+body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .modal-header-button{top:37px}
 .mtm-modal .modal-content{padding:0}
 .mtm-modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px 6px}
 .mtm-modal-title{margin:0;font-family:var(--mtm-font-display);font-size:20px;font-weight:400;line-height:1.2}
@@ -680,20 +698,15 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 
 .mtm-suggest{max-height:240px;overflow-y:auto}
 .mtm-suggest-item>span:not(.mtm-suggest-meta){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtm-suggest-item>span.mtm-avatar{flex:none}
 .mtm-suggest-meta{flex:none;white-space:nowrap}
 .modal.mtm-quick-add{overflow:visible}
 .mtm-quick-add .mtm-qa-footer{border-radius:0 0 var(--modal-radius,12px) var(--modal-radius,12px)}
-/* Tone popover: placed below its trigger; the plugin sets the coordinates. */
-.mtm-swatches.mod-popover{position:fixed;z-index:var(--layer-popover);left:var(--mtm-popover-x,0);top:var(--mtm-popover-y,0)}
-/* Toolbar note that toggles Show done for the board. */
-.mtm-toolbar-note.mod-toggle{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:var(--radius-s);cursor:pointer}
-.mtm-toolbar-note.mod-toggle:hover,.mtm-toolbar-note.mod-toggle:focus-visible{color:var(--text-normal);background:var(--background-modifier-hover)}
-.mtm-toolbar-note.mod-toggle > .svg-icon{width:14px;height:14px}
+/* ——— Review cadence: custom ——— */
 /* Custom review cadence: "Every <n> <unit>" under the cadence segments. */
 .mtm-cadence-custom{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
 body .mtm-cadence-custom input[type=number]{width:64px}
-/* Settings hero inside a declarative render row (.setting-item): fill the row; the group card replaces the divider. */
-.mtm-settings .setting-item > .mtm-settings-hero{flex:1;padding:4px 0;margin-bottom:0;border-bottom:0}
+/* ——— Inspector: footer clearance and empty state ——— */
 /* Inspector footer in the desktop right sidebar: clear Obsidian's floating status bar (18px min height, 4px padding, border). */
 body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(10px + 18px + 2 * var(--size-4-1) + 2px)}
 /* Inspector empty state: a ghost stack of the user's first three types (inert .mtm-card markup), serif invitation, actions and a hint. */
@@ -711,6 +724,7 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .mtm-empty-pointer .svg-icon{width:15px;height:15px}
 .mtm-field-hint .mtm-kbd{vertical-align:-4px;margin:0 1px}
 .mtm-kbd > .svg-icon{width:12px;height:12px}
+/* ——— Quick add: destination, title line, notice, phones ——— */
 /* Quick add: destination tokens that are only defaults (dashed, faint) and the status token. */
 .mtm-token.mod-ghost{background:transparent;box-shadow:none;outline:1px dashed var(--mtm-line);outline-offset:-1px;font-weight:500;color:var(--text-faint)}
 .mtm-token.mod-ghost .svg-icon{color:var(--text-faint)}
@@ -721,8 +735,6 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .mtm-qa-title{display:flex;align-items:center;gap:6px;min-width:0;padding:0 16px 10px 66px;margin-top:-4px;font-size:12px;color:var(--text-faint)}
 .mtm-qa-title .svg-icon{flex:none;width:13px;height:13px}
 .mtm-qa-title b{overflow:hidden;font-weight:600;color:var(--text-muted);white-space:nowrap;text-overflow:ellipsis}
-/* Suggestion rows: the label rule (flex:1) also caught the avatar. */
-.mtm-suggest-item>span.mtm-avatar{flex:none}
 /* Notice after quick add: type tile, title, destination. */
 .mtm-added{display:flex;align-items:center;gap:8px}
 .mtm-added-text{display:flex;flex-direction:column;line-height:1.35}
@@ -736,15 +748,7 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-type-option:not(.is-active){width:40px;padding:0;justify-content:center;gap:0;font-size:0;border-color:transparent;background:transparent}
 .is-phone .mtm-quick-add .mtm-type-picker.mod-row .mtm-type-option:not(.is-active) .mtm-tile{width:30px;height:30px}
 .is-phone .mtm-quick-add .mtm-qa-footer>span:first-child{display:none}
-/* Quick add has its own Cancel button. Since Obsidian 1.13 the close button is .modal-header-button (absolutely placed), not .modal-close-button. */
-body .modal.mtm-quick-add > .modal-header-button{display:none}
-/* The input sits inside .mtm-qa-field (for the suggestions), so the contract's flex:1 no longer sizes it. */
-body .mtm-quick-add .mtm-qa-field > input.mtm-qa-input{width:100%}
-/* Since Obsidian 1.13 the close button is .modal-header-button (24px, absolutely placed in .modal), so the contract's
-   .mtm-modal .modal-close-button rule no longer applies. Centre it on the .mtm-modal-head title row (desktop; phones lay out modals differently). */
-body:not(.is-phone) .modal.mtm-modal > .modal-header-button{top:29px;right:16px}
-/* Heads that start with a 40px tile (delete status/type) have a taller title row. */
-body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .modal-header-button{top:37px}
+/* ——— Matter overview: about, cadence, stats, sections ——— */
 /* Matter overview: the about section is the note body rendered read-only (lists, headings), then "Open note". */
 .mtm-overview-about.markdown-rendered{font-size:15px}
 .mtm-overview-about.markdown-rendered>:first-child{margin-top:0}
@@ -768,6 +772,7 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-section-more{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:var(--text-faint);cursor:pointer}
 .mtm-section-more:hover,.mtm-section-more:focus-visible{color:var(--text-normal)}
 .mtm-empty.mod-overview{align-items:center;padding:32px 20px;border:1px dashed var(--mtm-line);border-radius:14px}
+/* ——— List: group header, rows, narrow layout ——— */
 /* List group header: the title opens the Matter overview; "+" adds an Action in this Matter (on hover; always on mobile). */
 .mtm-table-group-title{cursor:pointer}
 .mtm-table-group-title:hover,.mtm-table-group-title:focus-visible{text-decoration:underline;text-decoration-color:var(--mtm-line);text-underline-offset:3px}
@@ -789,6 +794,7 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-table-meta :is(.mtm-priority-label,.mtm-table-waiting-name){display:none}
 .mtm-table-meta .mtm-link-chip{height:22px;padding:0 2px}
 }
+/* ——— Calendar: navigation, adding, dragging, narrow layout ——— */
 /* Calendar head: "Today" beside the arrows. */
 .mtm-cal-head button{height:26px;font-size:12px}
 /* Calendar day: "+" (on hover; always on mobile) left of the date opens quick add with that day. */
@@ -824,9 +830,11 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-cal-agenda-title{display:flex;align-items:baseline;gap:8px;font-family:var(--mtm-font-display);font-size:17px}
 .mtm-cal-agenda-title .mtm-section-aside{font-family:var(--font-interface)}
 }
+/* ——— Board: collapsed lanes ——— */
 /* A collapsed lane's cells expand it when clicked (the dots still select their Action). */
 .mtm-cell.is-collapsed{cursor:pointer}
 .mtm-cell.is-collapsed:hover{background:var(--background-modifier-hover)}
+/* ——— Timeline: navigation, weekends, dragging, narrow sizes ——— */
 /* Timeline navigation: the dates in view, "Today", a week back or forward. */
 .mtm-tl-nav{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--mtm-hairline)}
 .mtm-tl-range{font-family:var(--mtm-font-display);font-size:18px;white-space:nowrap}
@@ -845,6 +853,7 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-tl-ghost{position:absolute;top:5px;left:calc(var(--mtm-start,0) * var(--mtm-day-width) + 2px);width:calc(var(--mtm-span,1) * var(--mtm-day-width) - 4px);height:22px;box-sizing:border-box;border:1.5px dashed var(--mtm-strong);border-radius:7px;pointer-events:none}
 /* Timeline when narrow: slimmer labels and days. */
 @container (max-width:600px){.mtm-timeline{--mtm-tl-label:120px;--mtm-day-width:24px}.mtm-tl-label{padding-left:12px}.mtm-tl-nav{padding:8px 12px}.mtm-tl-range{font-size:16px}}
+/* ——— Fix orphaned Actions ——— */
 /* Fix orphaned Actions: one row per unrecognised value: its badge → the value it gets, and how many Actions. */
 .mtm-fix-row{gap:8px}
 .mtm-fix-row .mtm-orphan{flex:none}
@@ -853,6 +862,7 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-fix-to{display:inline-flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text-normal)}
 .mtm-fix-to .mtm-tile{width:18px;height:18px;border-radius:5px}
 .mtm-fix-to .mtm-tile .svg-icon,.mtm-fix-to .mtm-matter-icon .svg-icon{width:13px;height:13px}
+/* ——— Note banners: Action and Matter notes ——— */
 /* Action note banner: wraps instead of squeezing; the type line and tile open the type menu, the pill the status menu. */
 .mtm-note-banner{flex-wrap:wrap;row-gap:10px}
 .mtm-note-banner-text{flex:1 1 180px}
@@ -874,10 +884,6 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-note-banner-done .svg-icon{width:18px;height:18px}
 /* Banners show in reading view and Live Preview, not in source mode. */
 .markdown-source-view:not(.is-live-preview) [data-mtm-banner]{display:none}
-/* Done: any status in category closed, not only the status with ID "done". */
-.mtm-action-note.mtm-is-done .inline-title{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--mtm-dot);text-decoration-thickness:2px}
-.mtm-action-note.mtm-is-done .mtm-note-banner>.mtm-tile{opacity:.7}
-.nav-file-title.mtm-nav-action.mtm-is-done .nav-file-title-content{color:var(--text-faint);text-decoration:line-through}
 /* Matter note banner: state, review, counts and Open overview. */
 .mtm-note-banner.mod-matter{background:var(--mtm-raised);border-color:var(--mtm-hairline)}
 .mtm-note-banner.mod-matter>.mtm-tile{cursor:default}
@@ -887,8 +893,10 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-note-banner-stats .mod-waiting{color:var(--mtm-waiting-ink)}
 .mtm-note-banner-end>button{display:inline-flex;align-items:center;gap:6px}
 .mtm-note-banner-end>button .svg-icon{width:14px;height:14px}
+/* ——— Menus ——— */
 /* Type menu items: tile and label. */
 .mtm-menu-type{display:inline-flex;align-items:center;gap:8px}
+/* ——— Spheres ——— */
 /* Sphere bands on the board: a full-width grid row above its lanes; the head sticks left, one count per column. */
 .mtm-sphere-band{grid-column:1/-1;display:grid;grid-template-columns:subgrid;background:var(--mtm-chrome);border-top:1px solid var(--mtm-line);border-bottom:1px solid var(--mtm-line)}
 .mtm-sphere-head{position:sticky;left:0;z-index:2;display:flex;align-items:center;gap:7px;min-height:40px;padding:6px 8px 6px 10px;background:var(--mtm-chrome);border-right:1px solid var(--mtm-line)}
@@ -937,7 +945,8 @@ body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .
 .mtm-sphere-chip .svg-icon{width:13px;height:13px}
 .mtm-sphere-chip:hover{color:var(--text-normal)}
 .mtm-sphere-chip.mod-none{color:var(--text-faint)}
-/* Waiting since (V5): the age of a wait, short on cards ("10d"), long elsewhere ("10 days"); long waits in the review-late colour, never the overdue red. */
+/* ——— Waiting since ——— */
+/* Waiting since: the age of a wait, short on cards ("10d"), long elsewhere ("10 days"); long waits in the review-late colour, never the overdue red. */
 .mtm-waiting-age{font-size:11px;font-weight:700;color:var(--mtm-waiting-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mtm-link-chip+.mtm-waiting-age,.mtm-table-meta .mtm-waiting-age{margin-left:6px;font-weight:600;color:var(--text-faint)}
 .mtm-waiting-age.is-long,.mtm-link-chip+.mtm-waiting-age.is-long,.mtm-table-meta .mtm-waiting-age.is-long{color:var(--mtm-review-late)}
@@ -955,7 +964,8 @@ body .mtm-waiting-since input[type=date]{height:24px;padding:0 6px;font-size:12p
 /* Properties: mtm-waiting-since is muted like mtm-completed (the plugin sets it). */
 .mtm-action-note .metadata-property[data-property-key="mtm-waiting-since"]{opacity:.6}
 .mtm-action-note .metadata-property[data-property-key="mtm-waiting-since"] :is(input,.metadata-input-text){color:var(--text-muted)}
-/* Outcome (V7): under the overview title, a flag, a small label and the sentence in the display face, edited in place; empty: a dashed invitation. */
+/* ——— Outcome ——— */
+/* Outcome: under the overview title, a flag, a small label and the sentence in the display face, edited in place; empty: a dashed invitation. */
 .mtm-outcome{display:flex;align-items:baseline;gap:8px;max-width:640px;padding:8px 12px;border-left:3px solid var(--mtm-line);border-radius:0 10px 10px 0;background:var(--mtm-raised)}
 .mtm-outcome>.svg-icon{flex:none;align-self:center;width:15px;height:15px;color:var(--text-faint)}
 .mtm-outcome-label{flex:none;font-size:11px;font-weight:700;color:var(--text-faint)}
@@ -970,7 +980,8 @@ body .mtm-waiting-since input[type=date]{height:24px;padding:0 6px;font-size:12p
 .mtm-note-banner-outcome .svg-icon{flex:none;width:12px;height:12px;margin-top:2px;color:var(--text-faint)}
 /* A long outcome keeps a readable width: the counts and button wrap below it instead. */
 .mtm-note-banner-text:has(>.mtm-note-banner-outcome){flex:1 1 280px;min-width:min(100%,280px)}
-/* No next Action (V2): a dashed outline token stronger than --mtm-line, which is too faint dashed. */
+/* ——— No next Action ——— */
+/* No next Action: a dashed outline token stronger than --mtm-line, which is too faint dashed. */
 body{--mtm-dash:color-mix(in srgb,var(--text-faint) 55%,transparent)}
 /* The hint: a quiet dashed pill (not red: red means late); a button that opens a menu. */
 body .mtm-stalled:not(.clickable-icon){display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 7px 0 5px;border:1px dashed var(--mtm-dash);border-radius:999px;background:transparent;box-shadow:none;font-family:var(--font-interface);font-size:11px;font-weight:600;color:var(--text-muted);white-space:nowrap;cursor:pointer}
@@ -990,7 +1001,8 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-notice.mod-stalled .mtm-notice-actions{display:flex;gap:8px;margin-top:8px}
 .mtm-notice.mod-stalled .mtm-notice-actions button{display:inline-flex;align-items:center;gap:6px}
 .mtm-notice.mod-stalled .mtm-notice-actions .svg-icon{width:14px;height:14px}
-/* List grouped by type (V4): a Matter column after the title, and type group headings. */
+/* ——— List grouped by type ——— */
+/* List grouped by type: a Matter column after the title, and type group headings. */
 .mtm-table.mod-by-type{--mtm-table-cols:minmax(220px,2.2fr) minmax(140px,1fr) 96px 104px 84px minmax(110px,1fr) 40px;min-width:860px}
 .mtm-table-matter{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer}
 .mtm-table-matter>span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1003,7 +1015,8 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-table-group.mod-type .mod-waiting{color:var(--mtm-waiting-ink)}
 /* Two-line rows: the Matter follows the status. */
 @container (max-width:600px){.mtm-table.mod-by-type{min-width:0}.mtm-table-row>.mtm-table-meta .mtm-table-matter{order:1;max-width:140px}.mtm-table-row>.mtm-table-meta>:not(.mtm-status):not(.mtm-table-matter){order:2}}
-/* Setup presets (V3): four presets two by two; a preset that brings types shows them as small tiles; the types line, read-only. */
+/* ——— Setup presets ——— */
+/* Setup presets: four presets two by two; a preset that brings types shows them as small tiles; the types line, read-only. */
 .mtm-presets.mod-pairs{grid-template-columns:repeat(auto-fill,minmax(max(190px,calc(50% - 5px)),1fr))}
 .mtm-preset-types{display:flex;flex-wrap:wrap;gap:4px}
 .mtm-preset-types .mtm-tile{width:20px;height:20px;border-radius:6px}
@@ -1013,7 +1026,8 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-type-summary .mtm-token .mtm-tile{width:20px;height:20px;border-radius:6px}
 .mtm-type-summary .mtm-token .mtm-tile .svg-icon{width:12px;height:12px}
 .mtm-type-summary .mtm-default-badge{margin-left:2px}
-/* Person notes (V6): what's open with them, in the Matter overview's cards; a quiet dashed line when nothing is open. */
+/* ——— Person notes ——— */
+/* Person notes: what's open with them, in the Matter overview's cards; a quiet dashed line when nothing is open. */
 .mtm-person-banner{container-type:inline-size;display:flex;flex-direction:column;gap:12px;margin:4px 0 18px;padding:14px 16px 16px;border:1px solid var(--mtm-hairline);border-radius:var(--mtm-radius-panel);background:var(--mtm-raised);box-shadow:var(--mtm-card-shadow);font-family:var(--font-interface)}
 .mtm-person-banner-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 @container (max-width:440px){.mtm-person-banner-head>button{flex-basis:100%;justify-content:center}}
@@ -1032,7 +1046,8 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .is-phone .mtm-person-banner{padding:12px}
 .mtm-person-banner.mod-quiet{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;box-shadow:none;background:transparent;border-style:dashed;font-size:12.5px;color:var(--text-muted)}
 .mtm-person-banner.mod-quiet>.svg-icon{flex:none;width:15px;height:15px;color:var(--text-faint)}
-/* Process Inbox (V1). The footer has Close and Esc closes, so no corner ×, as in quick add (it sat on the count). */
+/* ——— Process Inbox ——— */
+/* Process Inbox. The footer has Close and Esc closes, so no corner ×, as in quick add (it sat on the count). */
 .mtm-process .modal-header-button{display:none}
 /* The modal: modalEl gets mtm-modal mtm-process and the current item's mtm-type-* mtm-tone-*. */
 .modal.mtm-modal.mtm-process{width:600px}
@@ -1114,8 +1129,6 @@ body .mtm-process-button:not(.clickable-icon):hover{border-color:var(--backgroun
 .is-phone .mtm-process .mtm-process-title{font-size:18px}
 /* The Matter field's suggestions sit over the modal. */
 .mtm-process .mtm-process-matter{width:100%}
-/* Phones: the toolbar is one strip that scrolls sideways (contract); its chip groups must not wrap inside it, or they stack into columns. */
-.is-phone .mtm-toolbar .mtm-filters{flex:none;flex-wrap:nowrap}
-.is-phone .mtm-toolbar>*{flex-shrink:0}
 /* The list's Inbox group gets the same Process button as the board's Inbox lane, inline after its count. */
 body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center;margin-left:4px}
+
