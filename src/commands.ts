@@ -4,7 +4,7 @@ import { normalizePath, Notice, TFolder } from 'obsidian';
 import type MattersPlugin from './main';
 import { STRINGS } from './strings';
 import { ConfirmModal } from './ui/modals/confirmModal';
-import { SAMPLE_FOLDER } from './services/setupPlan';
+import { SAMPLE_FILE_PATHS, SAMPLE_FOLDER, spheresWithoutSample } from './services/samplePackage';
 import { frontmatterOf } from './vault/notes';
 import { markReviewed } from './vault/matterWrites';
 import { dismissOrphan } from './vault/actionWrites';
@@ -125,11 +125,33 @@ function removeSampleContent(plugin: MattersPlugin): void {
 		danger: true,
 		onConfirm: async () => {
 			for (const file of files) await app.fileManager.trashFile(file);
-			const folder = app.vault.getAbstractFileByPath(SAMPLE_FOLDER);
-			if (folder instanceof TFolder && folder.children.length === 0) await app.fileManager.trashFile(folder);
+			for (const path of SAMPLE_FILE_PATHS) {
+				const file = app.vault.getFileByPath(path);
+				if (file) await app.fileManager.trashFile(file);
+			}
+			await trashEmptyFolders(plugin, SAMPLE_FOLDER);
+			// The sample's Spheres go too, unless a Matter still uses them or the user changed them.
+			const used = new Set<string>();
+			for (const f of app.vault.getMarkdownFiles()) {
+				const fm = frontmatterOf(app, f);
+				if (fm?.['mtm-kind'] === 'matter' && typeof fm['mtm-sphere'] === 'string') used.add(fm['mtm-sphere']);
+			}
+			const spheres = spheresWithoutSample(plugin.settings.spheres, used);
+			if (spheres.length !== plugin.settings.spheres.length) {
+				plugin.settings.spheres = spheres;
+				await plugin.saveSettings();
+			}
 			new Notice(STRINGS.notices.sampleRemoved(files.length));
 		},
 	}).open();
+}
+
+/** Trashes a folder whose subfolders hold nothing, deepest first. */
+async function trashEmptyFolders(plugin: MattersPlugin, path: string): Promise<void> {
+	const folder = plugin.app.vault.getFolderByPath(path);
+	if (!folder) return;
+	for (const child of [...folder.children]) if (child instanceof TFolder) await trashEmptyFolders(plugin, child.path);
+	if (folder.children.length === 0) await plugin.app.fileManager.trashFile(folder);
 }
 
 /** Writes the fallback values to every orphaned Action, after a confirmation listing what changes. */

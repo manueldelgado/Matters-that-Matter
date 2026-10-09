@@ -7,6 +7,7 @@ import { STRINGS } from '../../strings';
 import { boardBaseContent } from '../../services/baseFile';
 import { matchPreset, workflowLosses, type WorkflowLosses } from '../../services/presets';
 import { planSetup, type SetupPlan } from '../../services/setupPlan';
+import { SAMPLE_SPHERES, withSampleSpheres } from '../../services/samplePackage';
 import { appendIcon } from '../../ui/components/dom';
 import { alwaysUpdateLinks, ensureDateTimeTypes, openSettingsTab } from '../../vault/internal';
 import { exists, frontmatterOf, maxLaneOrder, notesOfKind } from '../../vault/notes';
@@ -169,6 +170,7 @@ export class SetupView extends ItemView {
 					basesOff: !this.plugin.basesAvailable,
 					openFilesAndLinks: () => openSettingsTab(this.app, 'file'),
 					losses: this.losses(),
+					newSpheres: SAMPLE_SPHERES.filter((s) => !this.plugin.settings.spheres.some((x) => x.id === s.id)).map((s) => s.label),
 					keepWorkflow: () => {
 						const settings = this.plugin.settings;
 						this.state.statuses = structuredClone(settings.statuses);
@@ -210,6 +212,8 @@ export class SetupView extends ItemView {
 				types: this.state.types,
 				inboxPath: plan.inboxPath,
 				boardPath: plan.boardPath,
+				// The sample's Matters sit in its Spheres.
+				spheres: this.state.sample ? withSampleSpheres(this.plugin.settings.spheres) : this.plugin.settings.spheres,
 				setupDone: true,
 			});
 			await this.plugin.saveSettings();

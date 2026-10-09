@@ -4,12 +4,12 @@
 
 import type { MattersSettings, StatusDef, TypeDef } from '../settings';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
-import { formatMtmDate, addDays, toYmd, type MtmDate } from '../model/dates';
 import { normalise } from './fuzzy';
+import { samplePlan } from './samplePackage';
 
 export type Folders = MattersSettings['folders'];
 
-export const SAMPLE_FOLDER = 'MTM/Sample';
+export { SAMPLE_FOLDER } from './samplePackage';
 export const INBOX_NAME = 'Inbox';
 export const BOARD_NAME = 'Matters';
 
@@ -18,7 +18,7 @@ export interface LinkTo {
 	linkTo: string;
 }
 
-export type PlannedValue = string | number | boolean | LinkTo;
+export type PlannedValue = string | number | boolean | LinkTo | LinkTo[];
 
 export function isLinkTo(value: unknown): value is LinkTo {
 	return typeof value === 'object' && value !== null && typeof (value as LinkTo).linkTo === 'string';
@@ -26,7 +26,8 @@ export function isLinkTo(value: unknown): value is LinkTo {
 
 export interface PlannedNote {
 	path: string;
-	kind: 'matter' | 'inbox' | 'board' | 'action';
+	/** A board or a file is written as its body alone; the others are notes with frontmatter. */
+	kind: 'matter' | 'inbox' | 'board' | 'action' | 'note' | 'file';
 	frontmatter: Record<string, PlannedValue>;
 	body: string;
 	sample?: boolean;
@@ -147,92 +148,11 @@ export function planSetup(choices: SetupChoices, vault: VaultSnapshot): SetupPla
 		modify.push({ path, add: { 'mtm-kind': 'matter', 'mtm-state': 'active' } });
 	}
 
-	if (choices.sample) create.push(...sampleNotes(choices, vault, laneOrder));
+	if (choices.sample)
+		create.push(
+			...samplePlan({ now: choices.now, statuses: choices.statuses, types: choices.types, inboxPath, laneOrder, exists: (p) => vault.exists(p) }),
+		);
 
 	const folderPaths = [folders.matters, folders.actions, folders.boards, folders.people, ...create.map((n) => parentOf(n.path))];
 	return { folders: missingFolders(folderPaths.filter(Boolean), vault), create, modify, reuse, inboxPath, boardPath };
-}
-
-// ——— Sample content ———
-
-interface SampleAction {
-	title: string;
-	type: string;
-	matter: 0 | 1;
-	priority?: 1 | 2 | 3;
-	/** Days from today, with an optional time. */
-	due?: [number, string?];
-	start?: number;
-	details: string;
-}
-
-const SAMPLE_MATTERS = [
-	{ name: 'Kitchen renovation', icon: 'hammer', review: '1w', about: 'A sample Matter. Every lane on the board is a Matter note like this one.' },
-	{ name: 'Weekend in Porto', icon: 'plane', review: '2w', about: 'A sample Matter with a few dated Actions for the calendar and timeline.' },
-];
-
-const SAMPLE_ACTIONS: SampleAction[] = [
-	{ title: 'Call the plumber about the sink', type: 'call', matter: 0, priority: 1, due: [0, '10:00'], details: 'Ask whether the old pipes can stay.' },
-	{ title: 'Message Ana about the tiles', type: 'message', matter: 0, due: [2], details: 'She has the supplier’s catalogue.' },
-	{ title: 'Write the list of appliances', type: 'write', matter: 0, details: 'Oven, hob, fridge, dishwasher.' },
-	{ title: 'Meet the kitchen designer', type: 'meet', matter: 0, priority: 2, due: [3, '16:00'], details: 'Bring the measurements.' },
-	{ title: 'Buy paint samples', type: 'buy', matter: 0, priority: 2, due: [-1], details: 'Three shades of white.' },
-	{ title: 'Visit the showroom', type: 'visit', matter: 0, due: [-2], details: 'Check the opening hours first.' },
-	{ title: 'Book the train to Porto', type: 'buy', matter: 1, priority: 1, due: [5], details: 'Window seats if possible.' },
-	{ title: 'Walk along the river', type: 'visit', matter: 1, start: 10, due: [11], details: 'A two-day Action: it spans the dates on the calendar and timeline.' },
-];
-
-function sampleNotes(choices: SetupChoices, vault: VaultSnapshot, laneOrder: number): PlannedNote[] {
-	const notes: PlannedNote[] = [];
-	const free = (name: string) => {
-		let path = joinPath(SAMPLE_FOLDER, `${name}.md`);
-		for (let n = 2; vault.exists(path); n++) path = joinPath(SAMPLE_FOLDER, `${name} ${n}.md`);
-		return path;
-	};
-
-	const matterPaths = SAMPLE_MATTERS.map((m) => {
-		const path = free(m.name);
-		notes.push({
-			path,
-			kind: 'matter',
-			sample: true,
-			frontmatter: {
-				'mtm-kind': 'matter',
-				'mtm-icon': m.icon,
-				'mtm-state': 'active',
-				'mtm-lane-order': ++laneOrder,
-				'mtm-review-every': m.review,
-				'mtm-sample': true,
-			},
-			body: `${m.about}\n`,
-		});
-		return path;
-	});
-
-	const today = toYmd(choices.now);
-	const date = (days: number, time?: string): string => {
-		const d: MtmDate = time ? { date: addDays(today, days), time } : { date: addDays(today, days) };
-		return formatMtmDate(d);
-	};
-	const { statuses, types } = choices;
-
-	SAMPLE_ACTIONS.forEach((a, i) => {
-		// Cycle through the workflow so every status and type appears.
-		const status = statuses[i % statuses.length];
-		const type = types.find((t) => t.id === a.type) ?? types[i % types.length];
-		if (!status || !type) return;
-		const fm: Record<string, PlannedValue> = {
-			'mtm-kind': 'action',
-			'mtm-type': type.id,
-			'mtm-status': status.id,
-			'mtm-matter': { linkTo: matterPaths[a.matter] ?? '' },
-		};
-		if (a.start !== undefined) fm['mtm-start'] = date(a.start);
-		if (a.due) fm['mtm-due'] = date(a.due[0], a.due[1]);
-		if (a.priority) fm['mtm-priority'] = a.priority;
-		if (status.category === 'closed') fm['mtm-completed'] = today;
-		fm['mtm-sample'] = true;
-		notes.push({ path: free(a.title), kind: 'action', sample: true, frontmatter: fm, body: `${a.details}\n\n- [ ] A checklist item\n` });
-	});
-	return notes;
 }

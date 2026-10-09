@@ -8,10 +8,15 @@ import { createNote, ensureFolder, linkTo, type Frontmatter } from './notes';
 function resolveValues(app: App, values: Record<string, PlannedValue>, sourcePath: string): Frontmatter {
 	const out: Frontmatter = {};
 	for (const [key, value] of Object.entries(values)) {
-		if (!isLinkTo(value)) out[key] = value;
+		const resolve = (link: { linkTo: string }) => {
+			const target = app.vault.getFileByPath(normalizePath(link.linkTo));
+			return target ? linkTo(app, target, sourcePath) : null;
+		};
+		if (Array.isArray(value)) out[key] = value.map(resolve).filter((v): v is string => v !== null);
+		else if (!isLinkTo(value)) out[key] = value;
 		else {
-			const target = app.vault.getFileByPath(normalizePath(value.linkTo));
-			if (target) out[key] = linkTo(app, target, sourcePath);
+			const link = resolve(value);
+			if (link) out[key] = link;
 		}
 	}
 	return out;
@@ -22,7 +27,7 @@ export async function executePlan(app: App, plan: SetupPlan): Promise<void> {
 
 	for (const note of plan.create) {
 		if (app.vault.getAbstractFileByPath(normalizePath(note.path))) continue;
-		if (note.kind === 'board') await app.vault.create(normalizePath(note.path), note.body);
+		if (note.kind === 'board' || note.kind === 'file') await app.vault.create(normalizePath(note.path), note.body);
 		else await createNote(app, note.path, resolveValues(app, note.frontmatter, note.path), note.body);
 	}
 

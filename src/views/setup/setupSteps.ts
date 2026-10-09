@@ -4,6 +4,7 @@ import { getAllTags, normalizePath, prepareFuzzySearch, TFile, TFolder, type App
 import type { StatusDef, TypeDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { areContexts, matchPreset, PRESET_IDS, presetStatuses, presetTypes, type PresetId, type WorkflowLosses } from '../../services/presets';
+import { SAMPLE_COUNTS, SAMPLE_FOLDER } from '../../services/samplePackage';
 import type { Folders, SetupPlan } from '../../services/setupPlan';
 import { appendIcon, statusChip, tileEl, typeClasses } from '../../ui/components/dom';
 import { StatusEditor } from '../../ui/components/statusEditor';
@@ -256,6 +257,8 @@ export interface SummaryWarnings {
 	/** Actions that would use a status or type the chosen workflow lacks (running setup again). */
 	losses: WorkflowLosses;
 	keepWorkflow(): void;
+	/** Labels of the sample's Spheres that settings will gain. */
+	newSpheres: string[];
 }
 
 function summaryItem(list: HTMLElement, cls: string | null, icon: string, path: string, note: string): void {
@@ -269,19 +272,25 @@ export function renderSummary(body: HTMLElement, state: SetupState, plan: SetupP
 	const t = STRINGS.setup.summary;
 	const summary = body.createDiv({ cls: 'mtm-summary' });
 
-	const createCount = plan.folders.length + plan.create.length;
+	// The sample is one line: its folders and files are listed together.
+	const hasSample = plan.create.some((n) => n.sample);
+	const folders = plan.folders.filter((f) => !hasSample || (f !== SAMPLE_FOLDER && !f.startsWith(`${SAMPLE_FOLDER}/`)));
+	const createCount = folders.length + plan.create.filter((n) => !n.sample).length + (hasSample ? 1 : 0);
 	if (createCount) {
 		const group = summary.createDiv();
 		group.createDiv({ cls: 'mtm-summary-group-title', text: t.create(createCount) });
 		const list = group.createDiv({ cls: 'mtm-summary-list' });
-		for (const folder of plan.folders) summaryItem(list, 'mod-create', 'folder-plus', `${folder}/`, t.newFolder);
-		for (const note of plan.create) summaryItem(list, 'mod-create', 'file-plus', note.path, t.newNote);
+		for (const folder of folders) summaryItem(list, 'mod-create', 'folder-plus', `${folder}/`, t.newFolder);
+		for (const note of plan.create) if (!note.sample) summaryItem(list, 'mod-create', 'file-plus', note.path, t.newNote);
+		if (hasSample) summaryItem(list, 'mod-create', 'package-plus', `${SAMPLE_FOLDER}/`, t.sampleContents(SAMPLE_COUNTS));
 	}
-	if (plan.modify.length) {
+	const spheres = state.sample ? warnings.newSpheres : [];
+	if (plan.modify.length || spheres.length) {
 		const group = summary.createDiv();
-		group.createDiv({ cls: 'mtm-summary-group-title', text: t.modify(plan.modify.length) });
+		group.createDiv({ cls: 'mtm-summary-group-title', text: t.modify(plan.modify.length + (spheres.length ? 1 : 0)) });
 		const list = group.createDiv({ cls: 'mtm-summary-list' });
 		for (const change of plan.modify) summaryItem(list, 'mod-modify', 'file-pen', change.path, t.addsKind);
+		if (spheres.length) summaryItem(list, 'mod-modify', 'settings', t.settings, t.addsSpheres(spheres));
 	}
 	if (plan.reuse.length) {
 		const group = summary.createDiv();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import { matterNames, planSetup, SAMPLE_FOLDER, type SetupChoices, type VaultSnapshot } from '../../src/services/setupPlan';
+import { SAMPLE_ACTIONS, SAMPLE_MATTERS } from '../../src/services/samplePackage';
 import { boardBaseContent } from '../../src/services/baseFile';
 
 const choices = (over: Partial<SetupChoices> = {}): SetupChoices => ({
@@ -88,44 +89,56 @@ describe('sample content', () => {
 	const plan = planSetup(choices({ sample: true }), vault());
 	const samples = plan.create.filter((n) => n.sample);
 	const actions = samples.filter((n) => n.kind === 'action');
+	const byTitle = (title: string) => actions.find((a) => a.path.endsWith(`/${title}.md`));
 
-	it('creates two Matters and eight Actions in the sample folder', () => {
-		expect(samples.filter((n) => n.kind === 'matter')).toHaveLength(2);
-		expect(actions).toHaveLength(8);
-		expect(samples.every((n) => n.path.startsWith(`${SAMPLE_FOLDER}/`) && n.frontmatter['mtm-sample'] === true)).toBe(true);
-		expect(plan.folders).toContain(SAMPLE_FOLDER);
+	it('writes the whole package into the sample folder, marked as sample', () => {
+		expect(samples.filter((n) => n.kind === 'matter')).toHaveLength(SAMPLE_MATTERS.length);
+		expect(actions).toHaveLength(SAMPLE_ACTIONS.length);
+		expect(samples.every((n) => n.path.startsWith(`${SAMPLE_FOLDER}/`))).toBe(true);
+		expect(samples.filter((n) => n.kind !== 'file').every((n) => n.frontmatter['mtm-sample'] === true)).toBe(true);
+		expect(plan.folders).toEqual(expect.arrayContaining([SAMPLE_FOLDER, `${SAMPLE_FOLDER}/Matters`, `${SAMPLE_FOLDER}/Actions`, `${SAMPLE_FOLDER}/People`, `${SAMPLE_FOLDER}/Notes`]));
 	});
 
-	it('covers every status and type', () => {
-		const statuses = new Set(actions.map((a) => a.frontmatter['mtm-status']));
-		const types = new Set(actions.map((a) => a.frontmatter['mtm-type']));
-		expect([...statuses].sort()).toEqual(DEFAULT_SETTINGS.statuses.map((s) => s.id).sort());
-		expect([...types].sort()).toEqual(DEFAULT_SETTINGS.types.map((t) => t.id).sort());
+	it('files Inbox Actions in the real Inbox and links the rest to their Matters and people', () => {
+		expect(byTitle('Renew the passport')?.frontmatter['mtm-matter']).toEqual({ linkTo: DEFAULT_SETTINGS.inboxPath });
+		expect(byTitle('Feedback on chapter 2')?.frontmatter).toMatchObject({
+			'mtm-matter': { linkTo: `${SAMPLE_FOLDER}/Matters/Doctoral thesis.md` },
+			'mtm-waiting-on': { linkTo: `${SAMPLE_FOLDER}/People/Alice Archer.md` },
+			'mtm-people': [{ linkTo: `${SAMPLE_FOLDER}/People/Alice Archer.md` }],
+			'mtm-waiting-since': '2026-09-19',
+		});
 	});
 
-	it('links Actions to the sample Matters and dates them from today', () => {
-		expect(actions[0]?.frontmatter['mtm-matter']).toEqual({ linkTo: `${SAMPLE_FOLDER}/Kitchen renovation.md` });
-		expect(actions[0]?.frontmatter['mtm-due']).toBe('2026-10-09T10:00');
-		expect(actions[7]?.frontmatter).toMatchObject({ 'mtm-start': '2026-10-19', 'mtm-due': '2026-10-20' });
+	it('dates everything from today', () => {
+		expect(byTitle('Confirm the worktop measurements')?.frontmatter['mtm-due']).toBe('2026-10-09T10:00');
+		expect(byTitle('Interview the operations team')?.frontmatter).toMatchObject({ 'mtm-start': '2026-10-08', 'mtm-due': '2026-10-10' });
+		expect(byTitle('Teach session 4')?.frontmatter['mtm-completed']).toBe('2026-10-08');
 	});
 
 	it('sets mtm-completed only on closed Actions', () => {
-		for (const a of actions) {
-			const closed = a.frontmatter['mtm-status'] === 'done';
-			expect('mtm-completed' in a.frontmatter).toBe(closed);
-		}
+		for (const a of actions) expect('mtm-completed' in a.frontmatter).toBe(a.frontmatter['mtm-status'] === 'done');
 	});
 
-	it('works with a smaller workflow', () => {
+	it('maps to a smaller workflow and other types', () => {
 		const simple = DEFAULT_SETTINGS.statuses.filter((s) => ['later', 'doing', 'done'].includes(s.id));
-		const p = planSetup(choices({ sample: true, statuses: simple }), vault());
-		const used = new Set(p.create.filter((n) => n.kind === 'action').map((n) => n.frontmatter['mtm-status']));
-		expect(used).toEqual(new Set(['later', 'doing', 'done']));
+		const types = DEFAULT_SETTINGS.types.filter((t) => ['write', 'call'].includes(t.id));
+		const p = planSetup(choices({ sample: true, statuses: simple, types }), vault());
+		const acts = p.create.filter((n) => n.kind === 'action');
+		expect(new Set(acts.map((n) => n.frontmatter['mtm-status']))).toEqual(new Set(['later', 'doing', 'done']));
+		expect(new Set(acts.map((n) => n.frontmatter['mtm-type']))).toEqual(new Set(['write', 'call']));
+		expect(acts).toHaveLength(SAMPLE_ACTIONS.length);
 	});
 
 	it('avoids existing sample file names', () => {
-		const p = planSetup(choices({ sample: true }), vault([`${SAMPLE_FOLDER}/Kitchen renovation.md`]));
-		expect(p.create.some((n) => n.path === `${SAMPLE_FOLDER}/Kitchen renovation 2.md`)).toBe(true);
+		const p = planSetup(choices({ sample: true }), vault([`${SAMPLE_FOLDER}/Matters/Kitchen renovation.md`]));
+		const kitchen = `${SAMPLE_FOLDER}/Matters/Kitchen renovation 2.md`;
+		expect(p.create.some((n) => n.path === kitchen)).toBe(true);
+		expect(p.create.find((n) => n.path.endsWith('/Order the worktop.md'))?.frontmatter['mtm-matter']).toEqual({ linkTo: kitchen });
+	});
+
+	it('continues the lane order after existing Matters', () => {
+		const p = planSetup(choices({ sample: true }), vault([], [], 7));
+		expect(p.create.find((n) => n.path.endsWith('/Kitchen renovation.md'))?.frontmatter['mtm-lane-order']).toBe(8);
 	});
 });
 
