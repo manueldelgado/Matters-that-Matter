@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { checklistItems, getDetails, insertTask, parseTask, setDetails, setTaskChecked, splitFrontmatter, taskLines, toggleTask } from '../../src/model/body';
+import {
+	checklistItems,
+	DETAILS_CLOSE as C,
+	DETAILS_OPEN as O,
+	getDetails,
+	insertTask,
+	parseTask,
+	repairDetailsMarkers,
+	setDetails,
+	setTaskChecked,
+	splitFrontmatter,
+	taskLines,
+	toggleTask,
+} from '../../src/model/body';
 
 const fm = '---\nmtm-kind: action\nmtm-status: next\n---\n';
 
@@ -131,14 +144,14 @@ describe('setDetails with the previous text', () => {
 			note = setDetails(note, typed, prev);
 			prev = typed;
 		}
-		expect(note).toBe(`${fm}Notes\n- abc\n\n- [ ] Step\n`);
+		expect(note).toBe(`${fm}${O}\nNotes\n- abc\n${C}\n\n- [ ] Step\n`);
 		prev = 'Plain.';
 		note = `${fm}Plain.\n`;
 		for (const typed of ['Plain.\n## Heading', 'Plain.\n## Heading two']) {
 			note = setDetails(note, typed, prev);
 			prev = typed;
 		}
-		expect(note).toBe(`${fm}Plain.\n## Heading two\n`);
+		expect(note).toBe(`${fm}${O}\nPlain.\n## Heading two\n${C}\n`);
 	});
 
 	it('falls back when the note no longer starts with the previous text', () => {
@@ -166,5 +179,183 @@ describe('CRLF notes', () => {
 		expect(ticked).toContain('- [x] b\r\n');
 		const details = setDetails(crlf, 'New\nlines', 'Details.');
 		expect(details).toBe('---\r\nmtm-kind: action\r\n---\r\nNew\r\nlines\r\n\r\n- [ ] a\r\n- [ ] b\r\n');
+	});
+});
+
+describe('details markers', () => {
+	const fm = '---\nmtm-kind: action\n---\n';
+	const ask = '\n- [ ] Ask for the quote\n';
+
+	describe('typed details that the fallback rule would cut', () => {
+		for (const typed of ['Buy for the party:\n- milk\n- bread', 'Plan\n# Ideas\nmore text', '- milk']) {
+			it(`round-trip: ${JSON.stringify(typed)}`, () => {
+				const note = setDetails(`${fm}Old.\n${ask}`, typed, 'Old.');
+				expect(note).toBe(`${fm}${O}\n${typed}\n${C}\n${ask}`);
+				expect(getDetails(note)).toBe(typed);
+				expect(checklistItems(note).map((i) => i.text)).toEqual(['Ask for the quote']);
+			});
+		}
+
+		it('are written into a note without a body', () => {
+			expect(setDetails(fm, 'A\n- b')).toBe(`${fm}${O}\nA\n- b\n${C}\n`);
+		});
+	});
+
+	describe('in notes without markers', () => {
+		it('are not written when the text does not need them', () => {
+			expect(setDetails(`${fm}Old.\n${ask}`, 'New text.\nTwo lines.', 'Old.')).toBe(`${fm}New text.\nTwo lines.\n${ask}`);
+		});
+
+		it('leave the note alone on other edits', () => {
+			const note = `${fm}Text\n\n- [ ] One\n## Log\n`;
+			expect(repairDetailsMarkers(note)).toBe(note);
+			expect(insertTask(note, 'Two')).toBe(`${fm}Text\n\n- [ ] One\n- [ ] Two\n## Log\n`);
+		});
+	});
+
+	describe('once written', () => {
+		const note = `${fm}${O}\nBuy:\n- milk\n${C}\n${ask}`;
+
+		it('stay when the text no longer needs them', () => {
+			expect(setDetails(note, 'Plain', 'Buy:\n- milk')).toBe(`${fm}${O}\nPlain\n${C}\n${ask}`);
+			expect(setDetails(note, '', 'Buy:\n- milk')).toBe(`${fm}${O}\n${C}\n${ask}`);
+		});
+
+		it('keep text outside them out of the details, and in the note', () => {
+			const outside = `${fm}Before\n${O}\nA\n- b\n${C}\nAfter\n`;
+			expect(getDetails(outside)).toBe('A\n- b');
+			expect(setDetails(outside, 'New\n- c', 'A\n- b')).toBe(`${fm}Before\n${O}\nNew\n- c\n${C}\nAfter\n`);
+		});
+
+		it('are recognised by the token alone, at the start of a line', () => {
+			const edited = `${fm}<!-- mtm-details keep me -->\nA\n- b\n<!-- /mtm-details -->\n`;
+			expect(getDetails(edited)).toBe('A\n- b');
+			expect(getDetails(`${fm}<!-- mtm-detailsx -->\nA\n- b\n`)).toBe('<!-- mtm-detailsx -->\nA');
+		});
+	});
+
+	describe('task items', () => {
+		it('between the markers are checklist items, not details', () => {
+			const note = `${fm}${O}\nBuy:\n- [ ] milk\n  for the cake\n- bread\n${C}\n${ask}`;
+			expect(getDetails(note)).toBe('Buy:\n- bread');
+			expect(checklistItems(note).map((i) => i.text)).toEqual(['milk', 'Ask for the quote']);
+		});
+
+		it('between the markers move to just after them on save, in order', () => {
+			const note = `${fm}${O}\nBuy:\n- [ ] milk\n  for the cake\n- bread\n- [x] eggs\n${C}\n${ask}`;
+			expect(setDetails(note, 'Buy now:\n- bread', 'Buy:\n- bread')).toBe(
+				`${fm}${O}\nBuy now:\n- bread\n${C}\n\n- [ ] milk\n  for the cake\n- [x] eggs\n- [ ] Ask for the quote\n`,
+			);
+		});
+
+		it('typed in the field become checklist items', () => {
+			const typed = 'Shop:\n- milk\n- [ ] Call Ana';
+			const note = setDetails(`${fm}Notes\n${ask}`, typed, 'Notes');
+			expect(note).toBe(`${fm}${O}\nShop:\n- milk\n${C}\n\n- [ ] Call Ana\n- [ ] Ask for the quote\n`);
+			expect(getDetails(note)).toBe('Shop:\n- milk');
+			// The next save while typing replaces the task it moved instead of adding it again.
+			expect(setDetails(note, 'Shop:\n- milk\n- [ ] Call Ana today', typed)).toBe(
+				`${fm}${O}\nShop:\n- milk\n${C}\n\n- [ ] Call Ana today\n- [ ] Ask for the quote\n`,
+			);
+		});
+
+		it('typed in the field need no markers on their own', () => {
+			const note = setDetails(`${fm}Notes\n`, 'Notes\n- [ ] Call', 'Notes');
+			expect(note).toBe(`${fm}Notes\n\n- [ ] Call\n`);
+			expect(getDetails(note)).toBe('Notes');
+			expect(setDetails(note, 'Notes\n- [ ] Call Ana', 'Notes\n- [ ] Call')).toBe(`${fm}Notes\n\n- [ ] Call Ana\n`);
+		});
+
+		it('moved ahead of text get a blank line after them', () => {
+			const note = `${fm}${O}\nA\n- [ ] t\n${C}\nMore text\n`;
+			expect(setDetails(note, 'A', 'A')).toBe(`${fm}${O}\nA\n${C}\n\n- [ ] t\n\nMore text\n`);
+		});
+	});
+
+	describe('damaged', () => {
+		const cases: { name: string; note: string; details: string; repaired: string }[] = [
+			{
+				name: 'opening marker without a closing one',
+				note: `${fm}${O}\nBuy:\n- milk\n\n- [ ] Ask\n`,
+				details: 'Buy:\n- milk',
+				repaired: `${fm}${O}\nBuy:\n- milk\n${C}\n\n- [ ] Ask\n`,
+			},
+			{
+				name: 'opening marker without a closing one, up to a heading',
+				note: `${fm}${O}\nPlan\n## Log\n`,
+				details: 'Plan',
+				repaired: `${fm}${O}\nPlan\n${C}\n## Log\n`,
+			},
+			{
+				name: 'closing marker without an opening one',
+				note: `${fm}Buy:\n- milk\n${C}\n\n- [ ] Ask\n`,
+				details: 'Buy:\n- milk',
+				repaired: `${fm}${O}\nBuy:\n- milk\n${C}\n\n- [ ] Ask\n`,
+			},
+			{
+				name: 'closing marker before the opening one',
+				note: `${fm}Intro\n${C}\nmore\n${O}\nlater\n`,
+				details: 'Intro',
+				repaired: `${fm}${O}\nIntro\n${C}\nmore\nlater\n`,
+			},
+			{
+				name: 'more than one pair',
+				note: `${fm}${O}\nA\n- a\n${C}\n\n${O}\nB\n${C}\n`,
+				details: 'A\n- a',
+				repaired: `${fm}${O}\nA\n- a\n${C}\n\nB\n`,
+			},
+			{
+				name: 'edited marker text',
+				note: `${fm}<!-- mtm-details: mine -->\nA\n- a\n<!-- /mtm-details -->\n`,
+				details: 'A\n- a',
+				repaired: `${fm}${O}\nA\n- a\n${C}\n`,
+			},
+		];
+
+		for (const c of cases) {
+			it(`${c.name}: read tolerantly, repaired on the next body write`, () => {
+				expect(getDetails(c.note)).toBe(c.details);
+				expect(repairDetailsMarkers(c.note)).toBe(c.repaired);
+				expect(setDetails(c.note, c.details, c.details)).toBe(c.repaired);
+			});
+		}
+
+		it('are repaired when a checklist item is added or ticked', () => {
+			const note = `${fm}${O}\nBuy:\n- milk\n\n- [ ] Ask\n`;
+			expect(insertTask(note, 'Call')).toBe(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [ ] Ask\n- [ ] Call\n`);
+			expect(toggleTask(note, 7, 'Ask', true)).toBe(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [x] Ask\n`);
+		});
+
+		it('are left alone when nothing is written', () => {
+			const note = `${fm}${O}\nBuy:\n- milk\n\n- [ ] Ask\n`;
+			expect(toggleTask(note, 7, 'Gone', true)).toBe(note);
+		});
+
+		it('get a closing marker when a new item would end the details', () => {
+			expect(insertTask(`${fm}${O}\nBuy:\n- milk\n`, 'Call')).toBe(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [ ] Call\n`);
+		});
+
+		it('are not markers when indented or inside a code block', () => {
+			const indented = `${fm}Text\n  ${O}\n- a\n`;
+			expect(getDetails(indented)).toBe(`Text\n  ${O}`);
+			expect(repairDetailsMarkers(indented)).toBe(indented);
+			const code = `${fm}Text\n\`\`\`\n${C}\n\`\`\`\n`;
+			expect(getDetails(code)).toBe('Text');
+			expect(repairDetailsMarkers(code)).toBe(code);
+		});
+	});
+
+	describe('in CRLF notes', () => {
+		const crlf = (s: string) => s.replace(/\n/g, '\r\n');
+
+		it('are read, written and repaired keeping CRLF', () => {
+			const note = crlf(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [ ] Ask\n`);
+			expect(getDetails(note)).toBe('Buy:\n- milk');
+			expect(setDetails(note, 'Buy:\n- milk\n- bread', 'Buy:\n- milk')).toBe(crlf(`${fm}${O}\nBuy:\n- milk\n- bread\n${C}\n\n- [ ] Ask\n`));
+			expect(setDetails(crlf(`${fm}Old\n`), 'A\n- b', 'Old')).toBe(crlf(`${fm}${O}\nA\n- b\n${C}\n`));
+			const damaged = crlf(`${fm}${O}\nBuy:\n- milk\n\n- [ ] Ask\n`);
+			expect(getDetails(damaged)).toBe('Buy:\n- milk');
+			expect(toggleTask(damaged, 7, 'Ask', true)).toBe(crlf(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [x] Ask\n`));
+		});
 	});
 });
