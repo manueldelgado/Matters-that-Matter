@@ -36,9 +36,10 @@ export interface ToolbarHandlers {
 }
 
 /** A toolbar note that switches something on this view: an eye, a label, a tooltip. Same element in both states. */
+/** A show/hide toggle: the label and icon say what a click does; the tooltip says what is shown now. */
 function toggleNote(bar: HTMLElement, shown: boolean, label: string, title: string, onToggle: () => void): void {
 	const note = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
-	appendIcon(note, shown ? 'eye' : 'eye-off');
+	appendIcon(note, shown ? 'eye-off' : 'eye');
 	note.appendText(label);
 	setTooltip(note, title);
 	note.addEventListener('click', () => onToggle());
@@ -82,9 +83,9 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 	const backlog = input.backlog;
 	if (backlog && h.toggleBacklog) {
 		const { label, shown } = backlog;
-		toggleNote(bar, shown, shown ? b.backlogShown(label) : b.backlogHidden(label), shown ? b.hideBacklogHere(label) : b.showBacklogHere(label), h.toggleBacklog);
+		toggleNote(bar, shown, shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
 	}
-	toggleNote(bar, input.showDone, input.showDone ? b.doneShown : b.doneHidden, input.showDone ? b.hideDoneHere : b.showDoneHere, () => h.toggleDone());
+	toggleNote(bar, input.showDone, input.showDone ? b.hideDone : b.showDone, input.showDone ? b.doneShownHere : b.doneHiddenHere, () => h.toggleDone());
 	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
 }
