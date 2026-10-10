@@ -385,6 +385,12 @@ async function open(ctx: Context, ref: string): Promise<number> {
 	}
 	const obsidianDir = ctx.io.obsidianDir === undefined ? obsidianSettingsDir(process.platform, ctx.io.env, ctx.io.home) : ctx.io.obsidianDir;
 	const url = openUrl(vaultRef(ctx.vault.root, obsidianDir), target);
+	// A dry run only says which link it would open.
+	if (ctx.dryRun) {
+		if (ctx.json) print(ctx.io.stdout, stringify({ url, opened: false, ...target }));
+		else print(ctx.io.stdout, [CLI.wouldOpen(name), `  ${ctx.out.d(url)}`]);
+		return EXIT.done;
+	}
 	try {
 		await (ctx.io.opener ?? systemOpener())(url);
 	} catch {
