@@ -8,12 +8,15 @@
 // 4. If anything fails while committing, what was committed is put back, in reverse order, from the content the plan
 //    saw.
 //
-// Line endings (CRLF stays CRLF) and the presence of a final newline are kept as the file had them.
+// The bytes written are exactly what the files layer computed (line endings and all).
 
 import { createHash } from 'node:crypto';
 import { chmodSync, linkSync, mkdirSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, sep } from 'node:path';
-import type { FileOutcome, FileWrite } from './filesLayer';
+import type { FileWrite as LayerWrite } from './filesLayer';
+
+/** What the writer needs of each file the files layer computed. */
+export type FileWrite = Pick<LayerWrite, 'path' | 'from' | 'before' | 'after'>;
 
 export type ApplyResult =
 	| { ok: true; written: string[] }
@@ -67,20 +70,6 @@ export const nodeFs: ApplyFs = {
 
 export const hash = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
 
-/** The new content in the old content's style: its line endings and whether it ends with a newline. */
-export function keepStyle(before: string | null, after: string): string {
-	if (before === null) return after;
-	let out = after;
-	const crlf = before.includes('\r\n');
-	if (crlf) out = out.replace(/\r?\n/g, '\r\n');
-	const eol = crlf ? '\r\n' : '\n';
-	const endsBefore = /\r?\n$/.test(before);
-	const endsAfter = /\r?\n$/.test(out);
-	if (endsBefore && !endsAfter && out !== '') out += eol;
-	else if (!endsBefore && endsAfter) out = out.replace(/\r?\n$/, '');
-	return out;
-}
-
 /** A vault path the writer accepts: relative, `/`-separated, without `.`, `..` or empty parts. */
 export function isVaultPath(path: string): boolean {
 	if (!path || path.startsWith('/') || path.includes('\\') || /^[a-zA-Z]:/.test(path)) return false;
@@ -102,7 +91,7 @@ interface Staged {
 	mode: number | null;
 }
 
-export function applyOutcome(root: string, outcome: FileOutcome, fs: ApplyFs = nodeFs): ApplyResult {
+export function applyOutcome(root: string, outcome: { files: readonly FileWrite[] }, fs: ApplyFs = nodeFs): ApplyResult {
 	const full = (path: string) => join(root, ...path.split('/'));
 	let realRoot: string;
 	try {
@@ -196,7 +185,7 @@ export function applyOutcome(root: string, outcome: FileOutcome, fs: ApplyFs = n
 			const from = file.from === null ? null : full(file.from);
 			const s: Staged = { file, target, from, temp: tempName(target), mode: from ? (fs.stat(from)?.mode ?? null) : null };
 			staged.push(s);
-			fs.writeFile(s.temp, keepStyle(file.before, file.after));
+			fs.writeFile(s.temp, file.after);
 			if (s.mode !== null) fs.chmod(s.temp, s.mode);
 		}
 	} catch (e) {

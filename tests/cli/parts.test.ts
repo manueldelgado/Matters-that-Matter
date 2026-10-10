@@ -4,8 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from '../../cli/src/args';
-import { applyOutcome, keepStyle, nodeFs, type ApplyFs } from '../../cli/src/apply';
-import type { FileOutcome } from '../../cli/src/filesLayer';
+import { applyOutcome, nodeFs, type ApplyFs, type FileWrite } from '../../cli/src/apply';
 import { cachingReader, fsVaultReader } from '../../cli/src/fsVault';
 import { obsidianSettingsDir, openUrl, vaultRef } from '../../cli/src/open';
 import { vaultPath } from '../../cli/src/vault';
@@ -63,7 +62,7 @@ describe('arguments', () => {
 });
 
 describe('safe writes', () => {
-	const outcome = (files: FileOutcome['files']): FileOutcome => ({ files, links: [], danglingLinks: 0 });
+	const outcome = (files: FileWrite[]) => ({ files });
 	const temps = (root: string) => {
 		const out: string[] = [];
 		const walk = (d: string) => {
@@ -89,11 +88,12 @@ describe('safe writes', () => {
 		};
 	};
 
-	it('keeps CRLF line endings and the presence of a final newline', () => {
-		expect(keepStyle('a\r\nb\r\n', 'a\nb\nc\n')).toBe('a\r\nb\r\nc\r\n');
-		expect(keepStyle('a\nb', 'a\nb\nc\n')).toBe('a\nb\nc');
-		expect(keepStyle('a\n', 'a\nb')).toBe('a\nb\n');
-		expect(keepStyle(null, 'new\n')).toBe('new\n');
+	it('writes the bytes it is given, line endings and all', () => {
+		const root = dir();
+		writeFiles(root, { 'Mixed.md': 'a\r\nb\r\n' });
+		const after = '---\nmtm-status: done\n---\r\na\r\nb';
+		expect(applyOutcome(root, outcome([{ path: 'Mixed.md', from: 'Mixed.md', before: 'a\r\nb\r\n', after }])).ok).toBe(true);
+		expect(readFileSync(join(root, 'Mixed.md'), 'utf8')).toBe(after);
 	});
 
 	it('writes, renames and creates, keeping each file’s mode and leaving no temporary files', () => {
@@ -109,7 +109,7 @@ describe('safe writes', () => {
 			]),
 		);
 		expect(r).toEqual({ ok: true, written: ['A/One.md', 'B/Deux.md', 'C/Three.md'] });
-		expect(readFileSync(join(root, 'A/One.md'), 'utf8')).toBe('one changed\r\n');
+		expect(readFileSync(join(root, 'A/One.md'), 'utf8')).toBe('one changed\n');
 		expect(statSync(join(root, 'A/One.md')).mode & 0o777).toBe(0o640);
 		expect(existsSync(join(root, 'A/Two.md'))).toBe(false);
 		expect(readFileSync(join(root, 'B/Deux.md'), 'utf8')).toBe('deux\n');

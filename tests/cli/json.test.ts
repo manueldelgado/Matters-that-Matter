@@ -8,7 +8,7 @@ import { nodeFs, type ApplyFs } from '../../cli/src/apply';
 import type { ContentsAfter } from '../../cli/src/filesLayer';
 import type { CliIo } from '../../cli/src/main';
 import { fixtureCopy, mtm, normalise, read, syntheticVault, tempDir, writeFiles } from './helpers';
-import { tempContentsAfter } from './tempWriter';
+import { contentsAfter } from '../../cli/src/filesLayer';
 
 const made: string[] = [];
 afterEach(() => {
@@ -27,7 +27,7 @@ const fixture = () => {
 
 /** Runs a command with --json and checks its exit code; the output is pinned in a file named after the case. */
 async function pinned(name: string, root: string, argv: string[], code: number, io: Partial<CliIo> = {}) {
-	const r = await mtm([...argv, '--json', '--vault', root], { contentsAfter: tempContentsAfter, ...io });
+	const r = await mtm([...argv, '--json', '--vault', root], { ...io });
 	expect(r.code, `${name}: ${r.stderr}`).toBe(code);
 	await expect(normalise(r.stdout, root)).toMatchFileSnapshot(join('__snapshots__', 'json', `${name}.json`));
 	return r;
@@ -78,7 +78,7 @@ describe('errors', () => {
 	it('changed while writing, twice', async () => {
 		const root = synthetic();
 		const racing: ContentsAfter = (plan, reader, options) => {
-			const outcome = tempContentsAfter(plan, reader, options);
+			const outcome = contentsAfter(plan, reader, options);
 			writeFiles(root, { 'MTM/Actions/Send the invoice.md': `${read(root, 'MTM/Actions/Send the invoice.md')}Edited elsewhere.\n` });
 			return outcome;
 		};
@@ -94,7 +94,7 @@ describe('errors', () => {
 	});
 
 	it('a path outside the vault', async () => {
-		const outside: ContentsAfter = () => ({ files: [{ path: '../Escape.md', from: null, before: null, after: 'x\n' }], links: [], danglingLinks: 0 });
+		const outside: ContentsAfter = () => ({ files: [{ path: '../Escape.md', from: null, before: null, after: 'x\n', changes: [] }], links: [], danglingLinks: 0, linkChanges: { rewritten: [], dangling: [] } });
 		await pinned('error-unsafe', synthetic(), ['add', 'Something'], 3, { contentsAfter: outside });
 	});
 });

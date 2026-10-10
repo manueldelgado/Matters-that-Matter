@@ -4,16 +4,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { nodeFs, type ApplyFs } from '../../cli/src/apply';
+import { WriteError } from '../../cli/src/filesLayer';
 import { parseNow } from '../../cli/src/main';
 import { CONFIG, hashes, mtm, SETTINGS_FILE, syntheticVault, tempDir, writeFiles } from './helpers';
-import { tempContentsAfter } from './tempWriter';
+import { contentsAfter } from '../../cli/src/filesLayer';
 
 const made: string[] = [];
 const keep = (root: string) => (made.push(dirname(root)), root);
 afterEach(() => {
 	for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
-const writer = { contentsAfter: tempContentsAfter };
+/** The files layer's writer (the default; named here so each write says which it uses). */
+const writer = { contentsAfter };
 
 describe('the vault isn’t ready: exit 2', () => {
 	it('without a vault named', async () => {
@@ -203,6 +205,41 @@ describe('a write that fails: exit 3, everything put back', () => {
 			stderr: 'Writing MTM/Actions/Send the invoice.md failed (disk full). Everything was put back as it was; nothing was changed.\n',
 		});
 		expect(hashes(root)).toEqual(before);
+	});
+});
+
+describe('a plan the files layer can’t apply', () => {
+	const throwing = (code: WriteError['code'], times = Infinity) => {
+		let n = 0;
+		return { contentsAfter: ((plan, reader, options) => {
+			if (n++ < times) throw new WriteError(code, 'MTM/Actions/Send the invoice.md', 'refused');
+			return contentsAfter(plan, reader, options);
+		}) as typeof contentsAfter };
+	};
+
+	it('properties that can’t be edited: exit 1, nothing written', async () => {
+		const root = keep(syntheticVault());
+		const before = hashes(root);
+		expect(await mtm(['done', 'Send the invoice', '--vault', root], throwing('invalid-properties'))).toEqual({
+			code: 1,
+			stdout: '',
+			stderr: 'The properties of MTM/Actions/Send the invoice.md aren’t valid YAML, so nothing was written. Fix them in Obsidian first.\n',
+		});
+		expect(hashes(root)).toEqual(before);
+	});
+
+	it('a file gone or one there already: planned again once, then exit 3', async () => {
+		const root = keep(syntheticVault());
+		expect((await mtm(['done', 'Send the invoice', '--vault', root], throwing('missing', 1))).code).toBe(0);
+		const r = await mtm(['reopen', 'Send the invoice', '--json', '--vault', root], throwing('exists'));
+		expect(r.code).toBe(3);
+		expect(JSON.parse(r.stdout)).toEqual({
+			error: {
+				code: 'exists',
+				path: 'MTM/Actions/Send the invoice.md',
+				message: 'MTM/Actions/Send the invoice.md is there already (the vault changed while Matters was reading it). Nothing was written; try again.',
+			},
+		});
 	});
 });
 

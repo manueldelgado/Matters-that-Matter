@@ -4,9 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { rmSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { ContentsAfter } from '../../cli/src/filesLayer';
 import { fixtureCopy, mtm, normalise, syntheticVault } from './helpers';
-import { tempContentsAfter } from './tempWriter';
 
 const made: string[] = [];
 const vault = (root: string) => (made.push(dirname(root)), root);
@@ -86,7 +84,7 @@ Due today or late
 describe('adding', () => {
 	it('adds from quick add’s words', async () => {
 		const root = vault(fixtureCopy());
-		const r = await mtm(['add', 'Call Marco about the quote /call #Kitchen fri 10:00 !1', '--vault', root], { contentsAfter: tempContentsAfter });
+		const r = await mtm(['add', 'Call Marco about the quote /call #Kitchen fri 10:00 !1', '--vault', root]);
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
@@ -99,7 +97,7 @@ describe('adding', () => {
 
 	it('falls back as quick add does, and says why in a line', async () => {
 		const root = vault(fixtureCopy());
-		const r = await mtm(['add', 'Ask about the gym /message #Gym', '--vault', root], { contentsAfter: tempContentsAfter });
+		const r = await mtm(['add', 'Ask about the gym /message #Gym', '--vault', root]);
 		expect(r.stdout).toBe(`Added “Ask about the gym”
   Inbox · Later · Message
   No Matter matches “Gym”, so it went to the Inbox.
@@ -111,7 +109,7 @@ describe('adding', () => {
 describe('strict updates and ambiguity', () => {
 	it('refuses a status that matches nothing, and writes nothing', async () => {
 		const root = vault(syntheticVault());
-		const r = await mtm(['update', 'Call Marco about the quote', '--status', 'Someday', '--vault', root], { contentsAfter: tempContentsAfter });
+		const r = await mtm(['update', 'Call Marco about the quote', '--status', 'Someday', '--vault', root]);
 		expect(r).toEqual({
 			code: 1,
 			stdout: '',
@@ -123,7 +121,7 @@ Nothing was changed.
 
 	it('lists the Actions a name matches when it matches several', async () => {
 		const root = vault(syntheticVault());
-		const r = await mtm(['done', 'Call Marco', '--vault', root], { contentsAfter: tempContentsAfter });
+		const r = await mtm(['done', 'Call Marco', '--vault', root]);
 		expect(r).toEqual({
 			code: 1,
 			stdout: '',
@@ -141,7 +139,7 @@ describe('dry runs and renames', () => {
 		// Without a position on a board ordered by hand (a move to another column would remove it, and say so).
 		const quote = { frontmatter: { 'mtm-kind': 'action', 'mtm-type': 'call', 'mtm-status': 'next', 'mtm-matter': '[[Kitchen renovation]]' } };
 		const root = vault(syntheticVault({ extra: { 'MTM/Actions/Call Marco about the quote.md': quote } }));
-		const r = await mtm(['done', 'Call Marco about the quote', '--dry-run', '--vault', root], { contentsAfter: tempContentsAfter });
+		const r = await mtm(['done', 'Call Marco about the quote', '--dry-run', '--vault', root]);
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
@@ -154,24 +152,25 @@ Nothing written (dry run).
 	});
 
 	it('renames on a new title and lists the links it updated', async () => {
-		const root = vault(syntheticVault());
-		// The files layer reports the links a rename rewrote; here a stand-in reports two notes.
-		const withLinks: ContentsAfter = (plan, reader, options) => ({
-			...tempContentsAfter(plan, reader, options),
-			links: [
-				{ path: 'Kitchen renovation.md', lines: [7] },
-				{ path: 'Daily/2026-10-08.md', lines: [3, 12] },
-			],
-		});
-		const r = await mtm(['update', 'Call Marco about the quote', '--title', 'Call Marco about the revised quote', '--vault', root], { contentsAfter: withLinks });
+		// Two notes link to the Action: one link on line 7 of the first, two on lines 3 and 12 of the second.
+		const lines = (at: Record<number, string>) => Array.from({ length: 12 }, (_, n) => at[n + 1] ?? `Line ${n + 1}.`).join('\n') + '\n';
+		const root = vault(
+			syntheticVault({
+				extra: {
+					'Notes/Kitchen plan.md': { body: lines({ 7: 'Ask: [[Call Marco about the quote]]' }) },
+					'Daily/2026-10-08.md': { body: lines({ 3: '- [[Call Marco about the quote|Marco]]', 12: 'Then [[Call Marco about the quote#Notes]].' }) },
+				},
+			}),
+		);
+		const r = await mtm(['update', 'Call Marco about the quote', '--title', 'Call Marco about the revised quote', '--vault', root]);
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
 			stdout: `Renamed to “Call Marco about the revised quote”
   MTM/Actions/Call Marco about the revised quote.md
   Updated 3 links in 2 notes:
-    Kitchen renovation.md      line 7
     Daily/2026-10-08.md        lines 3, 12
+    Notes/Kitchen plan.md      line 7
 `,
 		});
 	});

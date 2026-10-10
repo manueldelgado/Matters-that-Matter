@@ -300,12 +300,25 @@ export function changeLines(changes: readonly Change[], st: Style): string[] {
 function linkLines(outcome: FileOutcome | null, dryRun: boolean, st: Style): string[] {
 	if (!outcome) return [];
 	const out: string[] = [];
-	const count = outcome.links.reduce((n, l) => n + l.lines.length, 0);
+	const notes = (rows: readonly { path: string; lines: number[] }[]) => columns(rows.map((l) => [l.path, [CLI.lines(l.lines), st.d]]), [6], '    ');
+	// Several links can share a line (a list in the properties): count links, list lines.
+	const count = outcome.linkChanges?.rewritten.length ?? outcome.links.reduce((n, l) => n + l.lines.length, 0);
 	if (count) {
 		out.push(`  ${(dryRun ? CLI.wouldUpdateLinks : CLI.updatedLinks)(count, outcome.links.length)}`);
-		out.push(...columns(outcome.links.map((l) => [l.path, [CLI.lines(l.lines), st.d]]), [6], '    '));
+		out.push(...notes(outcome.links));
 	}
-	if (outcome.danglingLinks) out.push(`  ${st.y(CLI.danglingLinks(outcome.danglingLinks))}`);
+	if (outcome.danglingLinks) {
+		out.push(`  ${st.y((dryRun ? CLI.wouldDangle : CLI.danglingLinks)(outcome.danglingLinks))}`);
+		// Where they are: the notes (as named after the rename) and their lines.
+		const byNote = new Map<string, Set<number>>();
+		for (const d of outcome.linkChanges?.dangling ?? []) {
+			const set = byNote.get(d.path) ?? new Set<number>();
+			set.add(d.line + 1);
+			byNote.set(d.path, set);
+		}
+		const renamed = new Map(outcome.files.filter((f) => f.from !== null && f.from !== f.path).map((f) => [f.from as string, f.path]));
+		out.push(...notes([...byNote].map(([path, lines]) => ({ path: renamed.get(path) ?? path, lines: [...lines].sort((a, b) => a - b) })).sort((a, b) => (a.path < b.path ? -1 : 1))));
+	}
 	return out;
 }
 

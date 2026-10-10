@@ -90,7 +90,18 @@ No status matches “Someday”. Statuses here: Later, Next, Doing, Waiting, Don
 Nothing was changed.
 ```
 
-A new title renames the note. When Obsidian's "Automatically update internal links" is on in that vault, links to it are updated too, and each note is listed.
+A new title renames the note. When Obsidian's "Automatically update internal links" is on in that vault, links to it are updated too, as Obsidian would update them, and each note is listed with its lines:
+
+```
+$ mtm update "Call Marco about the quote" --title "Call Marco about the revised quote"
+Renamed to “Call Marco about the revised quote”
+  MTM/Actions/Call Marco about the revised quote.md
+  Updated 3 links in 2 notes:
+    Daily/2026-10-08.md        lines 3, 12
+    Notes/Kitchen plan.md      line 7
+```
+
+When the setting is off, the links are left as they are, as Obsidian would leave them, and `mtm` says how many now point to the old name, and where. `--dry-run` shows all of this before anything is written.
 
 `done` sets the done status and today's completion date; `reopen` moves a done Action back to the backlog status.
 
@@ -148,9 +159,9 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | Nothing matched, several things did, or a value can't be read. Nothing was written. |
+| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML so they can't be changed. Nothing was written. |
 | 2 | The vault isn't ready: no vault named, no Matters settings, setup not done, or settings from a newer version of Matters (reads still work then, with a warning; writes are refused) |
-| 3 | The write didn't happen: a file changed after it was read (and again when tried a second time), or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
+| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
 

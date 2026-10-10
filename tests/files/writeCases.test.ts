@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadCases, PLANS, planText, runCase, WRITES, type CaseRun, type WriteCase } from './writeCases';
+import { acceptedWrites, loadCases, PLANS, planText, runCase, WRITES, type CaseRun, type WriteCase } from './writeCases';
 
 const cases = loadCases();
 const runs = new Map<string, CaseRun>(cases.map((c) => [c.name, runCase(c)]));
@@ -188,17 +188,6 @@ describe('the plans for the Obsidian run', () => {
 });
 
 // ——— Obsidian's results ———
-
-/** Accepted differences: the ```json writes block in ACCEPTED.md, a list of `{ "case", "path", "reason" }`. */
-function acceptedWrites(): { case: string; path: string }[] {
-	const accepted = join(WRITES, '..', 'ACCEPTED.md');
-	if (!existsSync(accepted)) return [];
-	const block = /```json writes\n([\s\S]*?)\n```/.exec(readFileSync(accepted, 'utf8'));
-	if (!block) return [];
-	const list = JSON.parse(block[1] ?? '[]') as { case: string; path: string; reason: string }[];
-	for (const item of list) if (!item.reason?.trim()) throw new Error(`No reason given for ${item.case}: ${item.path}`);
-	return list;
-}
 
 /** Every file under a folder, as vault paths. */
 function walk(dir: string, prefix = ''): string[] {

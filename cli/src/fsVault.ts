@@ -45,11 +45,12 @@ export function fsVaultReader(root: string, configDir: string): VaultReader {
 	};
 }
 
-/** A reader that reads each file once: every later read of a path gives the same text. */
+/** A reader that lists and reads each file once: later calls give the same answers. */
 export function cachingReader(reader: VaultReader): VaultReader {
 	const texts = new Map<string, string | null>();
+	let files: string[] | null = null;
 	return {
-		list: () => reader.list(),
+		list: () => (files ??= [...reader.list()]),
 		read(path) {
 			if (!texts.has(path)) texts.set(path, reader.read(path));
 			return texts.get(path) ?? null;

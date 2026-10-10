@@ -11,7 +11,7 @@ import { findMatter } from '../../src/ops/fields';
 import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
 import { applyOutcome, type ApplyFs, type ApplyResult } from './apply';
 import { boolFlag, listFlag, parseArgs, textFlag, type Command, type FlagValue } from './args';
-import { contentsAfter as defaultContentsAfter, snapshotOf, type ContentsAfter, type FileOutcome } from './filesLayer';
+import { contentsAfter as defaultContentsAfter, snapshotOf, WriteError, type ContentsAfter, type FileOutcome } from './filesLayer';
 import { cachingReader, fsVaultReader } from './fsVault';
 import { errorJson, stringify, writeJson, type ErrorJson } from './json';
 import { obsidianSettingsDir, openUrl, systemOpener, vaultRef, type Opener, type OpenTarget } from './open';
@@ -53,8 +53,8 @@ export interface CliIo {
 	/** The clock when `--now` isn't given. */
 	clock?: () => Date;
 	opener?: Opener;
-	/** The plan applier; the files layer's when absent (null: none, so writes are refused). */
-	contentsAfter?: ContentsAfter | null;
+	/** The plan applier; the files layer's when absent. */
+	contentsAfter?: ContentsAfter;
 	/** The vault's files; on disk when absent. */
 	reader?: (root: string, configDir: string) => VaultReader;
 	/** The file operations writes use; Node's when absent. */
@@ -286,7 +286,7 @@ type Written<T> = { r: Extract<OpResult<T>, { ok: true }>; snap: Snapshot; outco
  * that fails is put back and gives exit code 3 too.
  */
 function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | number {
-	const writer = ctx.io.contentsAfter === undefined ? defaultContentsAfter : ctx.io.contentsAfter;
+	const writer = ctx.io.contentsAfter ?? defaultContentsAfter;
 	for (let attempt = 1; ; attempt++) {
 		const { snap, reader } = snapshot(ctx);
 		const r = op(snap);
@@ -299,19 +299,34 @@ function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | 
 				return usageError(ctx, CLI.planOutFailed(planOut));
 			}
 		}
-		const empty = planIsEmpty(r.plan);
-		const outcome = !empty && writer ? writer(r.plan, reader, { configDir: ctx.vault.configDir }) : null;
-		if (ctx.dryRun || empty) return { r, snap, outcome, written: false };
-		if (!writer || !outcome) {
-			if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: 'not-ready', message: CLI.cantWriteYet })));
-			else print(ctx.io.stderr, ctx.err.r(CLI.cantWriteYet));
-			return EXIT.notReady;
+		if (planIsEmpty(r.plan)) return { r, snap, outcome: null, written: false };
+		let outcome: FileOutcome;
+		try {
+			outcome = writer(r.plan, reader, { configDir: ctx.vault.configDir });
+		} catch (e) {
+			if (!(e instanceof WriteError)) throw e;
+			// A file the snapshot saw is gone, or one it didn't see is there: the vault changed; plan again once.
+			if (attempt === 1 && (e.code === 'exists' || e.code === 'missing')) continue;
+			return planFailure(ctx, e);
 		}
+		if (ctx.dryRun) return { r, snap, outcome, written: false };
 		const applied = applyOutcome(ctx.vault.root, outcome, ctx.io.fs);
 		if (applied.ok) return { r, snap, outcome, written: true };
 		if (attempt === 1 && applied.reason === 'changed') continue;
 		return writeFailure(ctx, applied);
 	}
+}
+
+/**
+ * A plan the files layer can't apply; nothing is written. The vault changed (exit 3), or a note's properties can't
+ * be edited (exit 1).
+ */
+function planFailure(ctx: Context, e: WriteError): number {
+	const changed = e.code === 'exists' || e.code === 'missing';
+	const message = e.code === 'exists' ? CLI.exists(e.path) : e.code === 'missing' ? CLI.missing(e.path) : e.code === 'invalid-properties' ? CLI.unreadableProperties(e.path) : CLI.notMtm(e.path);
+	if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: e.code, message, path: e.path })));
+	else print(ctx.io.stderr, ctx.err.r(message));
+	return changed ? EXIT.changed : EXIT.unmatched;
 }
 
 /** Why a write stopped, and whether anything was left changed. Exit code 3. */

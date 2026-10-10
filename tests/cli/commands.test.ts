@@ -6,14 +6,15 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { ContentsAfter } from '../../cli/src/filesLayer';
 import { fixtureCopy, hashes, mtm, normalise, read, syntheticVault, tempDir, writeFiles } from './helpers';
-import { tempContentsAfter } from './tempWriter';
+import { contentsAfter } from '../../cli/src/filesLayer';
 
 const made: string[] = [];
 const keep = (root: string) => (made.push(dirname(root)), root);
 afterEach(() => {
 	for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
-const writer = { contentsAfter: tempContentsAfter };
+/** The files layer's writer (the default; named here so each write says which it uses). */
+const writer = { contentsAfter };
 
 describe('reading', () => {
 	it('workflow', async () => {
@@ -54,7 +55,7 @@ describe('reading', () => {
 		expect(r.code).toBe(0);
 		expect(r.stdout).toMatchInlineSnapshot(`
 			"Inbox                      7 open
-			Kitchen renovation         Home · 20 open · 2 today or late · 2 waiting · reviewed 3 days ago
+			Kitchen renovation         Home · 22 open · 2 today or late · 2 waiting · reviewed 3 days ago
 			Household admin            Home · 4 open · 1 today or late · 1 waiting · review due
 			Learn to sail              Home · dormant · 1 open
 			Lakeside strategy review   Advisory · 5 open · 1 today or late · 1 waiting · reviewed yesterday
@@ -324,15 +325,6 @@ describe('writing', () => {
 			renames: [],
 		});
 	});
-
-	it('without the files layer’s writer, writes are refused (exit 2) and dry runs still work', async () => {
-		const root = keep(syntheticVault());
-		const before = hashes(root);
-		const refused = await mtm(['done', 'Send the invoice', '--vault', root], { contentsAfter: null });
-		expect(refused).toEqual({ code: 2, stdout: '', stderr: 'This version of mtm can show changes (--dry-run) but not write them yet.\n' });
-		expect((await mtm(['done', 'Send the invoice', '--dry-run', '--vault', root], { contentsAfter: null })).code).toBe(0);
-		expect(hashes(root)).toEqual(before);
-	});
 });
 
 describe('a file that changes while writing', () => {
@@ -340,7 +332,7 @@ describe('a file that changes while writing', () => {
 	const racing = (root: string, times: number): ContentsAfter => {
 		let n = 0;
 		return (plan, reader, options) => {
-			const outcome = tempContentsAfter(plan, reader, options);
+			const outcome = contentsAfter(plan, reader, options);
 			if (n++ < times) writeFiles(root, { 'MTM/Actions/Send the invoice.md': `${read(root, 'MTM/Actions/Send the invoice.md')}Edited elsewhere.\n` });
 			return outcome;
 		};

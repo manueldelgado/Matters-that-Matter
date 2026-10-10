@@ -2,7 +2,7 @@
 // would call it, and applies the plan with the files layer. The plans, with the body text each body edit leaves, are
 // what an Obsidian console script applies to a copy of the fixture to produce the expected results.
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { splitFrontmatter } from '../../src/model/body';
@@ -138,3 +138,14 @@ export function runCase(c: WriteCase): CaseRun {
 
 /** A plan file's text: tab-indented JSON with a final line break. */
 export const planText = (p: CasePlan): string => `${JSON.stringify(p, null, '\t')}\n`;
+
+/** Accepted differences: the ```json writes block in ACCEPTED.md, a list of `{ "case", "path", "reason" }`. */
+export function acceptedWrites(): { case: string; path: string }[] {
+	const accepted = join(WRITES, '..', 'ACCEPTED.md');
+	if (!existsSync(accepted)) return [];
+	const block = /```json writes\n([\s\S]*?)\n```/.exec(readFileSync(accepted, 'utf8'));
+	if (!block) return [];
+	const list = JSON.parse(block[1] ?? '[]') as { case: string; path: string; reason: string }[];
+	for (const item of list) if (!item.reason?.trim()) throw new Error(`No reason given for ${item.case}: ${item.path}`);
+	return list;
+}

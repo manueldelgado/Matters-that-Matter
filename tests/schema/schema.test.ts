@@ -390,6 +390,7 @@ const INTENTIONALLY_INVALID: Record<string, string> = {
 /** Notes whose properties YAML can't read: Obsidian shows no properties, and the plugin sees no Action. */
 const UNREADABLE: Record<string, string> = {
 	[`${EDGE}/Edge - invalid YAML.md`]: 'an unclosed flow list',
+	[`${EDGE}/More links/More - repeated key.md`]: 'mtm-status written twice: a map can’t repeat a key',
 };
 
 /** Notes with no properties block as Obsidian reads it: not MTM notes at all, so no schema applies. */
@@ -409,14 +410,17 @@ function notesUnder(dir: string, prefix = ''): string[] {
 
 type Properties = { kind: 'none' } | { kind: 'unreadable'; error: string } | { kind: 'read'; fm: Json };
 
-/** The properties block as Obsidian finds it: `---` on the very first line, closed by a line of `---`; YAML 1.2. */
+/**
+ * The properties block as Obsidian finds it: `---` on the very first line (after a byte-order mark, which Obsidian
+ * skips), closed by a line of `---`; YAML 1.2. Unknown tags (`!foo`) read as plain values, quietly.
+ */
 function properties(text: string): Properties {
-	const lines = text.split(/\r?\n/);
+	const lines = (text.startsWith('\uFEFF') ? text.slice(1) : text).split(/\r?\n/);
 	if (lines[0] !== '---') return { kind: 'none' };
 	const end = lines.indexOf('---', 1);
 	if (end < 0) return { kind: 'none' };
 	try {
-		const fm: unknown = parse(lines.slice(1, end).join('\n'));
+		const fm: unknown = parse(lines.slice(1, end).join('\n'), { logLevel: 'error' });
 		if (fm === null || fm === undefined) return { kind: 'none' };
 		if (typeof fm !== 'object' || Array.isArray(fm)) return { kind: 'unreadable', error: 'not a map of properties' };
 		return { kind: 'read', fm: fm as Json };
@@ -431,6 +435,11 @@ describe('the fixture vault', () => {
 	it('holds every listed edge case', () => {
 		const paths = new Set(notes.map((n) => n.path));
 		for (const path of [...Object.keys(INTENTIONALLY_INVALID), ...Object.keys(UNREADABLE), ...NO_PROPERTIES]) expect(paths, path).toContain(path);
+	});
+
+	it('reads the properties of a note that starts with a byte-order mark', () => {
+		const bom = notes.find((n) => n.path.endsWith('More - byte-order mark.md'));
+		expect(bom?.props).toMatchObject({ kind: 'read', fm: { 'mtm-kind': 'action' } });
 	});
 
 	it('has unreadable properties only where listed', () => {

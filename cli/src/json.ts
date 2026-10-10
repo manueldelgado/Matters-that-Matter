@@ -45,8 +45,11 @@ export type ErrorJson = {
 	error:
 		| OpError
 		| {
-				/** `changed` and `failed` (nothing changed, or `left` lists what couldn't be put back) and `unsafe` exit with 3. */
-				code: 'changed' | 'failed' | 'unsafe' | 'usage' | 'open-failed';
+				/**
+				 * Exit code 3: `changed`, `exists`, `missing` (the vault changed meanwhile), `failed` (put back, or `left`
+				 * lists what couldn't be), `unsafe`. Exit code 1: `invalid-properties`, `not-mtm`, `usage`, `open-failed`.
+				 */
+				code: 'changed' | 'exists' | 'missing' | 'failed' | 'unsafe' | 'invalid-properties' | 'not-mtm' | 'usage' | 'open-failed';
 				message: string;
 				path?: string;
 				left?: string[];

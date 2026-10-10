@@ -116,7 +116,6 @@ export const CLI = {
 	notAVault: (path: string, configDir: string) => `${path} isn’t an Obsidian vault: it has no ${configDir} folder.`,
 	noSettings: (path: string, file: string) => `Matters isn’t installed in ${path}: there’s no ${file}. Install Matters and run setup in Obsidian first.`,
 	badSettings: (file: string) => `Matters’ settings in ${file} can’t be read. Open the vault in Obsidian to repair them.`,
-	cantWriteYet: 'This version of mtm can show changes (--dry-run) but not write them yet.',
 	mcpLater: 'The MCP server isn’t in this version of mtm yet.',
 
 	// Writing.
@@ -125,6 +124,10 @@ export const CLI = {
 	writeFailed: (path: string, error: string) => `Writing ${path} failed (${error}). Everything was put back as it was; nothing was changed.`,
 	writeFailedLeft: (path: string, error: string, left: readonly string[]) =>
 		`Writing ${path} failed (${error}), and these files couldn’t be put back as they were: ${left.join(', ')}. Check them in Obsidian.`,
+	exists: (path: string) => `${path} is there already (the vault changed while Matters was reading it). Nothing was written; try again.`,
+	missing: (path: string) => `${path} isn’t there any more (the vault changed while Matters was reading it). Nothing was written; try again.`,
+	unreadableProperties: (path: string) => `The properties of ${path} aren’t valid YAML, so nothing was written. Fix them in Obsidian first.`,
+	notMtm: (path: string) => `Only mtm- properties are ever written, so nothing was written to ${path}.`,
 	outsideVault: (path: string) => `${path} is outside the vault, so nothing was written.`,
 	planOutFailed: (file: string) => `The plan couldn’t be written to ${file}.`,
 
@@ -155,6 +158,8 @@ export const CLI = {
 	lines: (lines: readonly number[]) => `${lines.length === 1 ? 'line' : 'lines'} ${lines.join(', ')}`,
 	danglingLinks: (n: number) =>
 		`${plural(n, 'link still points', 'links still point')} to the old name: Obsidian’s “Automatically update internal links” is off in this vault.`,
+	wouldDangle: (n: number) =>
+		`${plural(n, 'link would point', 'links would point')} to the old name: Obsidian’s “Automatically update internal links” is off in this vault.`,
 	detailsKey: 'details',
 	checklistKey: 'checklist',
 	linkKey: 'link',
