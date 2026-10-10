@@ -1,10 +1,10 @@
 // The board: a custom Bases view. Lanes come from all Matter notes; Bases decides which Actions are cards.
 
-import { Menu, normalizePath, type QueryController } from 'obsidian';
+import { FileView, Menu, normalizePath, Notice, type QueryController } from 'obsidian';
 import type MattersPlugin from '../../../main';
 import { STRINGS } from '../../../strings';
-import { toHm, toYmd } from '../../../model/dates';
-import { moveLane } from '../../../model/matters';
+import { toHm, toYmd, type Ymd } from '../../../model/dates';
+import { moveLane, startsCollapsed } from '../../../model/matters';
 import { buildBoard, orderMatters, type BoardBand, type BoardLane, type BoardModel, type BoardOptions, type MatterInfo } from '../../../services/boardModel';
 import { focusedSphere, NO_SPHERE } from '../../../services/spheres';
 import { showNoNextActionMenu, showSphereMenu, showStatusMenu } from '../../../ui/components/menus';
@@ -13,7 +13,9 @@ import { VIEW_TYPES } from '../../../services/baseFile';
 import { allActionItems, allMatters } from '../../../vault/index';
 import { moveAction } from '../../../vault/actionWrites';
 import { markReviewed, setMatterSphere, setMatterState, writeLaneOrders } from '../../../vault/matterWrites';
-import { CollectionView, OPTION_KEYS, SPHERES_OFF_KEY } from '../collectionView';
+import { CollectionView, OPTION_KEYS, SPHERES_COLLAPSED_KEY, SPHERES_OFF_KEY } from '../collectionView';
+import { revealPlan } from '../../../services/reveal';
+import type { ActionItem } from '../../../services/actionItems';
 import { attachDrag } from './boardDrag';
 import { renderToolbar, type SphereChip } from '../toolbar';
 import { renderBoard, renderEmpty, type BoardHandlers } from './boardRender';
@@ -26,6 +28,8 @@ import { MatterPicker } from '../../../ui/modals/matterPicker';
 const LANES_KEY = 'mtmLanes';
 /** The Matter the phone swipe board shows, kept the same way. */
 const PHONE_MATTER_KEY = 'mtmPhoneMatter';
+/** How long a revealed lane's header stays lit (the CSS animation's length). */
+const SPOTLIGHT_MS = 1600;
 
 type LaneToggles = Record<string, 'collapsed' | 'expanded'>;
 
@@ -39,6 +43,9 @@ export class BoardView extends CollectionView {
 	/** Where the swipe board was scrolled, for the Matter it showed. */
 	private swipeScroll: { path: string; left: number } | null = null;
 	private visibleWaiter: ResizeObserver | null = null;
+	/** A Matter whose lane header lights up after the next render (Show on board). */
+	private spotlightPath: string | null = null;
+	private spotlightTimer: number | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
 		super(controller, containerEl, plugin);
@@ -48,12 +55,18 @@ export class BoardView extends CollectionView {
 	onunload(): void {
 		this.plugin.boards.delete(this);
 		this.visibleWaiter?.disconnect();
+		this.clearSpotlight();
 		super.onunload();
 	}
 
 	/** The Sphere this board is focused on when it sits inside `el` (the active tab); undefined when it doesn't. */
 	focusWithin(el: HTMLElement): string | null | undefined {
-		return el.contains(this.containerEl) ? this.sphereFocus() : undefined;
+		return this.isWithin(el) ? this.sphereFocus() : undefined;
+	}
+
+	/** Whether this board sits inside `el` (a tab's view). */
+	isWithin(el: HTMLElement): boolean {
+		return el.contains(this.containerEl);
 	}
 
 	// ——— Options ———
@@ -107,6 +120,10 @@ export class BoardView extends CollectionView {
 		this.model = buildBoard(actions, this.matters, settings.statuses, options, today, now, allActionItems(this.plugin.app, settings));
 		this.chips = this.sphereChips(this.matters, actions, options.spheresOff);
 		this.render(this.model, options, now);
+
+		const reveal = this.takeReveal();
+		if (reveal) this.reveal(reveal, actions, options, today, now);
+		else this.spotlight();
 	}
 
 	private render(model: BoardModel, options: BoardOptions, now: Date): void {
@@ -130,6 +147,108 @@ export class BoardView extends CollectionView {
 			moveLane: (path, beforePath, sphereKey) => void this.moveLaneBefore(path, beforePath, sphereKey, options),
 		});
 		this.restoreScroll(scrollEl, scroll);
+	}
+
+	// ——— Show on board ———
+
+	/** Renders now, so a reveal waiting for this board is taken (the board was already open). */
+	revealNow(): void {
+		this.refresh(true);
+	}
+
+	/** The .base file this board shows in its own tab; null when embedded in a note. */
+	private boardFilePath(): string | null {
+		for (const leaf of this.plugin.app.workspace.getLeavesOfType('bases')) {
+			if (leaf.view instanceof FileView && leaf.view.containerEl.contains(this.containerEl)) return leaf.view.file?.path ?? null;
+		}
+		return null;
+	}
+
+	/** The Matter of a reveal waiting for this board's file, taken so no other view repeats it. */
+	private takeReveal(): string | null {
+		if (!this.plugin.hasPendingReveal()) return null;
+		const path = this.boardFilePath();
+		return path ? this.plugin.takeReveal(path) : null;
+	}
+
+	/**
+	 * Brings a Matter's lane into view: its Sphere chip on, its band and lane expanded (stored as if clicked), then
+	 * the lane header scrolled to the top left and lit once. A notice when the board can't show it as set up.
+	 * Phones choose the Matter's pill instead.
+	 */
+	private reveal(path: string, actions: readonly ActionItem[], options: BoardOptions, today: Ymd, now: Date): void {
+		const { settings } = this.plugin;
+		if (!this.model || this.noActionsYet(this.model.empty)) return;
+		// Built with every Sphere chip on, so a lane hidden only by its chip still shows whether it has cards.
+		const unfocused = buildBoard(actions, this.matters, settings.statuses, { ...options, spheresOff: new Set() }, today, now);
+		const plan = revealPlan(unfocused, options, path, this.matters);
+		if (plan.blocked === 'hidden-empty') {
+			const name = this.matters.find((m) => m.path === path)?.name ?? path;
+			new Notice(STRINGS.reveal.hiddenEmpty(name));
+			return;
+		}
+		if (plan.blocked === 'inbox-hidden') {
+			new Notice(STRINGS.reveal.inboxHidden);
+			return;
+		}
+		if (plan.blocked) return;
+
+		const phone = this.isPhone();
+		for (const step of plan.steps) {
+			if (step.kind === 'sphere-on') this.setInList(SPHERES_OFF_KEY, step.key, false);
+			// The swipe board shows one Matter whole: bands and collapsed lanes don't apply there.
+			else if (phone) continue;
+			else if (step.kind === 'expand-band') this.setInList(SPHERES_COLLAPSED_KEY, step.key, false);
+			else this.setLaneCollapsed(step.path, false);
+		}
+		if (phone) {
+			this.chooseMatter(path);
+			return;
+		}
+		this.spotlightPath = path;
+		if (plan.steps.length) this.refresh(true);
+		else this.spotlight();
+	}
+
+	/**
+	 * Scrolls the waiting lane's header to the board's top left, under the column headers, and lights it once. In a
+	 * hidden tab it waits until the board is shown; the Matter stays waiting until then, so a render in between
+	 * (which replaces the board's elements) arms it again, and the elements are looked up only when it runs.
+	 */
+	private spotlight(): void {
+		const path = this.spotlightPath;
+		if (!path) return;
+		this.clearSpotlight();
+		this.whenVisible(this.containerEl, () => {
+			this.spotlightPath = null;
+			const scroll = this.containerEl.querySelector<HTMLElement>('.mtm-board-scroll');
+			const header = scroll?.querySelector<HTMLElement>(`.mtm-lane-header[data-lane="${CSS.escape(path)}"]`);
+			if (!scroll || !header) return;
+			// The header sticks to the left edge, so scrolling it into view alone leaves the board where it was sideways.
+			scroll.scrollLeft = 0;
+			header.scrollIntoView({ block: 'start', inline: 'nearest' });
+			header.addClass('is-spotlit');
+			this.spotlightTimer = window.setTimeout(() => {
+				this.spotlightTimer = null;
+				header.removeClass('is-spotlit');
+			}, SPOTLIGHT_MS);
+		});
+	}
+
+	private clearSpotlight(): void {
+		if (this.spotlightTimer !== null) window.clearTimeout(this.spotlightTimer);
+		this.spotlightTimer = null;
+		this.containerEl.querySelectorAll('.mtm-lane-header.is-spotlit').forEach((el) => el.removeClass('is-spotlit'));
+	}
+
+	/** Stores a lane as collapsed or expanded, only where that differs from the default for its Matter's state. */
+	private setLaneCollapsed(path: string, collapse: boolean): void {
+		const matter = this.matters.find((m) => m.path === path);
+		if (!matter) return;
+		const toggles = { ...this.laneToggles() };
+		if (collapse === startsCollapsed(matter.state)) delete toggles[path];
+		else toggles[path] = collapse ? 'collapsed' : 'expanded';
+		this.setConfigSoon(LANES_KEY, Object.keys(toggles).length ? toggles : null);
 	}
 
 	// ——— Phone swipe board ———
@@ -417,16 +536,9 @@ export class BoardView extends CollectionView {
 		bandMenu: (band, e, button) => this.openBandMenu(band, e, button),
 		dismissSphere: (path) => void this.write(path, (f) => setMatterSphere(this.plugin.app, f, null)),
 		toggleLane: (path) => {
-			const matter = this.matters.find((m) => m.path === path);
 			const lane = this.model?.lanes.find((l) => l.matter.path === path);
-			if (!matter || !lane) return;
-			const toggles = { ...this.laneToggles() };
-			const collapse = !lane.collapsed;
-			// Store only what differs from the default for the Matter's state.
-			const byDefault = matter.state !== 'active';
-			if (collapse === byDefault) delete toggles[path];
-			else toggles[path] = collapse ? 'collapsed' : 'expanded';
-			this.setConfigSoon(LANES_KEY, Object.keys(toggles).length ? toggles : null);
+			if (!lane || !this.matters.some((m) => m.path === path)) return;
+			this.setLaneCollapsed(path, !lane.collapsed);
 			this.refresh(true);
 		},
 		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath, sphereId: this.sphereFocus() }),

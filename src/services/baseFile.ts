@@ -30,3 +30,15 @@ export function boardBaseContent(names: Record<CollectionView | 'nextActions', s
 		'    mtmGroupBy: type\n    mtmShowBacklog: false\n    mtmInboxPosition: hidden\n    mtmShowDone: hide\n';
 	return `filters:\n  and:\n    - ${quote(ACTIONS_FILTER)}\nviews:\n${views}${nextActions}`;
 }
+
+/** The name of the first view of a type in a parsed .base file, or null when it has none. */
+export function firstViewName(parsed: unknown, type: string): string | null {
+	const views = typeof parsed === 'object' && parsed !== null ? (parsed as { views?: unknown }).views : undefined;
+	if (!Array.isArray(views)) return null;
+	for (const view of views) {
+		if (typeof view !== 'object' || view === null) continue;
+		const { type: t, name } = view as { type?: unknown; name?: unknown };
+		if (t === type && typeof name === 'string' && name) return name;
+	}
+	return null;
+}

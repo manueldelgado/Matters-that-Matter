@@ -223,7 +223,7 @@ export class MatterOverviewView extends ItemView {
 			if (!file) return;
 			new IconPickerModal(this.app, this.getIcon(), (icon) => void this.write((f) => setMatterIcon(this.app, f, icon))).open();
 		},
-		showOnBoard: () => void this.plugin.openBoard(),
+		showOnBoard: () => void this.plugin.openBoard(this.path ? { reveal: this.path } : {}),
 		newAction: () => {
 			if (this.path) this.plugin.quickAdd({ matterPath: this.path });
 		},

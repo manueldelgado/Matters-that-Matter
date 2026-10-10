@@ -281,11 +281,17 @@ export abstract class CollectionView extends BasesView {
 	}
 
 	private toggleIn(configKey: string, key: string): void {
-		const set = new Set(this.stringList(configKey));
-		if (set.has(key)) set.delete(key);
-		else set.add(key);
-		this.setConfigSoon(configKey, set.size ? [...set] : null);
+		this.setInList(configKey, key, !this.stringList(configKey).includes(key));
 		this.refresh(true);
+	}
+
+	/** Adds a key to a list kept in the view config, or removes it, as a click would; the caller re-renders. */
+	protected setInList(configKey: string, key: string, present: boolean): void {
+		const set = new Set(this.stringList(configKey));
+		if (present === set.has(key)) return;
+		if (present) set.add(key);
+		else set.delete(key);
+		this.setConfigSoon(configKey, set.size ? [...set] : null);
 	}
 
 	protected toggleType(typeId: string): void {

@@ -151,6 +151,13 @@ export const STRINGS = {
 		newMatter: 'New Matter',
 	},
 
+	/** Show on board: when the board can't show the Matter without changing a choice. */
+	reveal: {
+		hiddenEmpty: (name: string) => `${name} isn’t on this board: it has no Actions here, and the board hides empty lanes.`,
+		inboxHidden: 'The Inbox is hidden on this board. Show it again in the board’s options.',
+		switchView: 'Switch this file to its board view to see the Matter.',
+	},
+
 	/** Process Inbox: one question per captured item, seven answers. */
 	process: {
 		title: 'Process Inbox',
