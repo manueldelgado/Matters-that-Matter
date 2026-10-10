@@ -950,6 +950,8 @@ export const STRINGS = {
 		dateRange: (value: string) => `“${value}” is a range. Give the start and the due date separately.`,
 		badLink: (value: string) => `“${value}” isn’t a note in this vault or a web address (http or https).`,
 		noTitle: 'An Action needs a title.',
+		titleTaken: (title: string, path: string) =>
+			`Another note is called “${title}” (${path}). Links in this vault aren’t updated on renames, so links to that note could lead to this Action instead. Choose another title.`,
 		noName: 'A Matter needs a name.',
 		badState: (value: string) => `“${value}” isn’t a Matter state. Use active, dormant or closed.`,
 		badRhythm: (value: string) => `“${value}” isn’t a review rhythm. Use a number of days, weeks or months, such as 2w.`,

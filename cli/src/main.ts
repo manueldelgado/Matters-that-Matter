@@ -17,8 +17,7 @@ import { errorJson, stringify, writeJson, type ErrorJson } from './json';
 import { obsidianSettingsDir, openUrl, systemOpener, vaultRef, type Opener, type OpenTarget } from './open';
 import {
 	colourFor,
-	formatAdded,
-	formatChanged,
+	formatActionWrite,
 	formatError,
 	formatList,
 	formatMatterAdded,
@@ -28,12 +27,13 @@ import {
 	formatToday,
 	formatWorkflow,
 	markup,
+	shownPath,
 	style,
+	typeTones,
 	type Style,
 } from './output';
 import { STRINGS } from '../../src/strings';
 import { CLI, COMMAND_HELP, HELP } from './strings';
-import { chooseTools, serveMcp } from './mcp';
 import { openVault, type Vault } from './vault';
 import { planAndWrite, takeSnapshot, type WriteFlow } from './writeFlow';
 
@@ -132,7 +132,9 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 	}
 
 	if (command === 'mcp') {
-		// Standard output is the protocol's: anything to say before serving goes to standard error.
+		// Loaded only here, so other commands never load the MCP library. Standard output is the protocol's: anything
+		// to say before serving goes to standard error.
+		const { chooseTools, serveMcp } = await import('./mcp');
 		const chosen = chooseTools(boolFlag(flags, 'read-only'), textFlag(flags, 'tools'));
 		if (!chosen.ok) {
 			print(io.stderr, err.r(chosen.message));
@@ -167,7 +169,7 @@ async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise
 	const ref = ctx.words.join(' ').trim();
 	switch (command) {
 		case 'today':
-			return read(ctx, today, (v, s) => formatToday(v, shownPath(ctx), typeTones(s), ctx.out));
+			return read(ctx, today, (v, s) => formatToday(v, shownPath(ctx.vault.root, ctx.io.home), typeTones(s), ctx.out));
 		case 'workflow':
 			return read(ctx, getWorkflow, (v) => formatWorkflow(v, ctx.out));
 		case 'matters':
@@ -246,15 +248,6 @@ function listInput(flags: Record<string, FlagValue>): ListActionsInput {
 
 function snapshot(ctx: Context): { snap: Snapshot; reader: VaultReader } {
 	return takeSnapshot(ctx.vault, ctx.now, ctx.io.reader);
-}
-
-const typeTones = (s: Snapshot) => new Map(s.settings.types.map((t) => [t.id, t.tone]));
-
-/** The vault as the today header shows it: `~/Notes`. */
-function shownPath(ctx: Context): string {
-	const { root } = ctx.vault;
-	const home = ctx.io.home.replace(/[\\/]+$/, '');
-	return home && (root === home || root.startsWith(`${home}/`)) ? `~${root.slice(home.length)}` : root;
 }
 
 /** Warnings about the vault as a whole go to stderr, so stdout stays the answer. */
@@ -342,14 +335,7 @@ function writeAction(ctx: Context, op: (s: Snapshot) => OpResult<ActionWrite>, v
 		print(ctx.io.stdout, stringify(writeJson({ action: r.value.action }, r, outcome, ctx.dryRun, written)));
 		return EXIT.done;
 	}
-	const today = toYmd(snap.now);
-	if (verb === null) {
-		print(ctx.io.stdout, formatAdded(r.value.action, r.warnings, today, ctx.dryRun, ctx.out));
-		return EXIT.done;
-	}
-	const beforePath = r.plan.edits[0]?.path ?? r.plan.bodies[0]?.path ?? r.plan.renames[0]?.from ?? r.value.action.path;
-	const before = { path: beforePath, title: (beforePath.split('/').pop() ?? beforePath).replace(/\.md$/i, '') };
-	print(ctx.io.stdout, formatChanged(verb, before, r.value.action, r.changes, r.warnings, outcome, ctx.dryRun, ctx.out));
+	print(ctx.io.stdout, formatActionWrite(verb, r, outcome, toYmd(snap.now), ctx.dryRun, ctx.out));
 	return EXIT.done;
 }
 

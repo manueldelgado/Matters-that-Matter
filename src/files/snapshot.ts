@@ -24,5 +24,6 @@ export function filesSnapshot(index: VaultIndex, settings: MattersSettings, now:
 		resolve: (link, fromPath) => index.resolve(link, fromPath),
 		linkText: (path, fromPath) => index.linkText(path, fromPath),
 		exists: (path) => index.existsIgnoringCase(path),
+		updatesLinks: index.config.alwaysUpdateLinks,
 	};
 }

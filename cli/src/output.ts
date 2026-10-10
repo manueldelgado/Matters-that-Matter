@@ -11,6 +11,8 @@ import type {
 	MatterSummary,
 	OpError,
 	ParsedQuickAdd,
+	Plan,
+	Snapshot,
 	TodayValue,
 	Warning,
 	WorkflowValue,
@@ -18,6 +20,36 @@ import type {
 import { STRINGS } from '../../src/strings';
 import type { FileOutcome } from './filesLayer';
 import { CLI } from './strings';
+
+// ——— Shared by the command line and the MCP server ———
+
+/** Each Action type's tone, for the dots beside type names. */
+export const typeTones = (s: Snapshot): ReadonlyMap<string, string> => new Map(s.settings.types.map((t) => [t.id, t.tone]));
+
+/** The vault as the today header shows it: `~/Notes` under the home folder. */
+export function shownPath(root: string, home: string): string {
+	const h = home.replace(/[\\/]+$/, '');
+	return h && (root === h || root.startsWith(`${h}/`)) ? `~${root.slice(h.length)}` : root;
+}
+
+/**
+ * A write to one Action as the command line says it: added (`verb` null), or changed, marked as done or reopened,
+ * naming the Action as it was before a rename.
+ */
+export function formatActionWrite(
+	verb: string | null,
+	r: { value: { action: ActionSummary }; plan: Plan; changes: readonly Change[]; warnings: readonly Warning[] },
+	outcome: FileOutcome | null,
+	today: Ymd,
+	dryRun: boolean,
+	st: Style,
+): string[] {
+	const after = r.value.action;
+	if (verb === null) return formatAdded(after, r.warnings, today, dryRun, st);
+	const path = r.plan.edits[0]?.path ?? r.plan.bodies[0]?.path ?? r.plan.renames[0]?.from ?? after.path;
+	const before = { path, title: (path.split('/').pop() ?? path).replace(/\.md$/i, '') };
+	return formatChanged(verb, before, after, r.changes, r.warnings, outcome, dryRun, st);
+}
 
 // ——— Colour ———
 

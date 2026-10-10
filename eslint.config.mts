@@ -60,6 +60,14 @@ export default defineConfig(
 		},
 	},
 	{
+		// The MCP library marks its low-level server as deprecated in favour of a higher-level one that wants schemas in
+		// its own schema library; the tools here are plain JSON Schemas, which the low-level server takes as they are.
+		files: ['cli/src/mcp.ts'],
+		rules: {
+			'@typescript-eslint/no-deprecated': 'off',
+		},
+	},
+	{
 		// They import their own bundle of the plugin's source from a data URL; the rule guards against injected markup.
 		files: ['scripts/fixture-vault.mjs', 'scripts/perf-files.mjs'],
 		rules: {

@@ -33,6 +33,8 @@ export interface Snapshot {
 	linkText(path: string, fromPath: string): string;
 	/** Whether a file or folder uses this path, ignoring case (as macOS and Windows do). */
 	exists(path: string): boolean;
+	/** Whether renames update links in other notes (Obsidian's "Automatically update internal links"); absent is no. */
+	readonly updatesLinks?: boolean;
 }
 
 // ——— What the operations plan ———
