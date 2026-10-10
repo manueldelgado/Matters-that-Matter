@@ -22,6 +22,7 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 - **What matters today?** in every new tab: what's due or late, what's waiting in the Inbox, which Matters are due a review, and long waits.
 - **Matter overviews**: the outcome you're aiming for, a review rhythm, progress, and the Matter's Actions by status.
 - **Process Inbox** steps through captured Actions one at a time and asks what each one needs.
+- **Review Matters** takes you through the Matters due a review, one at a time: what was done since, what needs a look, and four questions (the outcome, the next step, whether it's still on your mind, when to look again).
 - **Notes stay notes.** Action notes, Matter notes and the people your Actions name get a small banner that mirrors the card. Everything else in the note is yours.
 
 | | |
@@ -95,6 +96,7 @@ The plugin never rewrites a value on its own. If an Action names a status, type 
 | Open Matter overview | Opens the overview of the current Matter note |
 | Mark as reviewed | Records today as the current Matter's last review |
 | Process Inbox | Steps through the Inbox one Action at a time |
+| Review Matters | Steps through the Matters whose review is due, one at a time |
 | Run setup | Opens setup again |
 | Fix orphaned Actions | Gives every Action with an unknown status, type or Matter the fallback value, after asking |
 | Remove sample content | Moves the sample notes to the trash |
