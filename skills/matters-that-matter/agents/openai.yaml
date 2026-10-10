@@ -1,0 +1,15 @@
+# Codex reads this file; other assistants ignore it.
+# The MCP server needs the path to the user's vault, so it is added once by hand:
+#   codex mcp add matters -- npx -y matters-that-matter mcp --vault <path to the vault>
+# No command is given below on purpose: Codex starts a stdio dependency with its command and no arguments,
+# which can't name the vault, so it should not set the server up by itself.
+interface:
+  display_name: "Matters that Matter"
+  short_description: "Actions and Matters in your Obsidian vault"
+  default_prompt: "Use $matters-that-matter to show what matters today."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "matters"
+      description: "The Matters that Matter MCP server, for reading and changing Actions and Matters. Add it with: codex mcp add matters -- npx -y matters-that-matter mcp --vault <path to the vault>"
+      transport: "stdio"
