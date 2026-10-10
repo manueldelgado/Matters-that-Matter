@@ -1,8 +1,9 @@
 // Small DOM helpers shared by views and modals.
 
-import { setIcon } from 'obsidian';
+import { setIcon, setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../settings';
 import { classId } from '../../services/ids';
+import { STRINGS } from '../../strings';
 
 /** A span holding a Lucide icon. */
 export function iconEl(parent: HTMLElement, name: string, cls?: string): HTMLElement {
@@ -61,4 +62,29 @@ export function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEve
 		}
 	});
 	return el;
+}
+
+/** A note at the end of an editor row: how many notes use it, or that setup added it. */
+export interface RowNote {
+	text: string;
+	added?: boolean;
+}
+
+export function rowNote(row: HTMLElement, note: RowNote | null): void {
+	if (note) row.createSpan({ cls: ['mtm-row-note', ...(note.added ? ['mod-added'] : [])], text: note.text });
+}
+
+/** A label made up from an ID shows in italics, with the ID in a tooltip, until the user edits it. */
+export function markGenerated(row: HTMLElement, input: HTMLInputElement, id: string, generated: Set<string> | undefined): void {
+	if (!generated?.has(id)) return;
+	row.addClass('is-generated');
+	setTooltip(input, STRINGS.setup.reconnect.fromId(id));
+	input.addEventListener(
+		'input',
+		() => {
+			generated.delete(id);
+			row.removeClass('is-generated');
+		},
+		{ once: true },
+	);
 }

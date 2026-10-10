@@ -5,7 +5,7 @@ import type { StatusCategory, StatusDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { addStatus, canDeleteStatus, moveItem, setBacklog, setCategory, setDone } from '../../model/workflow';
-import { appendIcon, statusClasses, swapClasses } from './dom';
+import { appendIcon, markGenerated, rowNote, statusClasses, swapClasses, type RowNote } from './dom';
 import { reorderable } from './reorder';
 import { openTonePopover } from './tonePopover';
 
@@ -15,6 +15,10 @@ export interface StatusEditorOptions {
 	onChange(statuses: StatusDef[]): void;
 	/** Called when the user deletes a status that may be deleted. */
 	onDelete(status: StatusDef): void;
+	/** Setup reconnecting: how many notes use each status. */
+	note?(status: StatusDef): RowNote | null;
+	/** IDs whose label was made up from the ID: italic until edited. */
+	generated?: Set<string>;
 }
 
 const CATEGORIES: StatusCategory[] = ['open', 'active', 'closed'];
@@ -70,6 +74,7 @@ export class StatusEditor {
 		);
 
 		const input = row.createEl('input', { type: 'text', value: status.label, attr: { 'aria-label': STRINGS.editors.label } });
+		markGenerated(row, input, status.id, this.opts.generated);
 		input.addEventListener('input', () => {
 			const label = input.value;
 			let id = current.id;
@@ -127,6 +132,8 @@ export class StatusEditor {
 			if (next) this.commit(next);
 			else new Notice(STRINGS.notices.doneNeedsClosed);
 		});
+
+		rowNote(row, this.opts.note?.(status) ?? null);
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteStatus } });
 		appendIcon(del, 'trash-2');

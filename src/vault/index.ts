@@ -38,7 +38,8 @@ export function linkedNotes(app: App, file: TFile, exclude: ReadonlySet<string>)
 	return [...out.values()];
 }
 
-function peoplePaths(app: App, fm: Record<string, unknown>, sourcePath: string): Set<string> {
+/** Resolved notes an Action names in mtm-people and mtm-waiting-on. */
+export function peoplePaths(app: App, fm: Record<string, unknown>, sourcePath: string): Set<string> {
 	const raw = fm['mtm-people'];
 	const values: unknown[] = [...(Array.isArray(raw) ? (raw as unknown[]) : [raw]), fm['mtm-waiting-on']];
 	const out = new Set<string>();

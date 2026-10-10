@@ -1,4 +1,4 @@
-// Action type editor, used by the settings tab.
+// Action type editor, used by the settings tab and by setup when it reconnects.
 
 import { Notice, type App } from 'obsidian';
 import type { TypeDef } from '../../settings';
@@ -6,7 +6,7 @@ import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { addType, canDeleteType, moveItem, setDefaultType } from '../../model/workflow';
 import { IconPickerModal } from '../modals/iconPickerModal';
-import { appendIcon, swapClasses, tileEl, typeClasses } from './dom';
+import { appendIcon, markGenerated, rowNote, swapClasses, tileEl, typeClasses, type RowNote } from './dom';
 import { reorderable } from './reorder';
 import { swatches } from './tonePopover';
 
@@ -14,6 +14,10 @@ export interface TypeEditorOptions {
 	types: TypeDef[];
 	onChange(types: TypeDef[]): void;
 	onDelete(type: TypeDef): void;
+	/** Setup reconnecting: how many notes use each type. */
+	note?(type: TypeDef): RowNote | null;
+	/** IDs whose label was made up from the ID: italic until edited. */
+	generated?: Set<string>;
 }
 
 export class TypeEditor {
@@ -70,6 +74,7 @@ export class TypeEditor {
 		});
 
 		const input = row.createEl('input', { type: 'text', value: type.label, attr: { 'aria-label': STRINGS.editors.name } });
+		markGenerated(row, input, type.id, this.opts.generated);
 		input.addEventListener('input', () => {
 			const label = input.value;
 			let id = current.id;
@@ -101,6 +106,8 @@ export class TypeEditor {
 			const next = setDefaultType(this.types, current.id);
 			if (next) this.commit(next);
 		});
+
+		rowNote(row, this.opts.note?.(type) ?? null);
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteType } });
 		appendIcon(del, 'trash-2');
