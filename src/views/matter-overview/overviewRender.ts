@@ -5,12 +5,12 @@ import type { MattersSettings } from '../../settings';
 import { backlogStatus } from '../../model/workflow';
 import { STRINGS } from '../../strings';
 import { dayLabel, toYmd, type Ymd } from '../../model/dates';
-import { parseCadence, type Cadence, type MatterState } from '../../model/matters';
+import type { Cadence, MatterState } from '../../model/matters';
 import type { ActionItem } from '../../services/actionItems';
 import type { MatterInfo } from '../../services/boardModel';
 import { reviewState, type OverviewModel } from '../../services/overviewModel';
 import { avatarEl, bindCardActions, renderCard } from '../../ui/components/card';
-import { cadenceFields } from '../../ui/components/cadenceFields';
+import { renderCadenceControl, renderOutcomeField, renderStateSeg, STATE_ICONS } from '../../ui/components/matterControls';
 import { appendIcon, pressable, statusClasses, tileEl } from '../../ui/components/dom';
 
 export interface OverviewData {
@@ -46,6 +46,8 @@ export interface OverviewHandlers {
 	renderAbout: (el: HTMLElement, markdown: string) => void;
 	setState: (state: MatterState) => void;
 	markReviewed: () => void;
+	/** The review session for this Matter alone. */
+	reviewNow: () => void;
 	setCadence: (cadence: Cadence | null) => void;
 	/** The edited outcome; blank removes it. */
 	setOutcome: (text: string) => void;
@@ -57,7 +59,6 @@ export interface OverviewHandlers {
 	openFile: (file: TFile, e: MouseEvent | KeyboardEvent) => void;
 }
 
-const STATE_ICONS: Record<MatterState, string> = { active: 'circle-play', dormant: 'moon', closed: 'archive' };
 
 /** "14 September", with the year when it is not this year. */
 function longDate(ymd: Ymd, today: Ymd): string {
@@ -121,7 +122,7 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 	row.createEl('button', { cls: processing ? undefined : 'mod-cta', text: o.newAction }).addEventListener('click', () => h.newAction());
 	if (processing) row.createEl('button', { cls: 'mod-cta', text: STRINGS.process.title }).addEventListener('click', () => h.processInbox());
 
-	if (!matter.isInbox) renderOutcome(header, matter.outcome, h);
+	if (!matter.isInbox) renderOutcomeField(header, matter.outcome, (text) => h.setOutcome(text));
 
 	if (d.body !== null) {
 		const about = header.createDiv();
@@ -136,69 +137,12 @@ function renderHeader(header: HTMLElement, d: OverviewData, h: OverviewHandlers)
 	if (!matter.isInbox) renderControls(header, d, h);
 }
 
-/** The outcome under the title, edited in place (Enter or blur saves, Esc cancels); a dashed invitation when unset. */
-function renderOutcome(header: HTMLElement, outcome: string | null, h: OverviewHandlers): void {
-	const o = STRINGS.overview;
-	const box = header.createDiv({ cls: ['mtm-outcome', ...(outcome ? [] : ['mod-empty'])] });
-	appendIcon(box, 'flag');
-	box.createSpan({ cls: 'mtm-outcome-label', text: o.outcome });
-	const text = box.createSpan({
-		cls: 'mtm-outcome-text',
-		text: outcome ?? o.outcomeEmpty,
-		attr: { contenteditable: 'plaintext-only', spellcheck: 'true', role: 'textbox' },
-	});
-	let cancelled = false;
-	text.addEventListener('focus', () => {
-		if (outcome) return;
-		// The invitation gives way to an empty line.
-		text.setText('');
-		box.removeClass('mod-empty');
-	});
-	text.addEventListener('keydown', (e) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			text.blur();
-		} else if (e.key === 'Escape') {
-			e.preventDefault();
-			cancelled = true;
-			text.blur();
-		}
-	});
-	text.addEventListener('blur', () => {
-		const value = text.innerText.replace(/\s+/g, ' ').trim();
-		if (cancelled || value === (outcome ?? '')) {
-			cancelled = false;
-			text.setText(outcome ?? o.outcomeEmpty);
-			box.toggleClass('mod-empty', !outcome);
-			return;
-		}
-		h.setOutcome(value);
-	});
-	if (outcome) {
-		const edit = box.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': o.editOutcome } });
-		appendIcon(edit, 'pencil');
-		pressable(edit, () => text.focus());
-	}
-}
-
 function renderControls(header: HTMLElement, d: OverviewData, h: OverviewHandlers): void {
 	const o = STRINGS.overview;
 	const { matter } = d;
 	const controls = header.createDiv({ cls: 'mtm-overview-controls' });
 
-	const seg = controls.createDiv({ cls: 'mtm-seg', attr: { role: 'radiogroup' } });
-	for (const state of ['active', 'dormant', 'closed'] as const) {
-		const active = matter.state === state;
-		const b = seg.createEl('button', {
-			cls: ['mtm-seg-item', ...(active ? ['is-active'] : [])],
-			attr: { role: 'radio', 'aria-checked': String(active) },
-		});
-		appendIcon(b, STATE_ICONS[state]);
-		b.appendText(o.states[state]);
-		b.addEventListener('click', () => {
-			if (!active) h.setState(state);
-		});
-	}
+	renderStateSeg(controls, matter.state, (state) => h.setState(state));
 
 	const review = matter.review;
 	if (review?.cadence) {
@@ -211,38 +155,15 @@ function renderControls(header: HTMLElement, d: OverviewData, h: OverviewHandler
 		button.appendText(o.markReviewed);
 		button.addEventListener('click', () => h.markReviewed());
 	}
-
-	renderCadence(controls, d, h);
-}
-
-/** The cadence dropdown (K1): Never, the presets, Custom with "Every <n> <unit>". */
-function renderCadence(controls: HTMLElement, d: OverviewData, h: OverviewHandlers): void {
-	const o = STRINGS.overview;
-	const c = STRINGS.cadence;
-	const raw = typeof d.rawCadence === 'string' ? d.rawCadence.trim() : '';
-	const cadence = parseCadence(d.rawCadence);
-	const preset = cadence ? c.presets.find(([key]) => key === `${cadence.n}${cadence.unit}`)?.[0] : undefined;
-	const value = d.customCadence || (cadence && !preset) ? 'custom' : (preset ?? 'never');
-
-	const wrap = controls.createSpan({ cls: 'mtm-overview-cadence' });
-	wrap.appendText(o.review);
-	const select = wrap.createEl('select', { cls: 'dropdown', attr: { 'aria-label': o.review } });
-	select.createEl('option', { value: 'never', text: c.never });
-	for (const [key, label] of c.presets) select.createEl('option', { value: key, text: label });
-	select.createEl('option', { value: 'custom', text: c.custom });
-	select.value = value;
-	select.addEventListener('change', () => {
-		if (select.value === 'custom') h.chooseCustom();
-		else h.setCadence(select.value === 'never' ? null : parseCadence(select.value));
-	});
-
-	if (value === 'custom') {
-		const fields = cadenceFields(controls, cadence ?? { n: 1, unit: 'w' }, (next) => {
-			if (next) h.setCadence(next);
-		});
-		if (d.customCadence && !cadence) fields.focus();
+	// "Review now" beside it, for any Matter still in play.
+	if (matter.state !== 'closed') {
+		const now = controls.createEl('button', { cls: ['mtm-review-button', 'mtm-review-now'] });
+		appendIcon(now, 'rotate-ccw');
+		now.appendText(STRINGS.review.reviewNow);
+		now.addEventListener('click', () => h.reviewNow());
 	}
-	if (raw && !cadence) controls.createSpan({ cls: 'mtm-field-hint', text: o.invalidCadence(raw) });
+
+	renderCadenceControl(controls, d.rawCadence, d.customCadence, h, o.review);
 }
 
 function renderStats(header: HTMLElement, d: OverviewData): void {

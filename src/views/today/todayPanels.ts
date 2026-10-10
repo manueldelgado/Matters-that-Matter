@@ -10,7 +10,7 @@ import { toYmd } from '../../model/dates';
 import { todayModel, type TodayModel } from '../../services/todayModel';
 import { allActionItems, allMatters } from '../../vault/index';
 import { dismissOrphan } from '../../vault/actionWrites';
-import { ReviewPicker, WaitingPicker } from '../../ui/modals/todayPickers';
+import { WaitingPicker } from '../../ui/modals/todayPickers';
 import { runCommand } from '../../vault/internal';
 import { renderToday } from './todayRender';
 
@@ -94,10 +94,7 @@ export class TodayPanels {
 					newNote: () => this.command(leaf, 'file-explorer:new-file'),
 					goToFile: () => this.command(leaf, 'switcher:open'),
 					processInbox: () => this.plugin.processInbox(),
-					pickReview: () => {
-						if (!model.reviews.length) new Notice(STRINGS.today.noReviews);
-						else new ReviewPicker(app, model.reviews, (m) => void this.plugin.openMatter(m.path)).open();
-					},
+					pickReview: () => this.plugin.reviewMatters(),
 					pickWaiting: () => {
 						if (!model.waiting.length) new Notice(STRINGS.today.noWaiting);
 						else new WaitingPicker(app, model.waiting, now, (i) => void this.plugin.selectAction(i.path)).open();

@@ -31,6 +31,17 @@ export class BoardView extends CollectionView {
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
 		super(controller, containerEl, plugin);
+		plugin.boards.add(this);
+	}
+
+	onunload(): void {
+		this.plugin.boards.delete(this);
+		super.onunload();
+	}
+
+	/** The Sphere this board is focused on when it sits inside `el` (the active tab); undefined when it doesn't. */
+	focusWithin(el: HTMLElement): string | null | undefined {
+		return el.contains(this.containerEl) ? this.sphereFocus() : undefined;
 	}
 
 	// ——— Options ———
@@ -189,6 +200,16 @@ export class BoardView extends CollectionView {
 			);
 		}
 		menu.addSeparator();
+		// A session of one; the Inbox has no reviews.
+		if (!m.isInbox) {
+			menu.addItem((i) =>
+				i
+					.setTitle(STRINGS.review.reviewNow)
+					.setIcon('rotate-ccw')
+					.setDisabled(!file || m.state === 'closed')
+					.onClick(() => this.plugin.reviewMatters({ only: m.path })),
+			);
+		}
 		menu.addItem((i) =>
 			i
 				.setTitle(b.markReviewed)

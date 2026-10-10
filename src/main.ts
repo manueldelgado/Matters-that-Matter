@@ -9,6 +9,8 @@ import { MattersSettingTab } from './ui/settingsTab';
 import { BoardPicker } from './ui/modals/boardPicker';
 import { NewMatterModal } from './ui/modals/newMatterModal';
 import { ProcessInboxModal } from './ui/modals/processInbox/processInboxModal';
+import { ReviewModal, type ReviewContext } from './ui/modals/reviewSession/reviewModal';
+import type { BoardView } from './views/bases/board/boardView';
 import { QuickAddModal, type QuickAddInit } from './ui/modals/quickAdd/quickAddModal';
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
@@ -31,6 +33,8 @@ export default class MattersPlugin extends Plugin {
 	/** "settings-changed" fires after every save and after settings arrive from sync (then with `true`). */
 	events = new Events();
 	selection = new Selection();
+	/** Open boards, so commands can tell which one is in the active tab. */
+	readonly boards = new Set<BoardView>();
 	basesAvailable = false;
 	private watchers: Watchers | null = null;
 	private ribbonEl: HTMLElement | null = null;
@@ -180,10 +184,27 @@ export default class MattersPlugin extends Plugin {
 		new QuickAddModal(this, init).open();
 	}
 
-	/** Steps through the Inbox's open Actions; from a board focused on one Sphere, new Matters start in it. */
-	processInbox(sphereId: string | null = null): void {
+	/** Steps through the Inbox's open Actions; from a board focused on one Sphere, new Matters start in it. `then` runs when it closes. */
+	processInbox(sphereId: string | null = null, then?: () => void): void {
 		if (!this.settings.setupDone) return;
-		new ProcessInboxModal(this, { sphereId }).open();
+		new ProcessInboxModal(this, { sphereId, onDone: then }).open();
+	}
+
+	/** The Sphere the board in the active tab is focused on; null when there is none, or no board is active. */
+	activeBoardSphere(): string | null {
+		const el = this.app.workspace.getMostRecentLeaf()?.view.containerEl;
+		if (!el) return null;
+		for (const board of this.boards) {
+			const focus = board.focusWithin(el);
+			if (focus !== undefined) return focus;
+		}
+		return null;
+	}
+
+	/** The review session: the Matters due (of one Sphere, from a board focused on it), or one Matter ("Review now"). */
+	reviewMatters(context: ReviewContext = {}): void {
+		if (!this.settings.setupDone) return;
+		new ReviewModal(this, context).open();
 	}
 
 	/** The New Matter dialog; from a board focused on one Sphere it starts in that Sphere. */

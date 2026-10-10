@@ -684,7 +684,7 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 .mtm-tl-bar.mod-milestone .svg-icon{display:none}
 .mtm-tl-bar.mod-milestone.is-selected{box-shadow:none}
 .mtm-tl-bar.mod-milestone.is-selected::before{box-shadow:0 0 0 1px var(--mtm-strong),0 0 0 4px var(--mtm-ring)}
-/* ——— Setup wizard: reconnect mode (values found in notes). Planned for v1.1 ——— */
+/* ——— Setup wizard: reconnect mode (values found in notes). Planned for 1.0 ——— */
 .mtm-found-list{display:flex;flex-direction:column;gap:6px}
 .mtm-found-row{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 6px 4px 10px;border:1px solid var(--mtm-hairline);border-radius:10px;background:var(--mtm-raised)}
 .mtm-found-id{flex:none;width:110px;font-family:var(--font-monospace);font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1214,3 +1214,60 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .mtm-settings-theme{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--text-muted)}
 .mtm-settings-theme>.svg-icon{flex:none;width:16px;height:16px;color:var(--mtm-sky-icon)}
 .mtm-settings-theme.is-active>.svg-icon{color:var(--mtm-review-ok)}
+/* ——— Review session: a Matter at a time. Reuses Process Inbox's modal (mtm-modal mtm-process: width, progress bar,
+   end screen, phone sheet) and adds what a Matter's step, the start and the end need. ——— */
+/* A Matter's header: its icon, name, Sphere, when it was last reviewed, its rhythm. */
+.mtm-review-head{display:flex;align-items:flex-start;gap:12px;padding:14px 20px 4px}
+.mtm-review-head-main{display:flex;flex:1;flex-direction:column;gap:6px;min-width:0}
+.mtm-review-title{font-family:var(--mtm-font-display);font-size:21px;line-height:1.25;color:var(--text-normal)}
+.mtm-review-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--text-faint)}
+.mtm-review-meta .mtm-review{font-size:12px}
+.mtm-review-meta .mtm-state-pill{height:20px}
+/* Since the last review: one quiet line. */
+.mtm-review-since{display:flex;align-items:center;gap:6px;margin:6px 20px 0;font-size:12.5px;color:var(--text-muted)}
+.mtm-review-since{align-items:flex-start}
+.mtm-review-since>.svg-icon{flex:none;width:14px;height:14px;margin-top:1px;color:var(--text-faint)}
+.mtm-review-since>span{min-width:0;line-height:1.4}
+/* Sections: needs a look, then the questions. */
+.mtm-review-body{display:flex;flex-direction:column;gap:14px;padding:12px 20px 18px}
+.mtm-review-section{display:flex;flex-direction:column;gap:8px}
+.mtm-review-section>.mtm-stack{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.mtm-review-calm{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--mtm-review-ok)}
+.mtm-review-calm>.svg-icon{width:14px;height:14px}
+.mtm-review-question{display:flex;flex-direction:column;gap:7px;padding-top:12px;border-top:1px solid var(--mtm-hairline)}
+.mtm-review-q{font-family:var(--mtm-font-display);font-size:15px;color:var(--text-normal)}
+.mtm-review-question .mtm-outcome{margin:0}
+.mtm-review-question>.mtm-stack{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.mtm-review-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.mtm-review-row .mtm-field-hint{margin:0}
+/* Dormant Matters: the three answers as Process Inbox's decision buttons. */
+.mtm-review-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+/* Start screen: who's due, the Inbox hand-off, Start. */
+.mtm-review-start{display:flex;flex-direction:column;gap:14px;padding:22px 24px 18px}
+.mtm-review-start-title{margin:0;font-family:var(--mtm-font-display);font-size:24px;font-weight:400;line-height:1.2;color:var(--text-normal)}
+.mtm-review-start-text{margin:-6px 0 0;font-size:13px;line-height:1.5;color:var(--text-muted)}
+.mtm-review-queue{display:flex;flex-direction:column;border:1px solid var(--mtm-line);border-radius:12px;overflow:hidden}
+.mtm-review-queue-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--mtm-hairline);font-size:13.5px}
+.mtm-review-queue-row:first-child{border-top:0}
+.mtm-review-queue-row .mtm-tile{width:26px;height:26px;border-radius:8px}
+.mtm-review-queue-row .mtm-tile .svg-icon{width:14px;height:14px}
+.mtm-review-queue-name{flex:1;min-width:0;font-weight:600;color:var(--text-normal)}
+.mtm-review-queue-row .mtm-review{font-size:12px}
+.mtm-review-start .mtm-notice{align-items:center}
+.mtm-review-start .mtm-notice>div{flex:1}
+.mtm-review-all{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:12.5px;font-weight:600;color:var(--text-muted);cursor:pointer}
+.mtm-review-all .svg-icon{width:13px;height:13px}
+/* End screen: next reviews, long waits. */
+.mtm-review-next{display:flex;flex-direction:column;gap:4px;align-self:stretch;margin-top:6px;text-align:left}
+.mtm-review-next-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
+.mtm-review-next-row .mtm-matter-icon .svg-icon{width:14px;height:14px}
+.mtm-review-next-row b{flex:1;font-weight:600;color:var(--text-normal)}
+.mtm-review-waits{display:flex;flex-direction:column;gap:8px;align-self:stretch;margin-top:8px;text-align:left}
+.mtm-review-waits>.mtm-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+/* Ways in: "Review now" beside "Mark as reviewed". */
+.mtm-overview-controls .mtm-review-now{margin-left:2px}
+/* Phones: the sheet from Process Inbox; questions and choices stack. */
+.is-phone .mtm-review .mtm-review-choices{grid-template-columns:1fr}
+.is-phone .mtm-review .mtm-review-section>.mtm-stack,.is-phone .mtm-review .mtm-review-question>.mtm-stack{grid-template-columns:1fr}
+.is-phone .mtm-review .mtm-review-title{font-size:18px}
+.is-phone .mtm-review .mtm-process-hints{display:none}

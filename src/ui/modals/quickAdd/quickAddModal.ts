@@ -56,6 +56,8 @@ export interface QuickAddInit {
 	typeId?: string;
 	/** Text to start with, such as a person token ("@Marco "). */
 	text?: string;
+	/** Runs when the dialog closes, added or not (the review session refreshes its step). */
+	onClose?: () => void;
 }
 
 export class QuickAddModal extends Modal {
@@ -91,6 +93,7 @@ export class QuickAddModal extends Modal {
 	private tokensEl!: HTMLElement;
 	private pickerEl!: HTMLElement;
 	private addButton!: HTMLButtonElement;
+	private whenClosed: (() => void) | null;
 
 	constructor(
 		private plugin: MattersPlugin,
@@ -104,6 +107,7 @@ export class QuickAddModal extends Modal {
 		this.contextType = init.typeId ?? null;
 		this.pickedType = this.contextType;
 		this.initialText = init.text ?? '';
+		this.whenClosed = init.onClose ?? null;
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], 'Escape', () => {
@@ -167,6 +171,7 @@ export class QuickAddModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+		this.whenClosed?.();
 	}
 
 	// ——— Candidates ———

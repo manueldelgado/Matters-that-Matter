@@ -34,6 +34,17 @@ export function registerCommands(plugin: MattersPlugin): void {
 	});
 
 	plugin.addCommand({
+		id: 'review-matters',
+		name: STRINGS.commands.reviewMatters,
+		checkCallback: (checking) => {
+			if (!plugin.settings.setupDone) return false;
+			// From a board focused on one Sphere, only its Matters.
+			if (!checking) plugin.reviewMatters({ sphereId: plugin.activeBoardSphere() });
+			return true;
+		},
+	});
+
+	plugin.addCommand({
 		id: 'new-matter',
 		name: STRINGS.commands.newMatter,
 		// No writes before setup is done.

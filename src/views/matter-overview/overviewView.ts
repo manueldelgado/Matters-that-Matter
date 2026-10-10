@@ -250,6 +250,9 @@ export class MatterOverviewView extends ItemView {
 		},
 		setState: (state: MatterState) => void this.write((f) => setMatterState(this.app, f, state)),
 		markReviewed: () => void this.write((f) => markReviewed(this.app, f)),
+		reviewNow: () => {
+			if (this.path) this.plugin.reviewMatters({ only: this.path });
+		},
 		setCadence: (cadence: Cadence | null) => {
 			this.customCadence = false;
 			void this.write((f) => setReviewCadence(this.app, f, cadence));

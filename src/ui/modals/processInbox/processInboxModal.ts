@@ -59,6 +59,8 @@ const LAST_DELEGATE_KEY = 'mtm-process-delegate-status';
 export interface ProcessInboxContext {
 	/** The Sphere a board is focused on: new Matters start in it. */
 	sphereId: string | null;
+	/** Runs when the modal closes (the review session comes back after "Process the Inbox first"). */
+	onDone?: () => void;
 }
 
 interface Current {
@@ -165,6 +167,7 @@ export class ProcessInboxModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+		this.context.onDone?.();
 	}
 
 	/** Typing somewhere: keys belong to the field. */
