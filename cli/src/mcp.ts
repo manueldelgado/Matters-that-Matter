@@ -3,7 +3,7 @@
 // listener, only Matters data out (an Action's details, checklist and the names of linked notes, never other notes'
 // content), nothing deleted, settings never written.
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError, type CallToolResult, type Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -14,7 +14,7 @@ import { STRINGS } from '../../src/strings';
 import type { ApplyFs } from './apply';
 import type { ContentsAfter } from './filesLayer';
 import { writeJson, type ErrorJson } from './json';
-import { formatAdded, formatChanged, formatError, formatList, formatMatterAdded, formatMatters, formatShow, formatToday, formatWorkflow, style } from './output';
+import { formatActionWrite, formatError, formatList, formatMatterAdded, formatMatters, formatShow, formatToday, formatWorkflow, shownPath, style, typeTones } from './output';
 import { CLI, MCP } from './strings';
 import { PACKAGE_NAME, VERSION } from './version';
 import { openVault, type Vault } from './vault';
@@ -170,7 +170,7 @@ function readArguments(tool: ToolName, args: unknown): { ok: true; input: Record
 	const input: Record<string, unknown> = {};
 	for (const f of fields) {
 		const v = given[f.name];
-		if (v === undefined || (v === null && !f.kind.startsWith('nullable'))) {
+		if (v === undefined) {
 			if (f.required) return invalid(MCP.needs(tool, f.name), f.name);
 			continue;
 		}
@@ -188,6 +188,8 @@ function readArguments(tool: ToolName, args: unknown): { ok: true; input: Record
 								? typeof v === 'boolean'
 								: typeof v === 'number' || typeof v === 'string' || (f.kind === 'nullablePriority' && v === null);
 		if (!ok) {
+			// null only removes what can be removed (on update_action); elsewhere it's refused, never ignored.
+			if (v === null) return invalid(f.required ? MCP.needs(tool, f.name) : MCP.takesNoNull(f.name), f.name);
 			const message =
 				f.kind === 'text'
 					? MCP.takesText(f.name)
@@ -356,7 +358,20 @@ function toolError(lines: readonly string[]): CallToolResult {
 	return { isError: true, content: [{ type: 'text', text: textResult(lines) }] };
 }
 
-const opError = (e: OpError, write: boolean) => toolError(formatError(e, write, plain));
+/** Where the assistant can find the names that would work. */
+function pointer(field: string | undefined, code: string): string | null {
+	if (field === 'action' && code === 'not-found') return MCP.findActions;
+	if (field === 'matter' && code === 'unmatched') return MCP.findMatters;
+	return null;
+}
+
+function opError(e: OpError, write: boolean): CallToolResult {
+	const hint = pointer(e.field, e.code);
+	return toolError([...formatError(e, write, plain), ...(hint ? [hint] : [])]);
+}
+
+/** After the answer: a pointer for a Matter that matched nothing (adding falls back to the Inbox). */
+const warningPointers = (warnings: readonly Warning[]) => (warnings.some((w) => w.code === 'unmatched-matter') ? [MCP.findMatters] : []);
 const writeError = (e: ErrorJson['error']) => toolError([e.message]);
 
 /** Notes about the vault as a whole (setup not done, settings from a newer version), said before the answer. */
@@ -365,13 +380,6 @@ function vaultNotes(vault: Vault, warnings: readonly Warning[], read: boolean): 
 	if (read && !vault.settings.setupDone) notes.unshift(STRINGS.ops.notSetUp);
 	return notes.length ? [...notes, ''] : [];
 }
-
-function shownPath(root: string, home: string): string {
-	const h = home.replace(/[\\/]+$/, '');
-	return h && (root === h || root.startsWith(`${h}/`)) ? `~${root.slice(h.length)}` : root;
-}
-
-const typeTones = (s: Snapshot) => new Map(s.settings.types.map((t) => [t.id, t.tone]));
 
 /** A read: the human output as text, the `--json` value as structured content (lists inside an object). */
 function read<T>(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) => OpResult<T>, human: (value: T, s: Snapshot) => string[], wrap?: string): CallToolResult {
@@ -397,14 +405,7 @@ function writeAction(vault: Vault, now: Date, config: McpConfig, op: (s: Snapsho
 	const w = planAndWrite(writeSource(vault, now, config), op);
 	if (!w.ok) return failed(w);
 	const { r, snap, outcome, written } = w;
-	const day = toYmd(snap.now);
-	let lines: string[];
-	if (verb === null) lines = formatAdded(r.value.action, r.warnings, day, config.dryRun, plain);
-	else {
-		const beforePath = r.plan.edits[0]?.path ?? r.plan.bodies[0]?.path ?? r.plan.renames[0]?.from ?? r.value.action.path;
-		const before = { path: beforePath, title: (beforePath.split('/').pop() ?? beforePath).replace(/\.md$/i, '') };
-		lines = formatChanged(verb, before, r.value.action, r.changes, r.warnings, outcome, config.dryRun, plain);
-	}
+	const lines = [...formatActionWrite(verb, r, outcome, toYmd(snap.now), config.dryRun, plain), ...warningPointers(r.warnings)];
 	return {
 		content: [{ type: 'text', text: textResult([...vaultNotes(vault, r.warnings, false), ...lines]) }],
 		structuredContent: writeJson({ action: r.value.action }, r, outcome, config.dryRun, written) as unknown as Record<string, unknown>,
@@ -458,14 +459,14 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
 // ——— The server ———
 
 /**
- * The server with the tools `config.tools` names; connect it to a transport to serve. The tools are declared with
- * plain JSON Schemas, so the protocol's own handlers are set on the underlying server.
+ * The server with the tools `config.tools` names; connect it to a transport to serve. The SDK's low-level server:
+ * the tools are declared with plain JSON Schemas, so its higher-level one (and its schema conversion) isn't needed.
  */
-export function createMcpServer(config: McpConfig): McpServer {
-	const mcp = new McpServer({ name: PACKAGE_NAME, title: 'Matters that Matter', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP.instructions });
+export function createMcpServer(config: McpConfig): Server {
+	const server = new Server({ name: PACKAGE_NAME, title: 'Matters that Matter', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP.instructions });
 	const offered = TOOL_NAMES.filter((n) => config.tools.includes(n));
-	mcp.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: offered.map(toolDefinition) }));
-	mcp.server.setRequestHandler(CallToolRequestSchema, (request) => {
+	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: offered.map(toolDefinition) }));
+	server.setRequestHandler(CallToolRequestSchema, (request) => {
 		const { name, arguments: args } = request.params;
 		if (!isToolName(name) || !offered.includes(name)) throw new McpError(ErrorCode.InvalidParams, MCP.unknownTool(name));
 		try {
@@ -475,7 +476,7 @@ export function createMcpServer(config: McpConfig): McpServer {
 			return toolError([e instanceof Error ? e.message : String(e)]);
 		}
 	});
-	return mcp;
+	return server;
 }
 
 /**
@@ -485,7 +486,7 @@ export function createMcpServer(config: McpConfig): McpServer {
 export async function serveMcp(config: McpConfig, transport?: Transport): Promise<number> {
 	const server = createMcpServer(config);
 	const closed = new Promise<number>((resolve) => {
-		server.server.onclose = () => resolve(0);
+		server.onclose = () => resolve(0);
 	});
 	if (transport) await server.connect(transport);
 	else {

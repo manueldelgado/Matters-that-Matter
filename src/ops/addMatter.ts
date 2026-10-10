@@ -2,7 +2,7 @@
 // "New Matter" does. A Sphere that matches nothing leaves the Matter without one, with a warning.
 
 import { formatCadence, nextLaneOrder, parseCadence, parseOutcome, type MatterState } from '../model/matters';
-import { sanitiseTitle, uniqueTitle } from '../model/titles';
+import { sanitiseTitle } from '../model/titles';
 import { matchDefined } from '../services/match';
 import { DEFAULT_MATTER_ICON, laneOf, matterInfo, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
@@ -11,7 +11,7 @@ import { publicField } from './fieldNames';
 import { PlanBuilder } from './plan';
 import { matterSummary } from './summaries';
 import type { AddMatterInput, MatterSummary, OpResult, Snapshot, Warning } from './types';
-import { joinPath, vaultView } from './vaultView';
+import { freeName, joinPath, vaultView } from './vaultView';
 
 const T = STRINGS.ops;
 const STATES: readonly MatterState[] = ['active', 'dormant', 'closed'];
@@ -61,7 +61,8 @@ export function addMatter(input: AddMatterInput, s: Snapshot): OpResult<MatterSu
 
 	const base = sanitiseTitle(name.value) || STRINGS.untitledMatter;
 	const folder = settings.folders.matters;
-	const title = uniqueTitle(base, (t) => s.exists(joinPath(folder, `${t}.md`)));
+	// A name any note has is taken, so links to that note never reach the new Matter.
+	const title = freeName(s, folder, base);
 	const path = joinPath(folder, `${title}.md`);
 	const lanes = s.notes.filter((n) => n.frontmatter?.['mtm-kind'] === 'matter').map((n) => laneOf(n, settings.inboxPath));
 	const fm = newMatterFrontmatter({ icon, state, reviewEvery, sphereId, outcome }, nextLaneOrder(lanes));

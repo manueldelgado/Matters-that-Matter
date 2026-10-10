@@ -2,6 +2,7 @@
 // Built once per snapshot.
 
 import { toYmd, type Ymd } from '../model/dates';
+import { uniqueTitle } from '../model/titles';
 import { toActionItem, type ActionItem } from '../services/actionItems';
 import type { MatterInfo } from '../services/boardModel';
 import type { ResolveLink } from '../services/effective';
@@ -42,6 +43,20 @@ export const folderOfPath = (path: string): string => {
 };
 
 export const baseName = (path: string): string => (path.split('/').pop() ?? path).replace(/\.md$/i, '');
+
+/**
+ * The Markdown note anywhere in the vault whose name is `name`, ignoring case (other than `except`), or null. A new
+ * note with such a name would share its links: `[[name]]` could reach either.
+ */
+export function noteNamed(s: Snapshot, name: string, except?: string): string | null {
+	const lower = name.toLowerCase();
+	const skip = except?.toLowerCase();
+	return s.notes.find((n) => n.basename.toLowerCase() === lower && n.path.toLowerCase() !== skip)?.path ?? null;
+}
+
+/** A free name for a new note in `folder`: taken when a file there or a Markdown note anywhere has it. */
+export const freeName = (s: Snapshot, folder: string, base: string): string =>
+	uniqueTitle(base, (t) => s.exists(joinPath(folder, `${t}.md`)) || noteNamed(s, t) !== null);
 
 export function vaultView(s: Snapshot): VaultView {
 	const cached = views.get(s);

@@ -101,7 +101,7 @@ Renamed to “Call Marco about the revised quote”
     Notes/Kitchen plan.md      line 7
 ```
 
-When the setting is off, the links are left as they are, as Obsidian would leave them, and `mtm` says how many now point to the old name, and where. `--dry-run` shows all of this before anything is written.
+When the setting is off, the links are left as they are, as Obsidian would leave them, and `mtm` says how many now point to the old name, and where. With the setting off, a new title that another note in the vault already has is refused, since links to that note could lead to the Action instead. `add` and `add-matter` never take a name another note has: the new note gets " 2". `--dry-run` shows all of this before anything is written.
 
 `done` sets the done status and today's completion date; `reopen` moves a done Action back to the backlog status.
 
@@ -223,7 +223,7 @@ Other assistants that run local MCP servers take the same command and arguments.
 | `mark_as_done` | Marks an Action as done | writes, not destructive, idempotent |
 | `reopen_action` | Reopens a done Action | writes, not destructive, idempotent |
 | `get_action` | Everything about one Action | read only |
-| `list_actions` | Actions, with the filters of `mtm list` | read only |
+| `list_actions` | Actions, with the filters of `mtm list`; every match, not a page of them | read only |
 | `get_today` | What matters today? | read only |
 | `add_matter` | Adds a Matter | writes, not destructive |
 | `list_matters` | Matters in board order | read only |
@@ -249,14 +249,15 @@ npx -y matters-that-matter mcp --vault ~/Notes --read-only --tools get_today,lis
 
 ### What an assistant can and can't do
 
-An assistant can be misled by something it reads, such as a web page or an email, so the server keeps what it can do small, visible and reversible:
+An assistant can be misled by something it reads, such as a web page, an email or a note, so the server keeps what it can do small and visible, and tells the assistant to treat titles, details and checklist items as information, never as instructions:
 
 - It reads and writes only Matters data: Actions, Matters and the workflow. `get_action` gives an Action's details, checklist and the names of the notes it links to, never their content, and no tool reads other notes.
-- Nothing is deleted and settings are never written. Every write can be undone (`reopen_action` after `mark_as_done`; an Action moved or renamed can be moved or renamed back), and every write says what it changed, property by property.
+- Nothing is deleted and settings are never written. Every write says what it changed, property by property, so you can put it back: `reopen_action` after `mark_as_done`, another `update_action` for a change; an added Action or Matter can be deleted in Obsidian, and checklist items and links can be removed there too.
+- A new title renames the note, and a rename also updates links to the Action in other notes, as Obsidian does (when its "Automatically update internal links" is on). A new Action or Matter never takes a name another note in the vault has, so links to that note keep reaching it; a rename onto such a name is refused when the vault doesn't update links.
 - No Matters or people are created as a side effect: `add_action` falls back to the Inbox for a Matter it can't find, and says so.
 
 Anything that can write your vault can change your Actions; `--read-only` and `--tools` let you offer less.
 
 ## Licence
 
-MIT
+MIT. `dist/mtm.mjs` bundles other open-source packages (the MCP SDK, zod, ajv, ajv-formats, fast-uri, chrono-node, yaml and the small packages they use); their names, versions and licences are in `dist/THIRD-PARTY-LICENSES.txt`, which comes with the package.

@@ -290,6 +290,13 @@ describe('addAction: file names', () => {
 		expect(created({ title: 'Plan: phase #1 [draft]' }).create.path).toBe('MTM/Actions/Plan phase 1 draft.md');
 	});
 
+	it('a name any note has elsewhere is taken too, so its links keep reaching it', () => {
+		// The Matter is in another folder: an Action called the same would share [[Kitchen renovation]].
+		expect(created({ title: 'Kitchen renovation' }).create.path).toBe('MTM/Actions/Kitchen renovation 2.md');
+		expect(created({ title: 'some NOTE' }).create.path).toBe('MTM/Actions/some NOTE 2.md');
+		expect(created({ text: 'Marco Rossi' }).create.path).toBe('MTM/Actions/Marco Rossi 2.md');
+	});
+
 	it('a title made only of forbidden characters becomes "Untitled Action"', () => {
 		expect(created({ title: '###' }).create.path).toBe('MTM/Actions/Untitled Action.md');
 	});
