@@ -367,7 +367,7 @@ export function latestReviewNote(content: string): ReviewNote | null {
 }
 
 /** Adds a line after the body's last non-empty line: a blank line first unless that line is a review note; one trailing newline. */
-function appendLine(content: string, line: string): string {
+function appendReviewLine(content: string, line: string): string {
 	const { frontmatter, body } = splitFrontmatter(content);
 	const head = frontmatter && !frontmatter.endsWith('\n') ? `${frontmatter}\n` : frontmatter;
 	const lines = body.split('\n');
@@ -384,7 +384,7 @@ export function appendReviewNote(content: string, ymd: Ymd, text: string): strin
 	const eol = eolOf(content);
 	if (eol !== '\n') return appendReviewNote(content.replace(/\r\n/g, '\n'), ymd, text).replace(/\n/g, eol);
 	const line = reviewNoteLine(ymd, text);
-	return line ? appendLine(content, line) : content;
+	return line ? appendReviewLine(content, line) : content;
 }
 
 /**
@@ -400,7 +400,7 @@ export function replaceReviewNote(content: string, previous: string, ymd: Ymd, t
 	const lines = body.split('\n');
 	let at = -1;
 	for (let i = lines.length - 1; i >= 0 && at < 0; i--) if ((lines[i] ?? '').trimEnd() === previous.trimEnd()) at = i;
-	if (at < 0) return line ? appendLine(content, line) : content;
+	if (at < 0) return line ? appendReviewLine(content, line) : content;
 	if (line) {
 		lines[at] = line;
 		return frontmatter + lines.join('\n');
@@ -411,4 +411,17 @@ export function replaceReviewNote(content: string, previous: string, ymd: Ymd, t
 	while (end > 0 && (lines[end - 1] ?? '').trim() === '') end--;
 	if (end === lines.length || at < end) return frontmatter + lines.join('\n');
 	return end ? `${frontmatter}${lines.slice(0, end).join('\n')}\n` : frontmatter;
+}
+
+/**
+ * Adds a line at the end of the body as a paragraph of its own (a blank line before it unless the body is empty),
+ * keeping the frontmatter and the note's line ending.
+ */
+export function appendLine(content: string, line: string): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return appendLine(content.replace(/\r\n/g, '\n'), line).replace(/\n/g, eol);
+	const { frontmatter, body } = splitFrontmatter(content);
+	const text = line.replace(/\s+/g, ' ').trim();
+	const trimmed = body.replace(/\s+$/, '');
+	return trimmed ? `${frontmatter}${trimmed}\n\n${text}\n` : `${frontmatter}${text}\n`;
 }

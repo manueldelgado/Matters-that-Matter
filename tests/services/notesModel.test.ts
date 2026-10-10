@@ -97,6 +97,13 @@ describe('newActionFrontmatter', () => {
 		expect(Object.keys(fm)).toEqual(['mtm-kind', 'mtm-type', 'mtm-status', 'mtm-matter', ...extra]);
 	});
 
+	it('waiting on someone: the person after the priority, the waiting-since date after the people', () => {
+		const fm = newActionFrontmatter({ ...base, priority: 2, waitingOn: '[[Ana]]', people: ['[[Ana]]'] }, settings.statuses, today);
+		expect(Object.keys(fm)).toEqual(['mtm-kind', 'mtm-type', 'mtm-status', 'mtm-matter', 'mtm-priority', 'mtm-waiting-on', 'mtm-people', 'mtm-waiting-since']);
+		expect(fm['mtm-waiting-on']).toBe('[[Ana]]');
+		expect(fm['mtm-waiting-since']).toBe(today);
+	});
+
 	it('does not share the people array it was given', () => {
 		const people = ['[[Ana]]'];
 		const fm = newActionFrontmatter({ ...base, people }, settings.statuses, today);
@@ -113,6 +120,10 @@ describe('newMatterFrontmatter', () => {
 			['mtm-state', 'active'],
 			['mtm-lane-order', 4],
 		]);
+	});
+
+	it('can start in another state', () => {
+		expect(newMatterFrontmatter({ icon: 'hammer', reviewEvery: null, state: 'dormant' }, 4)['mtm-state']).toBe('dormant');
 	});
 
 	it('adds rhythm, Sphere and outcome in that order', () => {

@@ -389,6 +389,21 @@ function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	);
 }
 
+/**
+ * A date written on its own ("fri 10:00", "by the 21st", "del 20 al 22 de octubre"), as quick add reads dates:
+ * a range gives a start and a due date. Null unless the whole text is one date (a lead word such as "by" allowed).
+ */
+export function parseDateText(text: string, now: Date, languages?: readonly DateLanguage[]): { start: string | null; due: string } | null {
+	const clean = text.replace(/\s+/g, ' ').trim();
+	if (!clean) return null;
+	const date = findDate(clean, { now, types: [], matters: [], people: [], languages });
+	if (!date) return null;
+	const lead = DATE_LEAD.exec(clean.slice(0, date.start));
+	const from = lead ? date.start - lead[0].trimStart().length : date.start;
+	if (from !== 0 || clean.slice(date.end).replace(/[,.;!?]+$/, '') !== '') return null;
+	return { start: date.to ? formatMtmDate(date.from) : null, due: formatMtmDate(date.to ?? date.from) };
+}
+
 // ——— Parse ———
 
 export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResult {

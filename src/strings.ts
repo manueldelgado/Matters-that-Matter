@@ -887,6 +887,54 @@ export const STRINGS = {
 		},
 	},
 
+	/** What other tools are told when they add, change or read Actions and Matters. */
+	ops: {
+		// Adding falls back, as quick add does.
+		/** `fallback` is the default type's label, or with `fromText` the type the quick add text named. */
+		noType: (query: string, fallback: string, fromText = false) =>
+			fromText ? `No type matches “${query}”, so it uses ${fallback}, as the text says.` : `No type matches “${query}”, so it uses the default type, ${fallback}.`,
+		/** To the Inbox, or with `fromText` to the Matter the quick add text named. */
+		noMatter: (query: string, added = true, fromText?: string) =>
+			`No Matter matches “${query}”, so it ${added ? 'went' : 'goes'} to ${fromText ? `${fromText}, as the text says` : 'the Inbox'}.`,
+		noStatus: (query: string, backlog: string) => `No status matches “${query}”, so it starts in ${backlog}.`,
+		noPerson: (query: string, added = true) => `No note matches “${query}”, so it ${added ? 'was' : 'is'} left out.`,
+		noSphere: (query: string) => `No Sphere matches “${query}”, so the Matter has no Sphere.`,
+		leftOut: (query: string, added = true) => `“${query}” matched nothing, so it ${added ? 'was' : 'is'} left out.`,
+		startAfterDue: 'It starts after it’s due; it keeps both dates and is placed by the due date.',
+		newerSettings: 'These settings come from a newer version of Matters; what you read may miss something new.',
+		// Changing is strict: nothing is written.
+		actionNotFound: (ref: string) => `No Action matches “${ref}”.`,
+		severalActions: (ref: string) => `Several Actions match “${ref}”.`,
+		unmatchedStatus: (query: string, labels: readonly string[]) => `No status matches “${query}”. Statuses here: ${labels.join(', ')}.`,
+		unmatchedType: (query: string, labels: readonly string[]) => `No type matches “${query}”. Types here: ${labels.join(', ')}.`,
+		unmatchedSphere: (query: string, labels: readonly string[]) =>
+			labels.length ? `No Sphere matches “${query}”. Spheres here: ${labels.join(', ')}.` : `No Sphere matches “${query}”. There are no Spheres yet.`,
+		unmatchedMatter: (query: string) => `No Matter matches “${query}”.`,
+		unmatchedPerson: (query: string) => `No note matches “${query}”. People are notes, and they’re never created from here.`,
+		severalStatuses: (query: string) => `Several statuses match “${query}”.`,
+		severalTypes: (query: string) => `Several types match “${query}”.`,
+		severalSpheres: (query: string) => `Several Spheres match “${query}”.`,
+		severalMatters: (query: string) => `Several Matters match “${query}”.`,
+		severalPeople: (query: string) => `Several notes match “${query}”.`,
+		// Values that can't be read.
+		badPriority: (value: string) => `“${value}” isn’t a priority. Use 1, 2 or 3, or high, medium or low.`,
+		badDate: (value: string) => `“${value}” isn’t a date Matters can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.`,
+		dateRange: (value: string) => `“${value}” is a range. Give the start and the due date separately.`,
+		badLink: (value: string) => `“${value}” isn’t a note in this vault or a web address (http or https).`,
+		noTitle: 'An Action needs a title.',
+		noName: 'A Matter needs a name.',
+		badState: (value: string) => `“${value}” isn’t a Matter state. Use active, dormant or closed.`,
+		badRhythm: (value: string) => `“${value}” isn’t a review rhythm. Use a number of days, weeks or months, such as 2w.`,
+		badIcon: (value: string) => `“${value}” isn’t an icon name. Use a Lucide name, such as house.`,
+		badText: (field: string) => `${field} must be text.`,
+		badList: (field: string) => `${field} must be a list of text.`,
+		nothingToChange: 'Nothing to change: name at least one field.',
+		// The vault isn't ready for writes.
+		notSetUp: 'Matters isn’t set up in this vault yet. Run setup in Obsidian first.',
+		newerSettingsWrite: 'These settings come from a newer version of Matters, so nothing is written. Update Matters first.',
+		noWorkflow: 'The workflow has no statuses or no types. Check the statuses and types in Matters’ settings.',
+	},
+
 	modals: {
 		cancel: 'Cancel',
 		iconPicker: 'Choose an icon',

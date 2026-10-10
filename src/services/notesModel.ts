@@ -5,7 +5,7 @@
 import type { MattersSettings, StatusDef } from '../settings';
 import type { Priority } from '../model/actions';
 import type { Ymd } from '../model/dates';
-import { matterState, parseCadence, parseLaneOrder, parseOutcome, reviewInfo, type Lane } from '../model/matters';
+import { matterState, parseCadence, parseLaneOrder, parseOutcome, reviewInfo, type Lane, type MatterState } from '../model/matters';
 import type { ActionItem } from './actionItems';
 import type { MatterInfo } from './boardModel';
 import { linkText } from './effective';
@@ -53,6 +53,8 @@ export interface NewActionNote {
 	/** As written: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm'. */
 	start?: string | null;
 	due?: string | null;
+	/** As written in mtm-waiting-on: '[[link text]]'. Also add the person to `people`. */
+	waitingOn?: string | null;
 	/** As written in mtm-people: '[[link text]]'. */
 	people?: readonly string[];
 }
@@ -68,24 +70,28 @@ export function newActionFrontmatter(init: NewActionNote, statuses: readonly Sta
 	if (init.start) fm['mtm-start'] = init.start;
 	if (init.due) fm['mtm-due'] = init.due;
 	if (init.priority) fm['mtm-priority'] = init.priority;
+	if (init.waitingOn) fm['mtm-waiting-on'] = init.waitingOn;
 	if (init.people?.length) fm['mtm-people'] = [...init.people];
+	if (init.waitingOn) fm['mtm-waiting-since'] = today;
 	if (statuses.find((s) => s.id === init.statusId)?.category === 'closed') fm['mtm-completed'] = today;
 	return fm;
 }
 
 export interface NewMatterNote {
 	icon: string;
+	/** Active when absent. */
+	state?: MatterState;
 	reviewEvery: string | null;
 	sphereId?: string | null;
 	outcome?: string | null;
 }
 
-/** A new, active Matter's frontmatter, keys in the order they are written. */
+/** A new Matter's frontmatter (active unless told otherwise), keys in the order they are written. */
 export function newMatterFrontmatter(init: NewMatterNote, laneOrder: number): Frontmatter {
 	const fm: Frontmatter = {
 		'mtm-kind': 'matter',
 		'mtm-icon': init.icon,
-		'mtm-state': 'active',
+		'mtm-state': init.state ?? 'active',
 		'mtm-lane-order': laneOrder,
 	};
 	if (init.reviewEvery) fm['mtm-review-every'] = init.reviewEvery;
