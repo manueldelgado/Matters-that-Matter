@@ -2,12 +2,12 @@
 // every read and every attempt at a write, and writes all or nothing through the safe writer (apply.ts).
 
 import type { VaultReader } from '../../src/files/index';
-import type { OpError, OpResult, Plan, Snapshot } from '../../src/ops/types';
+import type { OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
 import { applyOutcome, type ApplyFs, type ApplyResult } from './apply';
 import { contentsAfter as defaultContentsAfter, snapshotOf, WriteError, type ContentsAfter, type FileOutcome } from './filesLayer';
 import { cachingReader, fsVaultReader } from './fsVault';
 import type { ErrorJson } from './json';
-import { CLI } from './strings';
+import { CLI, dryRunWording } from './strings';
 import type { Vault } from './vault';
 
 export type ReaderFactory = (root: string, configDir: string) => VaultReader;
@@ -39,6 +39,22 @@ export type WriteFlow<T> =
 	/** The plan couldn't be applied, or the write failed: `changed` when the vault changed meanwhile or a write failed. */
 	| { ok: false; kind: 'write'; error: ErrorJson['error']; changed: boolean };
 
+/**
+ * Warnings as the command line and the MCP server report them: each said once (the same unknown person given as
+ * waiting on and among the people warns once, the first kept), and in a dry run, worded as what would happen.
+ */
+export function reportedWarnings(warnings: readonly Warning[], dryRun: boolean): Warning[] {
+	const seen = new Set<string>();
+	const out: Warning[] = [];
+	for (const w of warnings) {
+		const key = `${w.code}\u0000${w.value ?? ''}\u0000${w.message}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(dryRun ? { ...w, message: dryRunWording(w.message) } : w);
+	}
+	return out;
+}
+
 export const planIsEmpty = (p: Plan) => !p.creates.length && !p.edits.length && !p.bodies.length && !p.renames.length;
 
 /**
@@ -50,8 +66,9 @@ export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<
 	const writer = src.contentsAfter ?? defaultContentsAfter;
 	for (let attempt = 1; ; attempt++) {
 		const { snap, reader } = takeSnapshot(src.vault, src.now, src.reader);
-		const r = op(snap);
-		if (!r.ok) return { ok: false, kind: 'op', error: r.error };
+		const result = op(snap);
+		if (!result.ok) return { ok: false, kind: 'op', error: result.error };
+		const r = { ...result, warnings: reportedWarnings(result.warnings, src.dryRun) };
 		const stop = src.onPlan?.(r.plan);
 		if (stop) return { ok: false, kind: 'write', error: stop, changed: false };
 		if (planIsEmpty(r.plan)) return { ok: true, r, snap, outcome: null, written: false };

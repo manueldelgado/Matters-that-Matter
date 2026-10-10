@@ -7,6 +7,8 @@ import { dirname, join } from 'node:path';
 import type { ContentsAfter } from '../../cli/src/filesLayer';
 import { fixtureCopy, hashes, mtm, normalise, read, syntheticVault, tempDir, writeFiles } from './helpers';
 import { contentsAfter } from '../../cli/src/filesLayer';
+import { dryRunWording } from '../../cli/src/strings';
+import { STRINGS } from '../../src/strings';
 
 const made: string[] = [];
 const keep = (root: string) => (made.push(dirname(root)), root);
@@ -400,5 +402,65 @@ describe('open', () => {
 			stdout: '',
 			stderr: 'The system couldn’t open the link. Open it yourself: obsidian://mtm-open?vault=Notes&matter=MTM%2FMatters%2FGarden.md\n',
 		});
+	});
+});
+
+describe('warnings', () => {
+	it('a dry run says what would happen, not what happened', async () => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['add', 'Ask about the gym #Gym @Zed', '--dry-run', '--vault', root]);
+		expect(r).toEqual({
+			code: 0,
+			stderr: '',
+			stdout: `Would add “Ask about the gym”
+  Inbox · Later · Write
+  No Matter matches “Gym”, so it would go to the Inbox.
+  No note matches “Zed”, so it would be left out.
+  MTM/Actions/Ask about the gym.md
+Nothing written (dry run).
+`,
+		});
+		const json = JSON.parse((await mtm(['add', 'Water the plants', '--matter', 'Garden shed', '--dry-run', '--json', '--vault', root])).stdout) as { warnings: { message: string }[] };
+		expect(json.warnings.map((w) => w.message)).toEqual(['No Matter matches “Garden shed”, so it would go to the Inbox.']);
+		// Adding for real keeps the wording of something done.
+		expect((await mtm(['add', 'Ask about the gym #Gym', '--vault', root])).stdout).toContain('so it went to the Inbox.');
+	});
+
+	it('rewords every fallback the operations word as done', () => {
+		const T = STRINGS.ops;
+		for (const done of [T.noMatter('X'), T.noMatter('X', true, 'Kitchen renovation'), T.noPerson('X'), T.leftOut('X')]) {
+			const would = dryRunWording(done);
+			expect(would, done).not.toBe(done);
+			expect(would, done).not.toMatch(/\b(went|was)\b/);
+			expect(would, done).toMatch(/\bwould\b/);
+		}
+		// Fallbacks worded in the present stay as they are.
+		expect(dryRunWording(T.noType('fax', 'Write'))).toBe(T.noType('fax', 'Write'));
+	});
+
+	it('the same unknown person as waiting on and among the people warns once', async () => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['add', 'Dinner', '--waiting-on', 'Zed', '--people', 'Zed', '--people', 'Lucía', '--vault', root]);
+		expect(r.code).toBe(0);
+		expect(r.stdout.match(/No note matches “Zed”/g)).toHaveLength(1);
+		const json = JSON.parse((await mtm(['add', 'Supper', '--waiting-on', 'Zed', '--people', 'Zed', '--json', '--vault', root])).stdout) as { warnings: { code: string; field: string }[] };
+		expect(json.warnings).toEqual([{ code: 'unmatched-person', field: 'people', value: 'Zed', message: 'No note matches “Zed”, so it was left out.' }]);
+	});
+});
+
+describe('open --dry-run', () => {
+	it('prints the link it would open and never opens it', async () => {
+		const root = keep(syntheticVault());
+		const urls: string[] = [];
+		const opener = (url: string) => (urls.push(url), Promise.resolve());
+		const r = await mtm(['open', 'Send the invoice', '--dry-run', '--vault', root], { opener });
+		expect(r).toEqual({
+			code: 0,
+			stderr: '',
+			stdout: 'Would open “Send the invoice” in Obsidian (dry run).\n  obsidian://mtm-open?vault=Notes&file=MTM%2FActions%2FSend%20the%20invoice.md\n',
+		});
+		const json = JSON.parse((await mtm(['open', 'Garden', '--dry-run', '--json', '--vault', root], { opener })).stdout) as Record<string, unknown>;
+		expect(json).toEqual({ url: 'obsidian://mtm-open?vault=Notes&matter=MTM%2FMatters%2FGarden.md', opened: false, matter: 'MTM/Matters/Garden.md' });
+		expect(urls).toEqual([]);
 	});
 });

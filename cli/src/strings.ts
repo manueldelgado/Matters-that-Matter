@@ -192,9 +192,24 @@ export const CLI = {
 
 	// Opening.
 	opening: (name: string) => `Opening “${name}” in Obsidian.`,
+	wouldOpen: (name: string) => `Would open “${name}” in Obsidian (dry run).`,
 	openFailed: (url: string) => `The system couldn’t open the link. Open it yourself: ${url}`,
 	nothingToOpen: (ref: string) => `No Action or Matter matches “${ref}”.`,
 } as const;
+
+/**
+ * The operations word a fallback as done ("so it went to the Inbox", "so it was left out"). A dry run adds nothing,
+ * so it says what would happen; other fallbacks are worded in the present already ("so it uses the default type").
+ */
+const DRY_RUN_WORDING: readonly [done: string, would: string][] = [
+	[' so it went to ', ' so it would go to '],
+	[' so it was left out', ' so it would be left out'],
+];
+
+/** A warning's message as a dry run says it. */
+export function dryRunWording(message: string): string {
+	return DRY_RUN_WORDING.reduce((m, [done, would]) => m.split(done).join(would), message);
+}
 
 const list = (items: readonly string[]) => items.join(', ');
 

@@ -111,7 +111,7 @@ When the setting is off, the links are left as they are, as Obsidian would leave
 
 ### Opening in Obsidian
 
-`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that Matters handles (a version of Matters with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). Opening links on Windows hasn't been tried yet.
+`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that Matters handles (a version of Matters with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). Opening links on Windows hasn't been tried yet.
 
 ## Options
 
@@ -120,7 +120,7 @@ When the setting is off, the links are left as they are, as Obsidian would leave
 | `--vault <path>` | The vault (or `MTM_VAULT`) |
 | `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` (one folder in the vault's root) |
 | `--json` | Output for scripts |
-| `--dry-run` | Show what would change, without writing |
+| `--dry-run` | Show what would change, without writing (warnings say what would happen) |
 | `--help`, `-h` | Help |
 | `--version`, `-V` | The version |
 
