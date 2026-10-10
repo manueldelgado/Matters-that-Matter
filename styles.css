@@ -1362,3 +1362,24 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* Live Preview: room for Obsidian's "edit this block" button, which sits in a code block's top-right corner. */
 .cm-preview-code-block .mtm-embed-head{margin-right:30px}
 .cm-preview-code-block .mtm-embed.mod-quiet{padding-right:42px}
+
+/* ——— Review notes ——— */
+/* The step's last question: a one-line field, quiet until used. */
+.mtm-review-note{width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1px solid var(--background-modifier-border);border-radius:8px;background:var(--background-primary);font:inherit;font-size:13px;color:var(--text-normal)}
+.mtm-review-note::placeholder{color:var(--text-faint)}
+.mtm-review-note:focus{border-color:var(--background-modifier-border-focus);box-shadow:0 0 0 3px var(--mtm-sky-ring)}
+/* What was noted at the last review, under "since" (under the head on dormant steps): a margin note in the display face. */
+.mtm-review-last{display:flex;align-items:baseline;gap:8px;margin:10px 20px 0;padding:8px 12px;border-radius:8px;background:var(--mtm-butter-faint);color:var(--text-normal);font-size:13px}
+.mtm-review-last>.svg-icon{flex:none;align-self:center;width:14px;height:14px;color:var(--mtm-butter-icon)}
+.mtm-review-last-when{flex:none;font-size:11.5px;font-weight:700;color:var(--text-muted)}
+.mtm-review-last-text{font-family:var(--mtm-font-display);font-size:14px}
+/* Overview: the same line under the review controls. */
+.mtm-overview-controls+.mtm-review-last{margin:10px 0 0}
+/* ——— Show on board ——— */
+/* Scrolled into view, a lane header stops below the sticky column headers (34px) with a little room. */
+.mtm-board .mtm-lane-header{scroll-margin-top:42px}
+/* The Matter's lane header lights up once in the butter highlight, then fades (the cells stay as they are). */
+@keyframes mtm-spotlight{0%,45%{box-shadow:inset 0 0 0 2px var(--mtm-butter-icon),0 0 0 4px var(--mtm-butter-ring);background:var(--mtm-butter-faint)}100%{box-shadow:inset 0 0 0 2px transparent,0 0 0 4px transparent}}
+.mtm-lane-header.is-spotlit{animation:mtm-spotlight 1600ms var(--mtm-ease,ease-out) 1}
+/* Reduced motion: a still outline, removed after the same time. */
+@media (prefers-reduced-motion:reduce){.mtm-lane-header.is-spotlit{animation:none;box-shadow:inset 0 0 0 2px var(--mtm-butter-icon)}}
