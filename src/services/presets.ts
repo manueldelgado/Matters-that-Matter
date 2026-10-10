@@ -56,6 +56,7 @@ export function areContexts(types: readonly TypeDef[]): boolean {
 }
 
 export interface Loss {
+	id: string;
 	label: string;
 	count: number;
 }
@@ -67,25 +68,35 @@ export interface WorkflowLosses {
 	types: Loss[];
 }
 
-type Workflow = { statuses: readonly StatusDef[]; types: readonly TypeDef[] };
+export type Workflow = { statuses: readonly StatusDef[]; types: readonly TypeDef[] };
 
 /**
- * Statuses and types that Actions use now (valid in the current workflow) but the chosen one lacks.
- * Nothing is rewritten; these Actions would show orphan badges.
+ * Statuses and types that Actions use but the chosen workflow lacks: what the notes hold, whatever the settings say
+ * (after a reinstall the settings are the defaults). Labels come from the first workflow in `labels` that knows the ID,
+ * else the raw ID. Nothing is rewritten; these Actions would show orphan badges.
  */
-export function workflowLosses(actions: readonly { status: unknown; type: unknown }[], current: Workflow, next: Workflow): WorkflowLosses {
-	const lost = <T extends { id: string; label: string }>(now: readonly T[], then: readonly { id: string }[]) =>
-		new Map(now.filter((x) => !then.some((y) => y.id === x.id)).map((x) => [x.id, { label: x.label, count: 0 }]));
-	const statuses = lost(current.statuses, next.statuses);
-	const types = lost(current.types, next.types);
+export function workflowLosses(actions: readonly { status: unknown; type: unknown }[], next: Workflow, labels: readonly Workflow[]): WorkflowLosses {
+	const has = (list: readonly { id: string }[], id: string) => list.some((x) => x.id === id);
+	const statuses = new Map<string, number>();
+	const types = new Map<string, number>();
 	let affected = 0;
 	for (const a of actions) {
-		const s = typeof a.status === 'string' ? statuses.get(a.status) : undefined;
-		const t = typeof a.type === 'string' ? types.get(a.type) : undefined;
-		if (s) s.count++;
-		if (t) t.count++;
+		const s = typeof a.status === 'string' && a.status.trim() && !has(next.statuses, a.status) ? a.status : null;
+		const t = typeof a.type === 'string' && a.type.trim() && !has(next.types, a.type) ? a.type : null;
+		if (s) statuses.set(s, (statuses.get(s) ?? 0) + 1);
+		if (t) types.set(t, (types.get(t) ?? 0) + 1);
 		if (s || t) affected++;
 	}
-	const used = (m: Map<string, Loss>) => [...m.values()].filter((l) => l.count > 0);
-	return { actions: affected, statuses: used(statuses), types: used(types) };
+	const listed = (counts: Map<string, number>, pick: (w: Workflow) => readonly { id: string; label: string }[]): Loss[] => {
+		const order = labels.flatMap((w) => pick(w).map((x) => x.id));
+		const rank = (id: string) => {
+			const i = order.indexOf(id);
+			return i < 0 ? Infinity : i;
+		};
+		const label = (id: string) => labels.map((w) => pick(w).find((x) => x.id === id)?.label).find((l) => l !== undefined) ?? id;
+		return [...counts.keys()]
+			.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+			.map((id) => ({ id, label: label(id), count: counts.get(id) ?? 0 }));
+	};
+	return { actions: affected, statuses: listed(statuses, (w) => w.statuses), types: listed(types, (w) => w.types) };
 }

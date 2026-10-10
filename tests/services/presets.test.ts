@@ -44,7 +44,7 @@ describe('workflowLosses', () => {
 	const current = { statuses: presetStatuses('default'), types: presetTypes('default') };
 	const next = { statuses: presetStatuses('next'), types: presetTypes('next') };
 
-	it('counts Actions whose valid status or type the chosen workflow lacks', () => {
+	it('counts Actions whose status or type the chosen workflow lacks, labelled from the first workflow that knows it', () => {
 		const losses = workflowLosses(
 			[
 				{ status: 'later', type: 'call' },
@@ -52,18 +52,29 @@ describe('workflowLosses', () => {
 				{ status: 'next', type: undefined },
 				{ status: 'nowhere', type: 'nope' },
 			],
-			current,
 			next,
+			[current],
 		);
-		expect(losses.actions).toBe(2);
-		expect(losses.statuses).toEqual([{ label: 'Later', count: 2 }]);
+		expect(losses.actions).toBe(3);
+		expect(losses.statuses).toEqual([
+			{ id: 'later', label: 'Later', count: 2 },
+			{ id: 'nowhere', label: 'nowhere', count: 1 },
+		]);
 		expect(losses.types).toEqual([
-			{ label: 'Call', count: 1 },
-			{ label: 'Write', count: 1 },
+			{ id: 'call', label: 'Call', count: 1 },
+			{ id: 'write', label: 'Write', count: 1 },
+			{ id: 'nope', label: 'nope', count: 1 },
 		]);
 	});
 
-	it('finds nothing when the workflow keeps its IDs', () => {
-		expect(workflowLosses([{ status: 'later', type: 'call' }], current, current)).toEqual({ actions: 0, statuses: [], types: [] });
+	it('counts what notes use even when the settings are the defaults (a reinstall)', () => {
+		const found = { statuses: [{ id: 'in-progress', label: 'In progress', tone: 'butter' as const, category: 'active' as const }], types: [] };
+		const losses = workflowLosses([{ status: 'in-progress', type: 'write' }], current, [current, found]);
+		expect(losses.statuses).toEqual([{ id: 'in-progress', label: 'In progress', count: 1 }]);
+		expect(losses.types).toEqual([]);
+	});
+
+	it('finds nothing when the workflow keeps its IDs, and ignores absent values', () => {
+		expect(workflowLosses([{ status: 'later', type: 'call' }, { status: undefined, type: '' }], current, [current])).toEqual({ actions: 0, statuses: [], types: [] });
 	});
 });

@@ -684,15 +684,7 @@ body .mtm-datetime input[type="time"]{flex:none;width:86px}
 .mtm-tl-bar.mod-milestone .svg-icon{display:none}
 .mtm-tl-bar.mod-milestone.is-selected{box-shadow:none}
 .mtm-tl-bar.mod-milestone.is-selected::before{box-shadow:0 0 0 1px var(--mtm-strong),0 0 0 4px var(--mtm-ring)}
-/* ——— Setup wizard: reconnect mode (values found in notes). Planned for 1.0 ——— */
-.mtm-found-list{display:flex;flex-direction:column;gap:6px}
-.mtm-found-row{display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 6px 4px 10px;border:1px solid var(--mtm-hairline);border-radius:10px;background:var(--mtm-raised)}
-.mtm-found-id{flex:none;width:110px;font-family:var(--font-monospace);font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mtm-found-arrow{display:flex;flex:none;color:var(--text-faint)}.mtm-found-arrow .svg-icon{width:13px;height:13px}
-.mtm-found-row input[type="text"]{flex:1;min-width:80px}
-.mtm-found-row select{flex:none;width:auto}
-.mtm-found-count{flex:none;min-width:58px;text-align:right;font-size:11.5px;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
-.mtm-found-row.is-generated input[type="text"]{font-style:italic}
+/* ——— Setup wizard: reconnect mode (settings read back from existing notes) ——— */
 .mtm-setup-mode{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:999px;background:var(--mtm-drop-bg);font-size:11px;font-weight:700;color:var(--mtm-today-ink)}
 .mtm-setup-mode .svg-icon{width:12px;height:12px}
 
@@ -1301,3 +1293,35 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* The Matter picker ("Move to Matter…"): icon, then name. */
 .mtm-suggest-matter{display:flex;align-items:center;gap:8px}
 .mtm-suggest-matter .mtm-matter-icon .svg-icon{width:16px;height:16px;color:var(--text-muted)}
+/* ——— Setup reconnecting to existing notes ——— */
+/* The mode marker sits beside the step count. */
+.mtm-setup-eyebrow{display:flex;align-items:center;gap:8px}
+/* How many notes use a status or type, as the Sphere editor shows Matters. */
+.mtm-status-row .mtm-row-note,.mtm-type-row .mtm-row-note{flex:none;min-width:64px;text-align:right;font-size:12px;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.mtm-row-note.mod-added{font-style:italic}
+/* Labels made up from an ID, until the user edits them. */
+.mtm-status-row.is-generated input[type="text"],.mtm-type-row.is-generated input[type="text"],.mtm-sphere-row.is-generated input[type="text"]{font-style:italic}
+/* The "From your notes" card spans the row above the presets. */
+.mtm-preset.mod-found{grid-column:1/-1}
+/* Summary rows that name a setting rather than a file. */
+.mtm-summary-item.mod-setting .mtm-summary-path{font-family:var(--font-interface)}
+/* A line in place of a checkbox (the sample is already there). */
+.mtm-check-row.mod-static{cursor:default}
+.mtm-check-row.mod-static>.svg-icon{flex:none;width:16px;height:16px;margin-top:2px;color:var(--text-muted)}
+/* Setup stepping aside when settings arrive from another device: one calm message in the card. */
+.mtm-setup-arrived{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 24px 30px;text-align:center}
+.mtm-setup-arrived .mtm-setup-title{margin:4px 0 0}
+.mtm-setup-arrived .mtm-setup-lead{max-width:420px;margin:0}
+.mtm-setup-arrived button{margin-top:8px}
+@container (max-width:520px){.mtm-status-row .mtm-row-note,.mtm-type-row .mtm-row-note{display:none}}
+/* Setup on phones: the step bar keeps numbers and the current step's name; editor rows wrap, with the category
+   and markers (or the swatches and Default) on a second line. */
+.is-phone .mtm-setup-inner{padding:18px 12px 28px}
+.is-phone .mtm-setup-step:not(.is-current){font-size:0;gap:0}
+.is-phone .mtm-setup-step+.mtm-setup-step::before{width:18px;margin:0 6px 0 2px}
+@container (max-width:520px){
+.mtm-status-row,.mtm-type-row{flex-wrap:wrap;row-gap:6px}
+.mtm-status-row::after,.mtm-type-row::after{content:"";order:1;flex-basis:100%}
+.mtm-status-row select,.mtm-status-row .mtm-row-markers,.mtm-type-row .mtm-swatches,.mtm-type-row .mtm-marker{order:2}
+.mtm-status-row select,.mtm-type-row .mtm-swatches{margin-left:26px}
+}

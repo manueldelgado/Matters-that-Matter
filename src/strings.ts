@@ -777,6 +777,66 @@ export const STRINGS = {
 			basesOffTitle: 'Bases is turned off.',
 			basesOff: 'The board, list, calendar and timeline need the Bases core plugin. Turn it on in Settings → Core plugins.',
 		},
+		/** Setup on a vault with notes but no settings: reading them back. */
+		reconnect: {
+			mode: 'Reconnect',
+			fromId: (id: string) => `Made from the ID in your notes: ${id}`,
+			location: {
+				title: 'Welcome back.',
+				lead: (actions: number, matters: number) =>
+					`Your vault already has ${plural(actions, 'Action', 'Actions')} and ${plural(matters, 'Matter', 'Matters')}. Setup picks up from them and fills in what it can; nothing in your notes changes.`,
+				otherDeviceTitle: 'Using Matters on another device?',
+				otherDevice: 'If your plugin settings sync, wait for them instead: they bring everything back exactly as it was.',
+				startFresh: 'Start fresh instead',
+				foundMatters: (n: number) => `Found ${plural(n, 'Matter', 'Matters')} here`,
+				foundActions: (n: number) => `Found ${plural(n, 'Action', 'Actions')} here`,
+				foundBoard: 'Found your board here',
+				foundPeople: (n: number) => `Found ${n === 1 ? '1 person' : `${n} people`} here`,
+				inboxAt: (path: string) => `Your Inbox is ${path}.`,
+				boardsHint: (path: string) => `Each board is a .base file. Setup keeps ${path}.`,
+			},
+			workflow: {
+				lead: 'Read from your notes. Rename, recolour or reorder anything: your notes keep their IDs, so they follow.',
+				recognisedTitle: (preset: string) => `We recognised your workflow: ${preset}.`,
+				recognised: (contexts: boolean, spheres: number) =>
+					`Its statuses and ${contexts ? 'contexts' : 'Action types'} come back as they were${spheres ? `, with your ${plural(spheres, 'Sphere', 'Spheres')}` : ''}.`,
+				readTitle: 'Read from your notes.',
+				read: 'Labels in italics were made from the IDs your notes use: check them, and the categories. Only a closed status can be told from the notes themselves.',
+				found: 'From your notes',
+				foundDesc: (statuses: number, types: number, spheres: number) =>
+					`${plural(statuses, 'status', 'statuses')}, ${plural(types, 'Action type', 'Action types')}${spheres ? ` and ${plural(spheres, 'Sphere', 'Spheres')}` : ''}, as your notes use them.`,
+				spheres: 'Spheres',
+				used: (n: number) => (n ? plural(n, 'Action', 'Actions') : 'Not used yet'),
+				added: 'Added',
+				addedDone: (label: string) => `Your notes have no closed status yet, so ${label} was added: “Mark as done” needs somewhere to go.`,
+				addedBacklog: (label: string) => `Your notes have no open status, so ${label} was added: new Actions need somewhere to start.`,
+			},
+			matters: {
+				lead: 'Your Matters are already here. Add any that are missing.',
+				foundTitle: (n: number) => `${plural(n, 'Matter', 'Matters')} found.`,
+				found: 'They stay as they are, in their Spheres and lane order. Add new ones or adopt other notes below.',
+			},
+			summary: {
+				lead: 'Here’s what will happen. Nothing in your notes changes, and nothing is deleted.',
+				settings: 'Settings · re-created',
+				statuses: 'Statuses',
+				types: 'Action types',
+				spheres: 'Spheres',
+				folders: 'Folders',
+				yourInbox: 'your Inbox',
+				yourBoard: 'your board',
+				sampleThere: 'Sample content is already in your vault',
+				sampleThereHint: 'Remove it any time with “Remove sample content”.',
+				defaultsTitle: 'These settings start from their defaults:',
+				defaults: 'Inbox lane (first), Show done (on), Week starts on (Monday), Show Today in new tabs (every new tab) and Open Matters as their overview (on). Your notes don’t record them; change them in Settings.',
+				putBack: 'Put it back',
+			},
+			arrived: {
+				title: 'Your settings arrived from another device.',
+				text: 'Matters is already set up there, so there’s nothing to do here: your statuses, types and Spheres are the ones you use everywhere.',
+				openBoard: 'Open board',
+			},
+		},
 	},
 
 	modals: {

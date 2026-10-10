@@ -1,4 +1,4 @@
-// Sphere editor, used by the settings tab: like the type editor, without tones or a default, with how many Matters use each.
+// Sphere editor, used by the settings tab and by setup when it reconnects: like the type editor, without tones or a default, with how many Matters use each.
 
 import type { App } from 'obsidian';
 import type { SphereDef } from '../../settings';
@@ -6,7 +6,7 @@ import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { moveItem } from '../../model/workflow';
 import { IconPickerModal } from '../modals/iconPickerModal';
-import { appendIcon, tileEl } from './dom';
+import { appendIcon, markGenerated, tileEl } from './dom';
 import { reorderable } from './reorder';
 
 export interface SphereEditorOptions {
@@ -15,6 +15,8 @@ export interface SphereEditorOptions {
 	count(id: string): number;
 	onChange(spheres: SphereDef[]): void;
 	onDelete(sphere: SphereDef): void;
+	/** IDs whose label was made up from the ID: italic until edited. */
+	generated?: Set<string>;
 }
 
 export class SphereEditor {
@@ -68,6 +70,7 @@ export class SphereEditor {
 		});
 
 		const input = row.createEl('input', { type: 'text', value: sphere.label, attr: { 'aria-label': STRINGS.editors.name } });
+		markGenerated(row, input, sphere.id, this.opts.generated);
 		input.addEventListener('input', () => {
 			const label = input.value;
 			let id = current.id;
