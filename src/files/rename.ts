@@ -145,13 +145,16 @@ export function isWikilink(original: string): boolean {
 	return WIKILINK.test(original);
 }
 
-/** A Markdown link destination as Obsidian writes it: spaces, backslashes and control characters encoded. */
+/**
+ * A Markdown link destination: spaces, backslashes and control characters encoded, as Obsidian writes it, and `%`,
+ * so a name with a percent sign still reads back as itself (links are percent-decoded when read).
+ */
 function encodeDestination(link: string): string {
 	let out = '';
 	for (const c of link) {
 		const code = c.charCodeAt(0);
 		const control = code === 0 || code === 8 || code === 11 || code === 12 || (code >= 14 && code <= 31);
-		out += c === '\\' || c === ' ' || control ? encodeURIComponent(c) : c;
+		out += c === '\\' || c === ' ' || c === '%' || control ? encodeURIComponent(c) : c;
 	}
 	return out;
 }

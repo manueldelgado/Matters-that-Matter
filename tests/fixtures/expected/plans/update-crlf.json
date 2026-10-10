@@ -24,8 +24,7 @@
 					"items": [
 						"Third step"
 					]
-				},
-				"bodyAfter": "Details in a CRLF note.\r\n\r\n- [ ] First step\r\n- [x] Second step\r\n- [ ] Third step\r\n"
+				}
 			}
 		],
 		"renames": []

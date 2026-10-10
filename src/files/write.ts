@@ -52,7 +52,7 @@ export interface WriteOptions {
 	links?: LinkConfig;
 }
 
-export type WriteErrorCode = 'exists' | 'missing' | 'invalid-properties' | 'not-mtm';
+export type WriteErrorCode = 'exists' | 'missing' | 'invalid-properties' | 'not-mtm' | 'bad-path';
 
 /** Why a plan can't be applied; nothing is written. */
 export class WriteError extends Error {
@@ -75,8 +75,9 @@ interface Touched {
 /**
  * Applies a plan to the vault's files as text: creates, then frontmatter edits (`mtm-` keys only), then body edits,
  * then renames (with links rewritten when the vault's "Automatically update internal links" is on). Paths in edits
- * and bodies are paths before any rename. Throws a `WriteError` when a file to create exists, a file to change is
- * missing, properties to edit aren't valid YAML, or an edit names a key without the `mtm-` prefix.
+ * and bodies are paths before any rename. Throws a `WriteError`, before anything is computed for paths, when a file
+ * to create exists, a file to change is missing, properties to edit aren't valid YAML or aren't closed, an edit names
+ * a key without the `mtm-` prefix, or a new path (a create or a rename target) isn't a note inside the vault.
  */
 export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOptions): FileOutcome {
 	const links = options.links ?? readLinkConfig(reader, options.configDir);
@@ -111,6 +112,14 @@ export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOpt
 	};
 	const taken = (path: string) => [...files].some((p) => p.toLowerCase() === path.toLowerCase());
 
+	/** New paths must be notes inside the vault: not absolute, not climbing out, not in the configuration folder. */
+	const checkPath = (path: string) => {
+		const ok = isVaultFile(path, options.configDir) && /\.md$/i.test(path) && !path.includes('\\') && !path.includes('\u0000') && !path.split('/').some((part) => part.trim() === '');
+		if (!ok) throw new WriteError('bad-path', path, `${path} is not a note path inside the vault`);
+	};
+
+	for (const create of plan.creates) checkPath(create.path);
+	for (const { to } of plan.renames) checkPath(to);
 	for (const create of plan.creates) {
 		if (taken(create.path)) throw new WriteError('exists', create.path, `${create.path} already exists`);
 		touched.set(create.path, { from: null, before: null, content: newNoteContent(create.frontmatter, create.body) });

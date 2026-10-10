@@ -9,7 +9,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { acceptedWrites, loadCases, PLANS, planText, runCase, WRITES, type CaseRun, type WriteCase } from './writeCases';
+import { readFrontmatter, stripBom } from '../../src/files/frontmatter';
+import { contentsAfter, WriteError } from '../../src/files/write';
+import { acceptedWrites, CONFIG_DIR, fixtureManifest, loadCases, MANIFEST, PLANS, planText, runCase, WRITES, type CaseRun, type WriteCase } from './writeCases';
 
 const cases = loadCases();
 const runs = new Map<string, CaseRun>(cases.map((c) => [c.name, runCase(c)]));
@@ -171,19 +173,93 @@ describe('what the files layer writes', () => {
 	});
 });
 
+describe('what the files layer writes in the harder cases', () => {
+	it('edits a block whose fence lines have spaces after the dashes where it is, keeping the fences', () => {
+		expect(file('update-fence-whitespace', 'MTM/Sample/Edge cases/Edge - fence with spaces.md')).toBe(
+			'---  \nmtm-kind: action\nmtm-type: write\nmtm-status: doing\nmtm-matter: "[[Kitchen renovation]]"\n--- \t\nFence lines with spaces after the dashes.\n',
+		);
+	});
+
+	it('keeps the byte-order mark when only properties change', () => {
+		const path = 'MTM/Sample/Edge cases/More links/More - byte-order mark.md';
+		expect(file('update-byte-order-mark-properties', path)).toBe(fixture('update-byte-order-mark-properties', path).replace('mtm-status: next', 'mtm-status: doing'));
+	});
+
+	it('encodes a percent sign and spaces in Markdown links to a renamed note; parentheses and accents stay', () => {
+		expect(file('rename-to-a-title-with-symbols', 'MTM/Sample/Notes/Hotel links.md')).toBe(
+			[
+				'- Wikilink: [[Hotel 50% (depósito) für Zoë]]',
+				'- Markdown: [hotel](Hotel%2050%25%20(depósito)%20für%20Zoë.md)',
+				'- Markdown with the name: [Hotel 50% (depósito) für Zoë](Hotel%2050%25%20(depósito)%20für%20Zoë.md)',
+				'- In angle brackets: [brackets](<Hotel 50% (depósito) für Zoë.md>)',
+				'',
+			].join('\n'),
+		);
+	});
+
+	it('rewrites a link whose name became unique, as Obsidian does, and the links to the renamed note', () => {
+		expect(file('rename-name-becomes-unique', 'MTM/Sample/Notes/Plumber links.md')).toBe(
+			[
+				'- Lower case: [[Call the plumber]]',
+				'- By path, to the plain note: [[MTM/Sample/Edge cases/Twins/Call the plumber]]',
+				'- By path, to the Action: [[call the plumber later]]',
+				'',
+			].join('\n'),
+		);
+	});
+});
+
+describe('what the files layer refuses', () => {
+	const c = cases.find((x) => x.name === 'add-fields') as WriteCase;
+	const reader = run('add-fields').reader;
+	const code = (plan: Parameters<typeof contentsAfter>[0]) => {
+		try {
+			contentsAfter(plan, reader, { configDir: CONFIG_DIR });
+			return null;
+		} catch (e) {
+			return e instanceof WriteError ? e.code : String(e);
+		}
+	};
+	const create = (path: string) => ({ creates: [{ path, frontmatter: [['mtm-kind', 'action'] as [string, unknown]], body: '' }], edits: [], bodies: [], renames: [] });
+	const rename = (to: string) => ({ creates: [], edits: [], bodies: [], renames: [{ from: 'MTM/Sample/Actions/Book the hotel.md', to }] });
+
+	it('new paths outside the vault, in the configuration folder, or not notes', () => {
+		expect(c).toBeDefined();
+		for (const path of ['/etc/x.md', '../outside.md', 'MTM/../../outside.md', '.obsidian/x.md', 'MTM/.hidden/x.md', 'MTM/x.txt', 'MTM/x', 'MTM//x.md', 'MTM\\x.md', ' /x.md']) {
+			expect(code(create(path)), path).toBe('bad-path');
+			expect(code(rename(path)), path).toBe('bad-path');
+		}
+		expect(code(create('MTM/Actions/Fine.md'))).toBeNull();
+		expect(code(rename('MTM/Sample/Actions/Fine.md'))).toBeNull();
+	});
+
+	it('properties opened by a fence that is never closed', () => {
+		const unclosed = 'MTM/Sample/Edge cases/Edge - frontmatter not closed.md';
+		expect(reader.read(unclosed)?.startsWith('---')).toBe(true);
+		expect(code({ creates: [], edits: [{ path: unclosed, set: { 'mtm-status': 'doing' }, remove: [] }], bodies: [], renames: [] })).toBe('invalid-properties');
+	});
+
+	it('keys without the mtm- prefix', () => {
+		expect(code({ creates: [], edits: [{ path: 'MTM/Sample/Actions/Book the hotel.md', set: { title: 'x' }, remove: [] }], bodies: [], renames: [] })).toBe('not-mtm');
+	});
+});
+
 describe('the plans for the Obsidian run', () => {
 	const write = process.env.MTM_WRITE_PLANS === '1';
+	const manifestText = `${JSON.stringify(fixtureManifest(), null, '\t')}\n`;
 
-	it.runIf(write)('are written', () => {
+	it.runIf(write)('are written, with the manifest of the fixture', () => {
 		rmSync(PLANS, { recursive: true, force: true });
 		mkdirSync(PLANS, { recursive: true });
 		for (const c of cases) writeFileSync(join(PLANS, `${c.name}.json`), planText(run(c.name).casePlan));
+		writeFileSync(join(PLANS, MANIFEST), manifestText);
 	});
 
 	it.skipIf(write)('are up to date (otherwise: MTM_WRITE_PLANS=1 npx vitest run tests/files/writeCases.test.ts)', () => {
 		const committed = existsSync(PLANS) ? readdirSync(PLANS).filter((f) => f.endsWith('.json')).sort() : [];
-		expect(committed).toEqual(cases.map((c) => `${c.name}.json`).sort());
+		expect(committed).toEqual([MANIFEST, ...cases.map((c) => `${c.name}.json`)].sort());
 		for (const c of cases) expect(readFileSync(join(PLANS, `${c.name}.json`), 'utf8'), c.name).toBe(planText(run(c.name).casePlan));
+		expect(readFileSync(join(PLANS, MANIFEST), 'utf8')).toBe(manifestText);
 	});
 });
 
@@ -197,6 +273,9 @@ function walk(dir: string, prefix = ''): string[] {
 	});
 }
 
+/** Files the Obsidian script writes beside the vault files of a case's result. */
+const RESULT_FILES = new Set(['removed.json', 'unresolved.json']);
+
 /** A case's files as Obsidian left them, and as the files layer leaves them: path → content, plus removed paths. */
 function bothTrees(c: WriteCase): { obsidian: Map<string, string>; mine: Map<string, string>; obsidianRemoved: string[]; mineRemoved: string[] } {
 	const dir = join(WRITES, c.name);
@@ -204,33 +283,71 @@ function bothTrees(c: WriteCase): { obsidian: Map<string, string>; mine: Map<str
 	let obsidianRemoved: string[] = [];
 	for (const path of walk(dir)) {
 		if (path === 'removed.json') obsidianRemoved = JSON.parse(readFileSync(join(dir, path), 'utf8')) as string[];
-		else obsidian.set(path, readFileSync(join(dir, path), 'utf8'));
+		else if (!RESULT_FILES.has(path)) obsidian.set(path, readFileSync(join(dir, path), 'utf8'));
 	}
 	const r = run(c.name);
 	const mine = new Map<string, string>(Object.entries(c.setup ?? {}));
 	for (const [path, text] of r.written) mine.set(path, text);
 	for (const path of r.removed) mine.delete(path);
-	return { obsidian, mine, obsidianRemoved, mineRemoved: r.removed };
+	// Obsidian's removed.json lists fixture files only; a setup note moved away was never in the fixture.
+	return { obsidian, mine, obsidianRemoved, mineRemoved: r.removed.filter((path) => !(path in (c.setup ?? {}))) };
 }
 
-describe.skipIf(!existsSync(WRITES))('Obsidian applied the same plans (waiting for the Obsidian write results when skipped)', () => {
-	const accepted = acceptedWrites();
-	const isAccepted = (name: string, path: string) => accepted.some((a) => a.case === name && a.path === path);
+/** What a note says: its properties as the index reads them, and its body with line endings made plain. */
+function meaningOf(text: string): { properties: Record<string, unknown> | null; body: string } {
+	const plain = stripBom(text).replace(/\r\n?/g, '\n');
+	const lines = plain.split('\n');
+	return { properties: readFrontmatter(plain).frontmatter, body: lines.slice(readFrontmatter(plain).bodyLine).join('\n') };
+}
 
-	it.each(cases.map((c) => [c.name, c] as [string, WriteCase]))('%s: the same files, byte for byte', (name, c) => {
-		expect(existsSync(join(WRITES, name)), `no Obsidian result for ${name}`).toBe(true);
+const withoutKeys = (props: Record<string, unknown> | null, keys: readonly string[]) =>
+	props && Object.fromEntries(Object.entries(props).filter(([k]) => !keys.includes(k)));
+
+const withGolden = cases.filter((c) => existsSync(join(WRITES, c.name)));
+const waiting = cases.filter((c) => !existsSync(join(WRITES, c.name)));
+
+describe('Obsidian applied the same plans', () => {
+	const accepted = acceptedWrites();
+	const acceptedFor = (name: string, path: string) => accepted.find((a) => a.case === name && a.path === path);
+
+	for (const c of waiting) it.skip(`${c.name}: waiting for the Obsidian write results`, () => {});
+
+	it.each(withGolden.map((c) => [c.name, c] as [string, WriteCase]))('%s: the same files, byte for byte', (name, c) => {
 		const { obsidian, mine, obsidianRemoved, mineRemoved } = bothTrees(c);
 		expect(mineRemoved, 'files moved away').toEqual([...obsidianRemoved].sort());
 		const paths = [...new Set([...obsidian.keys(), ...mine.keys()])].sort();
-		const differ = paths.filter((p) => obsidian.get(p) !== mine.get(p) && !isAccepted(name, p));
-		for (const p of differ) expect(mine.get(p) ?? null, `${name}: ${p}`).toBe(obsidian.get(p) ?? null);
-		expect(differ).toEqual([]);
+		for (const p of paths) {
+			const a = acceptedFor(name, p);
+			const theirs = obsidian.get(p);
+			const ours = mine.get(p);
+			if (!a) {
+				expect(ours ?? null, `${name}: ${p}`).toBe(theirs ?? null);
+				continue;
+			}
+			if (a.meaning === true) continue;
+			// Style only: the same properties (apart from the keys listed) and the same body.
+			expect(ours, `${name}: ${p} exists in both`).toBeDefined();
+			expect(theirs, `${name}: ${p} exists in both`).toBeDefined();
+			const x = meaningOf(ours ?? '');
+			const y = meaningOf(theirs ?? '');
+			expect(withoutKeys(x.properties, a.keys ?? []), `${name}: ${p} properties`).toEqual(withoutKeys(y.properties, a.keys ?? []));
+			expect(x.body, `${name}: ${p} body`).toBe(y.body);
+		}
 	});
+
+	it.each(withGolden.filter((c) => existsSync(join(WRITES, c.name, 'unresolved.json'))).map((c) => [c.name, c] as [string, WriteCase]))(
+		'%s: as many links point nowhere as Obsidian counts',
+		(name) => {
+			const u = JSON.parse(readFileSync(join(WRITES, name, 'unresolved.json'), 'utf8')) as { before: number; after: number };
+			expect(run(name).outcome.danglingLinks).toBe(u.after - u.before);
+		},
+	);
 
 	it('lists no accepted difference that has gone away', () => {
 		const gone = accepted.filter((a) => {
 			const c = cases.find((x) => x.name === a.case);
-			if (!c || !existsSync(join(WRITES, c.name))) return true;
+			if (!c) return true;
+			if (!existsSync(join(WRITES, c.name))) return false;
 			const { obsidian, mine } = bothTrees(c);
 			return obsidian.get(a.path) === mine.get(a.path);
 		});

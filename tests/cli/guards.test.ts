@@ -228,6 +228,17 @@ describe('a plan the files layer can’t apply', () => {
 		expect(hashes(root)).toEqual(before);
 	});
 
+	it('a plan path outside the vault: exit 3, nothing written', async () => {
+		const root = keep(syntheticVault());
+		const before = hashes(root);
+		const r = await mtm(['done', 'Send the invoice', '--json', '--vault', root], throwing('bad-path'));
+		expect(r.code).toBe(3);
+		expect(JSON.parse(r.stdout)).toEqual({
+			error: { code: 'unsafe', path: 'MTM/Actions/Send the invoice.md', message: 'MTM/Actions/Send the invoice.md is outside the vault, so nothing was written.' },
+		});
+		expect(hashes(root)).toEqual(before);
+	});
+
 	it('a file gone or one there already: planned again once, then exit 3', async () => {
 		const root = keep(syntheticVault());
 		expect((await mtm(['done', 'Send the invoice', '--vault', root], throwing('missing', 1))).code).toBe(0);

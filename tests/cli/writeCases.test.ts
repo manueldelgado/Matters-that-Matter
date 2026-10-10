@@ -42,6 +42,9 @@ export function argvOf(c: WriteCase): string[] {
 	return [...argv, '--now', c.now];
 }
 
+/** Files the Obsidian script writes beside the vault files of a case's result. */
+const RESULT_FILES = new Set(['removed.json', 'unresolved.json']);
+
 /** Every file under a folder, as vault paths. */
 function walk(dir: string, prefix = ''): string[] {
 	return readdirSync(join(dir, prefix), { withFileTypes: true }).flatMap((entry) => {
@@ -68,18 +71,24 @@ describe('the write cases, through mtm', () => {
 		expect(c && argvOf(c)).toEqual(['update', 'Confirm the worktop measurements', '--no-priority', '--now', '2026-10-09T12:00']);
 	});
 
+	it('covers every case', () => {
+		expect(cases.length).toBeGreaterThanOrEqual(45);
+		for (const c of cases) expect(existsSync(join(WRITES, c.name)), `no Obsidian result for ${c.name}`).toBe(true);
+	});
+
 	it.each(cases.map((c) => [c.name, c] as [string, WriteCase]))('%s: the files written are Obsidian’s', async (name, c) => {
 		const root = caseVault(c);
 		const before = hashes(root);
-		const r = await mtm([...argvOf(c), '--vault', root]);
-		expect(r.code, `${name}: ${r.stderr}`).toBe(0);
+		const r = await mtm([...argvOf(c), '--json', '--vault', root]);
+		expect(r.code, `${name}: ${r.stdout}${r.stderr}`).toBe(0);
 		const after = hashes(root);
 
 		const dir = join(WRITES, name);
 		const removed = existsSync(join(dir, 'removed.json')) ? (JSON.parse(readFileSync(join(dir, 'removed.json'), 'utf8')) as string[]) : [];
-		const expected = walk(dir).filter((p) => p !== 'removed.json');
+		const expected = walk(dir).filter((p) => !RESULT_FILES.has(p));
 		const filesLayer = runCase(c).written;
 
+		// Byte for byte: Obsidian's result, or for an accepted difference (style or meaning) the files layer's.
 		for (const path of expected) {
 			const disk = join(root, ...path.split('/'));
 			expect(existsSync(disk), `${name}: ${path} is missing`).toBe(true);
@@ -93,10 +102,20 @@ describe('the write cases, through mtm', () => {
 		for (const path of removed) expect(listed(path), `${name}: ${path} should be gone`).toBe(false);
 		for (const path of expected) expect(listed(path), `${name}: ${path} under its exact name`).toBe(true);
 
-		// Nothing else changed: every file written is in Obsidian's result, every file gone is in its list.
+		// Nothing else changed: every file written is in Obsidian's result; every file gone is in its list (fixture files
+		// only) or is a setup note that moved away.
+		const setup = Object.keys(c.setup ?? {});
 		const changed = Object.keys(after).filter((p) => before[p] !== after[p]);
 		const gone = Object.keys(before).filter((p) => !(p in after));
 		expect(changed.filter((p) => !expected.includes(p)), name).toEqual([]);
-		expect(gone.sort(), name).toEqual([...removed].sort());
+		expect(gone.filter((p) => !setup.includes(p)).sort(), name).toEqual([...removed].sort());
+		for (const p of setup) expect(p in after, `${name}: setup note ${p}`).toBe(expected.includes(p));
+
+		// As many links left pointing nowhere as Obsidian counted.
+		const unresolved = join(dir, 'unresolved.json');
+		if (existsSync(unresolved)) {
+			const u = JSON.parse(readFileSync(unresolved, 'utf8')) as { before: number; after: number };
+			expect((JSON.parse(r.stdout) as { danglingLinks: number }).danglingLinks, name).toBe(u.after - u.before);
+		}
 	});
 });

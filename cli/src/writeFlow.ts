@@ -72,11 +72,23 @@ export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<
 	}
 }
 
-/** A plan the files layer can't apply; nothing is written. The vault changed, or a note's properties can't be edited. */
+/**
+ * A plan the files layer can't apply; nothing is written. The vault changed, or a path would leave the vault (exit
+ * code 3, as the writer's own refusals), or a note's properties can't be edited (exit code 1).
+ */
 function planFailure(e: WriteError): { error: ErrorJson['error']; changed: boolean } {
-	const changed = e.code === 'exists' || e.code === 'missing';
-	const message = e.code === 'exists' ? CLI.exists(e.path) : e.code === 'missing' ? CLI.missing(e.path) : e.code === 'invalid-properties' ? CLI.unreadableProperties(e.path) : CLI.notMtm(e.path);
-	return { error: { code: e.code, message, path: e.path }, changed };
+	switch (e.code) {
+		case 'exists':
+			return { error: { code: e.code, message: CLI.exists(e.path), path: e.path }, changed: true };
+		case 'missing':
+			return { error: { code: e.code, message: CLI.missing(e.path), path: e.path }, changed: true };
+		case 'bad-path':
+			return { error: { code: 'unsafe', message: CLI.outsideVault(e.path), path: e.path }, changed: true };
+		case 'invalid-properties':
+			return { error: { code: e.code, message: CLI.unreadableProperties(e.path), path: e.path }, changed: false };
+		case 'not-mtm':
+			return { error: { code: e.code, message: CLI.notMtm(e.path), path: e.path }, changed: false };
+	}
 }
 
 /** Why a write stopped, and whether anything was left changed. */

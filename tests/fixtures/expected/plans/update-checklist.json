@@ -14,8 +14,7 @@
 					"items": [
 						"Photograph the wall"
 					]
-				},
-				"bodyAfter": "Before the worktop is ordered.\n\n- [x] Measure the window wall\n- [ ] Check the corner unit\n- [ ] Photograph the wall\n"
+				}
 			}
 		],
 		"renames": []

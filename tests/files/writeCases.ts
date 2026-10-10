@@ -1,17 +1,17 @@
 // The write cases (tests/fixtures/write-cases.json): each runs one operation on the fixture vault, as other tools
-// would call it, and applies the plan with the files layer. The plans, with the body text each body edit leaves, are
-// what an Obsidian console script applies to a copy of the fixture to produce the expected results.
+// would call it, and applies the plan with the files layer. The plans are what an Obsidian console script applies to
+// a copy of the fixture, the way the plugin applies plans, to produce the expected results; a manifest of the
+// fixture's files lets that script check it starts from the fixture as committed.
 
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { splitFrontmatter } from '../../src/model/body';
-import { stripBom } from '../../src/files/frontmatter';
-import { VaultIndex, type VaultReader } from '../../src/files/index';
+import { isVaultFile, VaultIndex, type VaultReader } from '../../src/files/index';
 import { filesSnapshot } from '../../src/files/snapshot';
 import { contentsAfter, treeAfter, type FileOutcome } from '../../src/files/write';
 import { addAction, addMatter, inputKey, markAsDone, reopen, updateAction } from '../../src/ops/index';
-import type { BodyEdit, OpResult, Plan } from '../../src/ops/types';
+import type { OpResult, Plan } from '../../src/ops/types';
 import { migrateSettings } from '../../src/services/migrations';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
@@ -37,14 +37,17 @@ export interface WriteCase {
 	setup?: Record<string, string>;
 }
 
-/** A plan as the Obsidian script applies it: each body edit carries the body text it leaves. */
+/** A plan as the Obsidian script applies it, with the case's link setting and setup notes. */
 export interface CasePlan {
 	case: string;
 	description: string | null;
 	alwaysUpdateLinks: boolean;
 	setup: Record<string, string>;
-	plan: Omit<Plan, 'bodies'> & { bodies: { path: string; edit: BodyEdit; bodyAfter: string }[] };
+	plan: Plan;
 }
+
+/** The manifest file in the plans folder (its name can't be a case name). */
+export const MANIFEST = '_fixture.json';
 
 export interface CaseRun {
 	result: OpResult<unknown>;
@@ -111,14 +114,6 @@ function runOp(c: WriteCase, reader: VaultReader): OpResult<unknown> {
 	}
 }
 
-/** The body text (after the properties block) a note holds once the plan's body edits up to `upTo` are applied. */
-function bodyAfter(plan: Plan, upTo: number, reader: VaultReader): string {
-	const partial: Plan = { creates: plan.creates, edits: plan.edits, bodies: plan.bodies.slice(0, upTo + 1), renames: [] };
-	const path = plan.bodies[upTo]?.path ?? '';
-	const file = contentsAfter(partial, reader, { configDir: CONFIG_DIR }).files.find((f) => f.path === path);
-	return splitFrontmatter(stripBom(file?.after ?? '')).body;
-}
-
 export function runCase(c: WriteCase): CaseRun {
 	const reader = caseReader(c);
 	const result = runOp(c, reader);
@@ -131,7 +126,7 @@ export function runCase(c: WriteCase): CaseRun {
 		description: c.description ?? null,
 		alwaysUpdateLinks: c.alwaysUpdateLinks ?? true,
 		setup: c.setup ?? {},
-		plan: { ...plan, bodies: plan.bodies.map((b, i) => ({ ...b, bodyAfter: bodyAfter(plan, i, reader) })) },
+		plan,
 	};
 	return { result, plan, outcome, casePlan, written, removed, reader };
 }
@@ -139,13 +134,35 @@ export function runCase(c: WriteCase): CaseRun {
 /** A plan file's text: tab-indented JSON with a final line break. */
 export const planText = (p: CasePlan): string => `${JSON.stringify(p, null, '\t')}\n`;
 
-/** Accepted differences: the ```json writes block in ACCEPTED.md, a list of `{ "case", "path", "reason" }`. */
-export function acceptedWrites(): { case: string; path: string }[] {
+/** Every vault file of the fixture (not the configuration folder) with its SHA-256, in code-unit order. */
+export function fixtureManifest(): { files: Record<string, string> } {
+	const files: Record<string, string> = {};
+	for (const path of [...fixtureFiles].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+		if (!isVaultFile(path, CONFIG_DIR)) continue;
+		files[path] = createHash('sha256').update(readFileSync(join(FIXTURE, path))).digest('hex');
+	}
+	return { files };
+}
+
+/**
+ * An accepted difference: the ```json writes block in ACCEPTED.md. `keys` lists the properties whose values may
+ * differ; `meaning: true` marks a difference in what the note says, which skips the style checks.
+ */
+export interface Accepted {
+	case: string;
+	path: string;
+	reason: string;
+	keys?: string[];
+	meaning?: boolean;
+}
+
+/** The accepted differences between Obsidian's results and the files layer's (shared by the files and CLI tests). */
+export function acceptedWrites(): Accepted[] {
 	const accepted = join(WRITES, '..', 'ACCEPTED.md');
 	if (!existsSync(accepted)) return [];
 	const block = /```json writes\n([\s\S]*?)\n```/.exec(readFileSync(accepted, 'utf8'));
 	if (!block) return [];
-	const list = JSON.parse(block[1] ?? '[]') as { case: string; path: string; reason: string }[];
+	const list = JSON.parse(block[1] ?? '[]') as Accepted[];
 	for (const item of list) if (!item.reason?.trim()) throw new Error(`No reason given for ${item.case}: ${item.path}`);
 	return list;
 }

@@ -1,0 +1,23 @@
+{
+	"case": "done-while-waiting",
+	"description": "Mark as done while waiting on someone: the waiting stays as written.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Feedback on chapter 2.md",
+				"set": {
+					"mtm-type": "message",
+					"mtm-status": "done",
+					"mtm-matter": "[[Doctoral thesis]]",
+					"mtm-completed": "2026-10-09"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}
