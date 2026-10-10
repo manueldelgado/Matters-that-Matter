@@ -13,9 +13,13 @@ import { TypeEditor } from './components/typeEditor';
 import { SphereEditor } from './components/sphereEditor';
 import { DeleteModal } from './modals/deleteModal';
 import { companionThemeActive, renderThemeRow } from './components/themeOffer';
+import { applyControlValue, readControlValue, type ControlKey } from '../services/settingsControls';
 
 type FolderKey = keyof MattersSettings['folders'];
 const FOLDER_PREFIX = 'folders.';
+
+/** A built-in control's key: only keys with a mapping in services/settingsControls compile. */
+const control = (key: ControlKey): ControlKey => key;
 
 export class MattersSettingTab extends PluginSettingTab {
 	private statusEditor: StatusEditor | null = null;
@@ -76,22 +80,22 @@ export class MattersSettingTab extends PluginSettingTab {
 						desc: s.inboxLaneDesc,
 						control: {
 							type: 'dropdown',
-							key: 'defaultInboxPosition',
+							key: control('defaultInboxPosition'),
 							options: { top: STRINGS.views.options.first, bottom: STRINGS.views.options.last },
 						},
 					},
-					{ name: s.showDone, desc: s.showDoneDesc, control: { type: 'toggle', key: 'showDone' } },
+					{ name: s.showDone, desc: s.showDoneDesc, control: { type: 'toggle', key: control('showDone') } },
 					{
 						name: s.weekStart,
 						desc: s.weekStartDesc,
-						control: { type: 'dropdown', key: 'weekStart', options: { monday: s.monday, sunday: s.sunday } },
+						control: { type: 'dropdown', key: control('weekStart'), options: { monday: s.monday, sunday: s.sunday } },
 					},
-					{ name: s.openMattersAsOverview, desc: s.openMattersAsOverviewDesc, control: { type: 'toggle', key: 'openMattersAsOverview' } },
-					{ name: s.inlineChips, desc: s.inlineChipsDesc, control: { type: 'toggle', key: 'inlineChips' } },
+					{ name: s.openMattersAsOverview, desc: s.openMattersAsOverviewDesc, control: { type: 'toggle', key: control('openMattersAsOverview') } },
+					{ name: s.inlineChips, desc: s.inlineChipsDesc, control: { type: 'toggle', key: control('inlineChips') } },
 					{
 						name: s.todayInNewTabs,
 						desc: s.todayInNewTabsDesc,
-						control: { type: 'dropdown', key: 'todayInNewTabs', options: { every: s.todayEvery, alone: s.todayAlone, off: s.todayOff } },
+						control: { type: 'dropdown', key: control('todayInNewTabs'), options: { every: s.todayEvery, alone: s.todayAlone, off: s.todayOff } },
 					},
 				],
 			},
@@ -118,7 +122,7 @@ export class MattersSettingTab extends PluginSettingTab {
 
 	getControlValue(key: string): unknown {
 		if (key.startsWith(FOLDER_PREFIX)) return this.plugin.settings.folders[key.slice(FOLDER_PREFIX.length) as FolderKey];
-		return this.plugin.settings[key as keyof MattersSettings];
+		return readControlValue(this.plugin.settings, key);
 	}
 
 	setControlValue(key: string, value: unknown): void | Promise<void> {
@@ -128,12 +132,7 @@ export class MattersSettingTab extends PluginSettingTab {
 			this.saveSoon();
 			return;
 		}
-		if (key === 'defaultInboxPosition') settings.defaultInboxPosition = value === 'bottom' ? 'bottom' : 'top';
-		else if (key === 'showDone') settings.showDone = value === true;
-		else if (key === 'openMattersAsOverview') settings.openMattersAsOverview = value === true;
-		else if (key === 'todayInNewTabs') settings.todayInNewTabs = value === 'alone' || value === 'off' ? value : 'every';
-		else if (key === 'weekStart') settings.weekStart = value === 'sunday' ? 'sunday' : 'monday';
-		else return;
+		if (!applyControlValue(settings, key, value)) return;
 		return this.plugin.saveSettings();
 	}
 
