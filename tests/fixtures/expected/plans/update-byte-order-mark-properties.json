@@ -1,0 +1,22 @@
+{
+	"case": "update-byte-order-mark-properties",
+	"description": "A note that starts with a byte-order mark, properties only (no body edit).",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
+				"set": {
+					"mtm-type": "write",
+					"mtm-status": "doing",
+					"mtm-matter": "[[Kitchen renovation]]"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

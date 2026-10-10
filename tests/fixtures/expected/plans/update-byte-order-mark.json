@@ -24,8 +24,7 @@
 					"items": [
 						"Check the mark is still there"
 					]
-				},
-				"bodyAfter": "Starts with a byte-order mark. See [[More - target]].\n\n- [ ] Check the mark is still there\n"
+				}
 			}
 		],
 		"renames": []

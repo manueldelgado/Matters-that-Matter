@@ -3,7 +3,7 @@
 // `FileManager.processFrontMatter`, so a note the plugin wrote reads the same whichever wrote it last. Pure.
 
 import { isMap, isScalar, isSeq, parseDocument, stringify, type Document, type Node } from 'yaml';
-import { stripBom } from './frontmatter';
+import { lineAt, splitFrontmatter, stripBom } from './frontmatter';
 
 /** The options Obsidian writes properties with (`stringifyYaml`). */
 export const OBSIDIAN_YAML = { nullStr: '', lineWidth: 0, aliasDuplicateObjects: false } as const;
@@ -25,13 +25,14 @@ export class FrontmatterError extends Error {
 }
 
 /**
- * Where the properties block is, found as Obsidian finds it when it writes properties: the note starts with `---`
- * and a line break, and the block ends at the next `---` that starts a line and ends it (or the note).
+ * Where the properties block is, found as the index finds it (and Obsidian's cache reads it): the note's first line
+ * is `---` (spaces or tabs after it allowed) and a later line is the same; offsets in the text after a byte-order
+ * mark, which callers strip first.
  */
 export interface FrontmatterSpan {
 	/** The first character of the YAML, after the opening line. */
 	from: number;
-	/** Where the closing `---` starts (the YAML ends with the line break before it, if any). */
+	/** Where the closing line starts (the YAML ends with the line break before it, if any). */
 	to: number;
 	/** Where the body starts, after the closing line. */
 	contentStart: number;
@@ -40,16 +41,22 @@ export interface FrontmatterSpan {
 }
 
 export function frontmatterSpan(content: string): FrontmatterSpan | null {
-	const open = /^---(\r?\n)/.exec(content);
-	if (!open) return null;
-	const from = open[0].length;
-	const close = /---(\r?\n|$)/g;
-	close.lastIndex = from;
-	let m = close.exec(content);
-	while (m && content.charAt(m.index - 1) !== '\n') m = close.exec(content);
-	if (!m) return null;
-	return { from, to: m.index, contentStart: close.lastIndex, eol: open[1] === '\r\n' ? '\r\n' : '\n' };
+	const block = splitFrontmatter(content);
+	if (!block || content.startsWith(BOM)) return null;
+	const open = lineAt(content, 0);
+	const to = lineStart(content, block.endOffset);
+	const close = lineAt(content, to);
+	const eol = content.slice(open.end, open.next) === '\r\n' ? '\r\n' : '\n';
+	return { from: open.next, to, contentStart: close.next < 0 ? content.length : close.next, eol };
 }
+
+/** Whether the note's first line is a `---` fence (so a block the index can't see must not be written over or before). */
+function startsWithFence(content: string): boolean {
+	return FENCE.test(content.slice(0, lineAt(content, 0).end));
+}
+
+const FENCE = /^---[ \t]*$/;
+const BOM = '\uFEFF';
 
 /** Text written with `\n`, in the note's line ending. */
 export function withEol(text: string, eol: string): string {
@@ -162,6 +169,9 @@ function editBlock(content: string, set: Readonly<Record<string, unknown>>, remo
 	const span = frontmatterSpan(content);
 	if (!span) {
 		if (entries.length === 0) return content;
+		// A note that opens with a fence the index doesn't read as properties (never closed): adding a block before it
+		// would leave two, so the write is refused.
+		if (startsWithFence(content)) throw new FrontmatterError(path, `The properties of ${path} are not closed by a --- line`);
 		const eol = content.includes('\r\n') ? '\r\n' : '\n';
 		return `---${eol}${withEol(obsidianYaml(Object.fromEntries(entries)), eol)}---${eol}${content}`;
 	}

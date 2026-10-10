@@ -12,7 +12,7 @@ There are none: the file index reproduces `cache.json` byte for byte.
 
 ## Writes
 
-Differences between what Obsidian leaves after applying a write case's plan (`writes/<case>/`) and what the files layer (`src/files/write.ts`) leaves for the same plan. `tests/files/writeCases.test.ts` ignores exactly the files listed in the `json writes` block below, and fails when one of them no longer differs. Each entry is `{ "case": "…", "path": "…", "reason": "…" }`: `path` is the vault path of a file in that case's result.
+Differences between what Obsidian leaves after applying a write case's plan (`writes/<case>/`) and what the files layer (`src/files/write.ts`) leaves for the same plan. `tests/files/writeCases.test.ts` ignores exactly the files listed in the `json writes` block below, and fails when one of them no longer differs. Each entry is `{ "case": "…", "path": "…", "reason": "…" }`: `path` is the vault path of a file in that case's result. A style difference still has to say the same thing: the test checks that both files have the same properties, as the index reads them, and the same body once line endings are made plain; `"keys": ["…"]` names properties whose values may differ. A difference in meaning must say so with `"meaning": true`, which skips those checks; nothing else can pass as style.
 
 Three are style only: the properties read the same and every link reaches the same file. When Obsidian changes a property it writes the whole block again in its own style (comments dropped, quoting and number forms normalised, flow lists as block lists, LF lines even in a CRLF note); the files layer changes only the `mtm-` keys a plan names and leaves every other byte.
 
@@ -40,7 +40,8 @@ Every other case, the renames with links updated and not updated included, match
 	{
 		"case": "update-byte-order-mark",
 		"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
-		"reason": "A difference in meaning, where the files layer is deliberately safer. On a note that starts with a byte-order mark, Obsidian's processFrontMatter drops the mark and every property the write doesn't set (mtm-kind and mtm-sample are gone), so the note stops being an Action. The files layer edits the properties after the mark, keeps the mark and every other property, and doesn't copy that loss."
+		"reason": "A difference in meaning, where the files layer is deliberately safer. On a note that starts with a byte-order mark, Obsidian's processFrontMatter drops the mark and every property the write doesn't set (mtm-kind and mtm-sample are gone), so the note stops being an Action. The files layer edits the properties after the mark, keeps the mark and every other property, and doesn't copy that loss.",
+		"meaning": true
 	}
 ]
 ```

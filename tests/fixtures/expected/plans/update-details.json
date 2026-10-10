@@ -12,8 +12,7 @@
 				"edit": {
 					"kind": "details",
 					"text": "Before the worktop is ordered, with Charlie on site."
-				},
-				"bodyAfter": "Before the worktop is ordered, with Charlie on site.\n\n- [x] Measure the window wall\n- [ ] Check the corner unit\n"
+				}
 			}
 		],
 		"renames": []
