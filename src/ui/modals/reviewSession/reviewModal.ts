@@ -68,7 +68,14 @@ export class ReviewModal extends Modal {
 		private context: ReviewContext = {},
 	) {
 		super(plugin.app);
+		// Our own scope for → and Enter replaces the modal's, which held Escape: register it again.
 		this.scope = new Scope(this.app.scope);
+		this.scope.register([], 'Escape', () => {
+			// Typing in a field: Escape is the field's.
+			if (this.editing()) return true;
+			this.close();
+			return false;
+		});
 		this.scope.register([], 'ArrowRight', () => {
 			if (this.phase !== 'step' || this.editing()) return true;
 			this.skip();
