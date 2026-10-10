@@ -703,6 +703,25 @@ export const STRINGS = {
 		spheresAliases: ['groups', 'areas', 'spheres of life'],
 	},
 
+	/** The `matters` code block in notes. */
+	embed: {
+		open: 'Open Actions',
+		done: 'Done',
+		all: 'All Actions',
+		late: 'Late',
+		waiting: 'Waiting',
+		waitingOn: (names: string) => `Waiting on ${names}`,
+		dueToday: 'Due today or late',
+		dueBy: (date: string) => `Due by ${date}`,
+		dueBetween: (from: string, to: string) => `Due ${from} to ${to}`,
+		with: (names: string) => `with ${names}`,
+		priority: { 1: 'High priority', 2: 'Medium priority', 3: 'Low priority' } as Record<1 | 2 | 3, string>,
+		newAction: 'New Action here',
+		more: (n: number, where: 'board' | 'overview') => `${n} more ${where === 'board' ? 'on the board' : 'in the overview'}`,
+		nothingIn: (name: string) => `Nothing open in ${name}.`,
+		nothing: 'Nothing here.',
+		invalid: 'Matches nothing, so it isn’t applied',
+	},
 	setup: {
 		steps: ['Location', 'Workflow', 'Matters', 'Summary'],
 		stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
