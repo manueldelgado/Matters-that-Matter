@@ -50,6 +50,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - `ItemView` state must not use a `file` key: Obsidian reads it as a note to open and swaps in a Markdown view.
 - An `ItemView`'s header title isn't refreshed after `setState`; call `refreshViewTitle` (`vault/internal.ts`).
 - Since Obsidian 1.13 a modal's close button is `.modal-header-button`, absolutely placed in `.modal`; `.modal-close-button` no longer exists.
+- Giving a modal its own `Scope` (for extra shortcuts) replaces the one that held Escape: register Escape again, leaving it to a field being typed in.
 - Menus whose items carry colour or icons that matter use `menu.setUseNativeMenu(false)`: macOS native menus show plain text only.
 - There is no public submenu API: a "Move to …" item opens a second `Menu` at the same position.
 - Don't name a view member `focus`: it shadows `View.focus()`, which Obsidian calls.
