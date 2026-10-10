@@ -4,7 +4,7 @@
 import { BasesView, debounce, Keymap, Notice, type QueryController, type TFile } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
-import { resolveInboxPosition, resolveShowDone } from '../../model/actions';
+import { resolveCardOrder, resolveInboxPosition, resolveShowDone, type CardOrder } from '../../model/actions';
 import type { InboxPosition } from '../../model/matters';
 import type { ActionItem } from '../../services/actionItems';
 import { sphereKeysFor, type MatterInfo } from '../../services/boardModel';
@@ -23,6 +23,7 @@ export const OPTION_KEYS = {
 	hideEmptyLanes: 'mtmHideEmptyLanes',
 	groupBy: 'mtmGroupBy',
 	showBacklog: 'mtmShowBacklog',
+	cardOrder: 'mtmCardOrder',
 } as const;
 
 /** Type chips switched off, kept in the view config (so a newly added type starts on). */
@@ -252,14 +253,17 @@ export abstract class CollectionView extends BasesView {
 		});
 	}
 
-	protected async write(path: string, fn: (file: TFile) => Promise<void>): Promise<void> {
+	/** Runs a write on the note; false when the note is gone or the write failed (a notice says so). */
+	protected async write(path: string, fn: (file: TFile) => Promise<void>): Promise<boolean> {
 		const file = this.plugin.app.vault.getFileByPath(path);
-		if (!file) return;
+		if (!file) return false;
 		try {
 			await fn(file);
+			return true;
 		} catch (e) {
 			console.error('Matters that Matter: write failed', e);
 			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+			return false;
 		}
 	}
 
@@ -299,6 +303,17 @@ export abstract class CollectionView extends BasesView {
 		if (off.has(typeId)) off.delete(typeId);
 		else off.add(typeId);
 		this.setConfigSoon(TYPES_OFF_KEY, off.size ? [...off] : null);
+		this.refresh(true);
+	}
+
+	/** Boards and lists: the automatic order (default) or by hand. Pending toggles win, like the chips. */
+	protected cardOrder(): CardOrder {
+		return resolveCardOrder(this.configValue(OPTION_KEYS.cardOrder));
+	}
+
+	/** Automatic is the default, so switching back clears the option. */
+	protected toggleCardOrder(): void {
+		this.setConfigSoon(OPTION_KEYS.cardOrder, this.cardOrder() === 'manual' ? null : 'manual');
 		this.refresh(true);
 	}
 

@@ -2,6 +2,7 @@
 
 import type { App, TFile } from 'obsidian';
 import type { StatusDef } from '../settings';
+import { applyCardOrder } from '../services/cardOrder';
 import { applyStatus } from '../services/completion';
 import { toYmd } from '../model/dates';
 import { now } from './clock';
@@ -15,7 +16,11 @@ export function actionsUsing(app: App, key: 'mtm-status' | 'mtm-type', id: strin
 export async function moveStatus(app: App, files: readonly TFile[], from: StatusDef, to: StatusDef): Promise<number> {
 	const today = toYmd(now());
 	for (const file of files) {
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => applyStatus(fm, to, from.category, today));
+		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+			applyStatus(fm, to, from.category, today);
+			// Another cell: the card joins it after its numbered cards.
+			applyCardOrder(fm, from.id !== to.id);
+		});
 	}
 	return files.length;
 }

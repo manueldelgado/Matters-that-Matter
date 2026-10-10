@@ -36,6 +36,7 @@ export class ListView extends CollectionView {
 		const options = this.collectionOptions();
 		const groupBy = this.config.get(OPTION_KEYS.groupBy) === 'type' ? 'type' : 'matter';
 		const showBacklog = this.config.get(OPTION_KEYS.showBacklog) !== false;
+		const cardOrder = this.cardOrder();
 		const backlog = backlogStatus(settings.statuses);
 		const actions = this.actions();
 		const matters = allMatters(this.plugin.app, settings, today);
@@ -50,8 +51,9 @@ export class ListView extends CollectionView {
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
 			groupBy,
 			showBacklog,
+			cardOrder,
 			matters,
-			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
+			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.order, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
 		]);
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
@@ -60,7 +62,7 @@ export class ListView extends CollectionView {
 			actions,
 			matters,
 			settings.statuses,
-			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres, showBacklog },
+			{ ...options, hideEmptyLanes: true, laneToggles: {}, spheres: settings.spheres, showBacklog, cardOrder },
 			today,
 			now,
 			allActionItems(this.plugin.app, settings),
@@ -81,12 +83,14 @@ export class ListView extends CollectionView {
 				statuses: settings.statuses,
 				backlog: backlog ? { label: backlog.label, shown: showBacklog } : undefined,
 				openCount: board.empty ? null : board.openCount,
+				cardOrder,
 			},
 			{
 				toggleType: (id) => this.toggleType(id),
 				toggleSphere: (key) => this.toggleSphere(key),
 				toggleDone: () => this.toggleDone(),
 				toggleBacklog: () => this.toggleBacklog(showBacklog),
+				toggleCardOrder: () => this.toggleCardOrder(),
 				newAction: () => this.plugin.quickAdd({ sphereId: focus }),
 			},
 		);
@@ -98,7 +102,7 @@ export class ListView extends CollectionView {
 			view,
 			{
 				layout: buildListLayout(board),
-				byType: groupBy === 'type' ? buildTypeGroups(board, settings.types) : null,
+				byType: groupBy === 'type' ? buildTypeGroups(board, settings.types, cardOrder) : null,
 				matters: new Map(matters.map((m) => [m.path, m])),
 				selected: this.plugin.selection.path,
 				now,

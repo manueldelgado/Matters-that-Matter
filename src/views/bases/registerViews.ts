@@ -44,9 +44,21 @@ function inboxOption(): BasesAllOptions {
 	};
 }
 
+/** Boards and lists: cards in the automatic order, or in the user's own (mtm-order). */
+function cardOrderOption(): BasesAllOptions {
+	const o = STRINGS.views.options;
+	return {
+		type: 'dropdown',
+		key: OPTION_KEYS.cardOrder,
+		displayName: o.cardOrder,
+		default: 'auto',
+		options: { auto: o.cardOrderAuto, manual: o.cardOrderManual },
+	};
+}
+
 function boardOptions(): BasesAllOptions[] {
 	const o = STRINGS.views.options;
-	return [inboxOption(), ...doneOptions(), { type: 'toggle', key: OPTION_KEYS.hideEmptyLanes, displayName: o.hideEmptyLanes, default: false }];
+	return [inboxOption(), ...doneOptions(), cardOrderOption(), { type: 'toggle', key: OPTION_KEYS.hideEmptyLanes, displayName: o.hideEmptyLanes, default: false }];
 }
 
 /** The list and timeline never show empty Matters, so they have no "Hide empty lanes". */
@@ -69,6 +81,7 @@ function listOptions(plugin: MattersPlugin): BasesAllOptions[] {
 		{ type: 'toggle', key: OPTION_KEYS.showBacklog, displayName: o.showBacklog(backlog), default: true },
 		inboxOption(),
 		...doneOptions(),
+		cardOrderOption(),
 	];
 }
 

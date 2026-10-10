@@ -11,11 +11,13 @@ import { showNoNextActionMenu, showSphereMenu, showStatusMenu } from '../../../u
 import { nextStepStatus } from '../../../services/nextAction';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { allActionItems, allMatters } from '../../../vault/index';
-import { moveAction } from '../../../vault/actionWrites';
+import { moveAction, writeCardOrders } from '../../../vault/actionWrites';
+import { isHTMLElement } from '../../../vault/internal';
+import { dropWrites, moveWithin, type CellCard, type MoveWithin, type OrderWrite } from '../../../services/cardOrder';
+import type { ActionItem } from '../../../services/actionItems';
 import { markReviewed, setMatterSphere, setMatterState, writeLaneOrders } from '../../../vault/matterWrites';
 import { CollectionView, OPTION_KEYS, SPHERES_COLLAPSED_KEY, SPHERES_OFF_KEY } from '../collectionView';
 import { revealPlan } from '../../../services/reveal';
-import type { ActionItem } from '../../../services/actionItems';
 import { attachDrag } from './boardDrag';
 import { renderToolbar, type SphereChip } from '../toolbar';
 import { renderBoard, renderEmpty, type BoardHandlers } from './boardRender';
@@ -88,6 +90,7 @@ export class BoardView extends CollectionView {
 			hideEmptyLanes: this.config.get(OPTION_KEYS.hideEmptyLanes) === true,
 			laneToggles: this.laneToggles(),
 			spheres: this.plugin.settings.spheres,
+			cardOrder: this.cardOrder(),
 		};
 	}
 
@@ -112,7 +115,7 @@ export class BoardView extends CollectionView {
 			settings.spheres,
 			{ ...options, typesOff: [...options.typesOff], spheresOff: [...options.spheresOff], spheresCollapsed: [...options.spheresCollapsed] },
 			this.matters,
-			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.start, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
+			actions.map((a) => [a.path, a.title, a.effective, a.priority, a.order, a.start, a.due, a.completed, a.waitingOn, a.waitingSince, a.linkedCount]),
 		]);
 		if (!force && signature === this.signature) return;
 		this.signature = signature;
@@ -132,7 +135,11 @@ export class BoardView extends CollectionView {
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
 		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null };
-		renderToolbar(view, { ...input, statuses: this.plugin.settings.statuses, spheres: this.chips, openCount: model.empty ? null : model.openCount }, this.handlers);
+		renderToolbar(
+			view,
+			{ ...input, statuses: this.plugin.settings.statuses, spheres: this.chips, openCount: model.empty ? null : model.openCount, cardOrder: options.cardOrder },
+			this.handlers,
+		);
 		if (this.noActionsYet(model.empty)) {
 			renderEmpty(view, this.handlers);
 			return;
@@ -142,11 +149,64 @@ export class BoardView extends CollectionView {
 			return;
 		}
 		const scrollEl = renderBoard(view, input, this.handlers);
+		const byHand = options.cardOrder === 'manual';
 		attachDrag(scrollEl, {
-			moveCard: (path, matterPath, statusId) => void this.write(path, (file) => moveAction(this.plugin.app, file, { matterPath, statusId }, this.plugin.settings)),
+			byHand,
+			moveCard: (path, matterPath, statusId, index) =>
+				byHand
+					? void this.dropByHand(path, matterPath, statusId, index)
+					: void this.write(path, (file) => moveAction(this.plugin.app, file, { matterPath, statusId }, this.plugin.settings)),
 			moveLane: (path, beforePath, sphereKey) => void this.moveLaneBefore(path, beforePath, sphereKey, options),
 		});
+		// The card menu on desktop: the same items as a long-press on phones.
+		scrollEl.addEventListener('contextmenu', (e) => {
+			const card = isHTMLElement(e.target) ? e.target.closest<HTMLElement>('.mtm-card[data-path]') : null;
+			const path = card?.dataset.path;
+			if (!path) return;
+			e.preventDefault();
+			this.moveMenu(path, { x: e.clientX, y: e.clientY });
+		});
 		this.restoreScroll(scrollEl, scroll);
+	}
+
+	// ——— Cards in your own order ———
+
+	/** Every Action in a cell (hidden ones too, marked), for numbering it; one number per Action, whichever board shows it. */
+	private cellCards(matterPath: string, statusId: string): CellCard[] {
+		const shown = new Set((this.model?.lanes.find((l) => l.matter.path === matterPath)?.cells.get(statusId) ?? []).map((a) => a.path));
+		return allActionItems(this.plugin.app, this.plugin.settings)
+			.filter((a) => a.effective.matterPath === matterPath && a.effective.status.id === statusId)
+			.map((a) => ({ ...a, shown: shown.has(a.path) }));
+	}
+
+	/** A By hand drop: the place in the cell, and into another cell the move and the place in one write. */
+	private async dropByHand(path: string, matterPath: string, statusId: string, index: number): Promise<void> {
+		const item = this.itemAt(path);
+		if (!item) return;
+		const writes = dropWrites(this.cellCards(matterPath, statusId), path, index);
+		const sameCell = item.effective.matterPath === matterPath && item.effective.status.id === statusId;
+		if (sameCell) {
+			await this.writeOrders(writes);
+			return;
+		}
+		const own = writes.find((w) => w.path === path);
+		const moved = await this.write(path, (file) => moveAction(this.plugin.app, file, { matterPath, statusId, order: own?.order }, this.plugin.settings));
+		// Neighbours are renumbered only around a card that actually arrived.
+		if (moved) await this.writeOrders(writes.filter((w) => w.path !== path));
+	}
+
+	private async writeOrders(writes: readonly OrderWrite[]): Promise<void> {
+		if (!writes.length) return;
+		try {
+			await writeCardOrders(this.plugin.app, writes);
+		} catch (e) {
+			console.error('Matters that Matter: write failed', e);
+			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+		}
+	}
+
+	private itemAt(path: string): ActionItem | undefined {
+		return this.model?.lanes.flatMap((l) => [...l.cells.values()].flat()).find((i) => i.path === path);
 	}
 
 	// ——— Show on board ———
@@ -328,18 +388,37 @@ export class BoardView extends CollectionView {
 		this.refresh(true);
 	}
 
-	/** Long-press: every status, Mark as done or Reopen, then Move to Matter…. */
+	/**
+	 * The card menu (long-press on phones, right-click on desktop): every status, Mark as done or Reopen, on By hand
+	 * boards Move to top, Move up and Move down within the cell, then Move to Matter….
+	 */
 	private moveMenu(path: string, at: { x: number; y: number }): void {
-		const item = this.model?.lanes.flatMap((l) => [...l.cells.values()].flat()).find((i) => i.path === path);
+		const item = this.itemAt(path);
 		if (!item) return;
 		const { app } = this.plugin;
 		const settings = this.plugin.settings;
+		const byHand = this.cardOrder() === 'manual';
+		const b = STRINGS.board;
 		showStatusMenu(
 			at,
 			settings.statuses,
 			{ statusId: item.effective.status.id, category: item.category },
 			(statusId) => void this.write(path, (file) => moveAction(app, file, { statusId }, settings)),
-			(menu) =>
+			(menu) => {
+				if (byHand) {
+					// One read of the cell for all three items.
+					const cell = this.cellCards(item.effective.matterPath, item.effective.status.id);
+					const within: [MoveWithin, string, string][] = [
+						['top', b.moveToTop, 'arrow-up-to-line'],
+						['up', b.moveUp, 'arrow-up'],
+						['down', b.moveDown, 'arrow-down'],
+					];
+					for (const [move, title, icon] of within) {
+						const writes = moveWithin(cell, item.path, move);
+						menu.addItem((i) => i.setTitle(title).setIcon(icon).setDisabled(!writes.length).onClick(() => void this.writeOrders(writes)));
+					}
+					menu.addSeparator();
+				}
 				menu.addItem((i) =>
 					i
 						.setTitle(STRINGS.swipe.moveTo)
@@ -350,7 +429,8 @@ export class BoardView extends CollectionView {
 								void this.write(path, (file) => moveAction(app, file, { matterPath: m.path }, settings)),
 							).open();
 						}),
-				),
+				);
+			},
 		);
 	}
 
@@ -532,6 +612,7 @@ export class BoardView extends CollectionView {
 		toggleType: (typeId) => this.toggleType(typeId),
 		toggleSphere: (key) => this.toggleSphere(key),
 		toggleDone: () => this.toggleDone(),
+		toggleCardOrder: () => this.toggleCardOrder(),
 		toggleBand: (key) => this.toggleSphereCollapsed(key),
 		bandMenu: (band, e, button) => this.openBandMenu(band, e, button),
 		dismissSphere: (path) => void this.write(path, (f) => setMatterSphere(this.plugin.app, f, null)),

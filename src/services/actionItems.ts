@@ -1,7 +1,7 @@
 // An Action as every view sees it: raw note values plus effective values. Pure.
 
 import type { StatusCategory } from '../settings';
-import { parsePriority, isWaiting, type Priority } from '../model/actions';
+import { parseOrder, parsePriority, isWaiting, type Priority } from '../model/actions';
 import { parseMtmDate, type MtmDate } from '../model/dates';
 import { effectiveAction, linkText, type EffectiveAction, type ResolveLink, type WorkflowSettings } from './effective';
 
@@ -11,6 +11,8 @@ export interface ActionItem {
 	effective: EffectiveAction;
 	category: StatusCategory;
 	priority: Priority | null;
+	/** mtm-order: the place in its cell on boards and lists ordered by hand; null when unnumbered. */
+	order: number | null;
 	start: MtmDate | null;
 	due: MtmDate | null;
 	completed: unknown;
@@ -39,6 +41,7 @@ export function toActionItem(
 		effective,
 		category: effective.category,
 		priority: parsePriority(raw['mtm-priority']),
+		order: parseOrder(raw['mtm-order']),
 		start: parseMtmDate(raw['mtm-start']),
 		due: parseMtmDate(raw['mtm-due']),
 		completed: raw['mtm-completed'],

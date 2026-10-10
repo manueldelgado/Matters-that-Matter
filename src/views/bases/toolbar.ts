@@ -2,6 +2,7 @@
 
 import { setIcon, setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../settings';
+import type { CardOrder } from '../../model/actions';
 import { closedStatuses } from '../../model/workflow';
 import { STRINGS } from '../../strings';
 import { appendIcon, pressable, tileEl, typeClasses } from '../../ui/components/dom';
@@ -28,6 +29,8 @@ export interface ToolbarInput {
 	backlog?: { label: string; shown: boolean };
 	/** Null hides the count (nothing to count yet). */
 	openCount: number | null;
+	/** Boards and lists: the card order, with its switch beside Show done; absent elsewhere. */
+	cardOrder?: CardOrder;
 }
 
 export interface ToolbarHandlers {
@@ -35,14 +38,17 @@ export interface ToolbarHandlers {
 	toggleSphere?: (key: string) => void;
 	toggleDone: () => void;
 	toggleBacklog?: () => void;
+	toggleCardOrder?: () => void;
 	newAction: () => void;
 }
 
-/** A toolbar note that switches something on this view: an eye, a label, a tooltip. Same element in both states. */
-/** A show/hide toggle: the label and icon say what a click does; the tooltip says what is shown now. */
-function toggleNote(bar: HTMLElement, shown: boolean, label: string, title: string, onToggle: () => void): void {
+/**
+ * A toolbar note that switches something on this view: an icon, a label, a tooltip. Same element in both states.
+ * The label and icon say what a click does; the tooltip says what is shown now.
+ */
+function toggleNote(bar: HTMLElement, icon: string, label: string, title: string, onToggle: () => void): void {
 	const note = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
-	appendIcon(note, shown ? 'eye-off' : 'eye');
+	appendIcon(note, icon);
 	note.appendText(label);
 	setTooltip(note, title);
 	note.addEventListener('click', () => onToggle());
@@ -53,6 +59,9 @@ function toggleNote(bar: HTMLElement, shown: boolean, label: string, title: stri
 		}
 	});
 }
+
+/** A show/hide toggle's icon: what a click does. */
+const eye = (shown: boolean) => (shown ? 'eye-off' : 'eye');
 
 /** Type chips (all on by default; each one switched off hides its type), Sphere chips, the open count, Show done and "+". */
 export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: ToolbarHandlers): void {
@@ -86,11 +95,21 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 	const backlog = input.backlog;
 	if (backlog && h.toggleBacklog) {
 		const { label, shown } = backlog;
-		toggleNote(bar, shown, shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
+		toggleNote(bar, eye(shown), shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
+	}
+	if (input.cardOrder && h.toggleCardOrder) {
+		const byHand = input.cardOrder === 'manual';
+		toggleNote(
+			bar,
+			byHand ? 'arrow-down-wide-narrow' : 'hand',
+			byHand ? b.sortAutomatically : b.orderByHand,
+			byHand ? b.orderedByHand : b.orderedAutomatically,
+			h.toggleCardOrder,
+		);
 	}
 	const closed = closedStatuses(input.statuses).map((s) => s.label);
 	const done = closed[0] ?? '';
-	toggleNote(bar, input.showDone, input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
+	toggleNote(bar, eye(input.showDone), input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
 	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
 }

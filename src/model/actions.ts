@@ -12,6 +12,15 @@ export function parsePriority(raw: unknown): Priority | null {
 	return n === 1 || n === 2 || n === 3 ? n : null;
 }
 
+/**
+ * A card's place in its cell when ordered by hand (mtm-order): any finite number, or a plain decimal string
+ * ("20", "-5", "12.5"), lower first; anything else means none.
+ */
+export function parseOrder(raw: unknown): number | null {
+	if (typeof raw === 'string') return /^-?\d+(\.\d+)?$/.test(raw.trim()) ? Number(raw.trim()) : null;
+	return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
+
 function hasValue(raw: unknown): boolean {
 	if (raw === undefined || raw === null) return false;
 	if (typeof raw === 'string') return raw.trim() !== '';
@@ -52,6 +61,8 @@ export interface CardKey {
 	title: string;
 	priority: Priority | null;
 	due: MtmDate | null;
+	/** mtm-order; only boards and lists ordered by hand read it. */
+	order?: number | null;
 }
 
 /** Priority (1 first, none last), then due date (soonest first, undated last), then title. */
@@ -65,6 +76,21 @@ export function compareCards(a: CardKey, b: CardKey): number {
 		return a.due ? -1 : 1;
 	}
 	return a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true });
+}
+
+/** By hand: numbered cards first (lower first), then the rest in the automatic order. */
+export function compareCardsByHand(a: CardKey, b: CardKey): number {
+	const oa = a.order ?? null, ob = b.order ?? null;
+	if (oa !== null && ob !== null && oa !== ob) return oa - ob;
+	if ((oa === null) !== (ob === null)) return oa !== null ? -1 : 1;
+	return compareCards(a, b);
+}
+
+export type CardOrder = 'auto' | 'manual';
+
+/** The view option; anything but 'manual' is the automatic order. */
+export function resolveCardOrder(option: unknown): CardOrder {
+	return option === 'manual' ? 'manual' : 'auto';
 }
 
 /** Closed ÷ all Actions; 0 for a Matter without Actions. */

@@ -184,6 +184,53 @@ describe('buildTypeGroups', () => {
 	});
 });
 
+describe('cards in your own order', () => {
+	// Kitchen's Next cell: Call plumber (high) comes first automatically; by hand, the numbers lead.
+	const ordered = [
+		action('Call plumber', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'next', 'mtm-type': 'call', 'mtm-priority': 1, 'mtm-order': 20 }),
+		action('Buy tiles', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'next', 'mtm-type': 'buy', 'mtm-order': 10 }),
+		action('Write brief', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'next', 'mtm-type': 'write' }),
+		action('Ask Ana', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'waiting', 'mtm-type': 'call', 'mtm-order': 5 }),
+		action('Order timber', { 'mtm-matter': '[[Garden]]', 'mtm-status': 'next', 'mtm-type': 'buy', 'mtm-order': 15 }),
+		action('Measure plot', { 'mtm-matter': '[[Garden]]', 'mtm-status': 'next', 'mtm-type': 'buy', 'mtm-order': 1 }),
+	];
+	const kitchenNext = (b: ReturnType<typeof buildBoard>) => titles(b.lanes.find((l) => l.matter.name === 'Kitchen')?.cells.get('next'));
+
+	it('reads mtm-order into the Action item', () => {
+		expect(ordered[0]!.order).toBe(20);
+		expect(ordered[2]!.order).toBeNull();
+	});
+
+	it('Automatic boards ignore mtm-order', () => {
+		expect(kitchenNext(buildBoard(ordered, matters, settings.statuses, options(), today, now))).toEqual(['Call plumber', 'Buy tiles', 'Write brief']);
+		expect(kitchenNext(buildBoard(ordered, matters, settings.statuses, options({ cardOrder: 'auto' }), today, now))).toEqual(['Call plumber', 'Buy tiles', 'Write brief']);
+	});
+
+	it('By hand boards put numbered cards first, then the rest in the automatic order', () => {
+		expect(kitchenNext(buildBoard(ordered, matters, settings.statuses, options({ cardOrder: 'manual' }), today, now))).toEqual(['Buy tiles', 'Call plumber', 'Write brief']);
+	});
+
+	it('the list by Matter keeps the status runs, in hand order within each', () => {
+		const board = buildBoard(ordered, matters, settings.statuses, options({ cardOrder: 'manual' }), today, now);
+		const kitchenRows = buildList(board).find((g) => g.lane.matter.name === 'Kitchen')?.rows;
+		// Ask Ana (5) stays in the Waiting run after Next, although its number is lowest.
+		expect(titles(kitchenRows)).toEqual(['Buy tiles', 'Call plumber', 'Write brief', 'Ask Ana']);
+		const auto = buildBoard(ordered, matters, settings.statuses, options(), today, now);
+		expect(titles(buildList(auto).find((g) => g.lane.matter.name === 'Kitchen')?.rows)).toEqual(['Call plumber', 'Buy tiles', 'Write brief', 'Ask Ana']);
+	});
+
+	it('the list by type follows the hand order within each status run, across Matters', () => {
+		const board = buildBoard(ordered, matters, settings.statuses, options({ cardOrder: 'manual' }), today, now);
+		const buy = buildTypeGroups(board, settings.types, 'manual').find((g) => g.type.id === 'buy');
+		expect(titles(buy?.rows)).toEqual(['Measure plot', 'Buy tiles', 'Order timber']);
+		const call = buildTypeGroups(board, settings.types, 'manual').find((g) => g.type.id === 'call');
+		// Status runs first: Next before Waiting, whatever the numbers.
+		expect(titles(call?.rows)).toEqual(['Call plumber', 'Ask Ana']);
+		const auto = buildTypeGroups(buildBoard(ordered, matters, settings.statuses, options(), today, now), settings.types).find((g) => g.type.id === 'buy');
+		expect(titles(auto?.rows)).toEqual(['Buy tiles', 'Measure plot', 'Order timber']);
+	});
+});
+
 describe('Sphere bands', () => {
 	const spheres = [
 		{ id: 'home', label: 'Home', icon: 'house' },

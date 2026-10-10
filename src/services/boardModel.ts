@@ -1,7 +1,7 @@
 // What the board shows: visible columns, ordered lanes and sorted cells. Pure.
 
 import type { SphereDef, StatusDef } from '../settings';
-import { compareCards, isShownByDone } from '../model/actions';
+import { compareCards, compareCardsByHand, isShownByDone, type CardOrder } from '../model/actions';
 import { orderLanes, startsCollapsed, type InboxPosition, type Lane, type MatterState, type ReviewInfo } from '../model/matters';
 import type { Ymd } from '../model/dates';
 import type { ActionItem } from './actionItems';
@@ -39,6 +39,8 @@ export interface BoardOptions {
 	spheresCollapsed: ReadonlySet<string>;
 	/** Lists can hide the backlog status's Actions; shown when absent. */
 	showBacklog?: boolean;
+	/** Cells in the automatic order (the default), or by hand (mtm-order first). */
+	cardOrder?: CardOrder;
 }
 
 export interface BoardBand {
@@ -124,6 +126,7 @@ export function buildBoard(
 	const keys = sphereKeysFor(matters, options.spheres);
 	const shown = (m: MatterInfo) => m.isInbox || keys.length === 0 || sphereShown(m.sphere, options.spheresOff);
 
+	const compare = options.cardOrder === 'manual' ? compareCardsByHand : compareCards;
 	const lanes: BoardLane[] = [];
 	const columnCounts = new Map(columns.map((c) => [c.id, 0]));
 	let openCount = 0;
@@ -134,7 +137,7 @@ export function buildBoard(
 		const cells = new Map(columns.map((c) => [c.id, [] as ActionItem[]]));
 		for (const a of mine) cells.get(a.effective.status.id)?.push(a);
 		for (const [id, list] of cells) {
-			list.sort(compareCards);
+			list.sort(compare);
 			columnCounts.set(id, (columnCounts.get(id) ?? 0) + list.length);
 		}
 		const open = mine.filter((a) => a.category !== 'closed');

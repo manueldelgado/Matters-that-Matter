@@ -1,5 +1,5 @@
-// Writes to Action notes. Every write here comes from a user action and sets status, Matter and type
-// explicitly, which also clears orphan badges.
+// Writes to Action notes, each from a user action. Edits and moves set status, Matter and type explicitly,
+// which also clears orphan badges; writeCardOrders (a card's place in its cell) writes only mtm-order.
 
 import { normalizePath, TFile, type App } from 'obsidian';
 import type { MattersSettings } from '../settings';
@@ -8,6 +8,7 @@ import type { Priority } from '../model/actions';
 import { insertTask, setDetails, toggleTask } from '../model/body';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { applyFieldEdit, type FieldEdit } from '../services/actionEdit';
+import { applyCardOrder, changesCell, type OrderWrite } from '../services/cardOrder';
 import { applyStatus } from '../services/completion';
 import { effectiveAction } from '../services/effective';
 import { matterLink as matterLinkFor, newActionFrontmatter, personKey } from '../services/notesModel';
@@ -20,6 +21,8 @@ export interface ActionTarget {
 	statusId?: string;
 	matterPath?: string;
 	typeId?: string;
+	/** mtm-order for a By hand drop into another cell; without it, a move to another cell removes mtm-order. */
+	order?: number;
 }
 
 /** Link text for a Matter path, falling back to the bare name when the note is missing. */
@@ -30,7 +33,8 @@ function matterLink(app: App, matterPath: string, sourcePath: string): string {
 
 /**
  * Edits an Action's frontmatter. Status, Matter and type are always written (the target's, or as they are shown),
- * so every edit also clears orphan badges; other fields change only when `fields` names them.
+ * so every edit also clears orphan badges; other fields change only when `fields` names them. A move to another
+ * cell (status or Matter) removes mtm-order unless the target gives the new position.
  */
 export async function editAction(app: App, file: TFile, settings: MattersSettings, target: ActionTarget, fields: FieldEdit = {}): Promise<void> {
 	const current = effectiveAction(frontmatterOf(app, file), settings, resolverFor(app, file.path));
@@ -44,8 +48,20 @@ export async function editAction(app: App, file: TFile, settings: MattersSetting
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
 		fm['mtm-matter'] = matterLink(app, matterPath, file.path);
+		applyCardOrder(fm, changesCell({ statusId: current.status.id, matterPath: current.matterPath }, { statusId: status.id, matterPath }), target.order);
 		applyFieldEdit(fm, fields, keyOf, today);
 	});
+}
+
+/** Writes positions within a cell (By hand boards); nothing else changes. */
+export async function writeCardOrders(app: App, writes: readonly OrderWrite[]): Promise<void> {
+	for (const w of writes) {
+		const file = app.vault.getFileByPath(normalizePath(w.path));
+		if (!file) continue;
+		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+			fm['mtm-order'] = w.order;
+		});
+	}
 }
 
 /** Moves an Action to another status, Matter or type; the other two fields are written as they are shown. */

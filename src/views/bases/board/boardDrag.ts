@@ -5,8 +5,13 @@ const CARD_TYPE = 'application/x-mtm-action';
 const LANE_TYPE = 'application/x-mtm-lane';
 
 export interface DragHandlers {
-	/** A card was dropped on another cell. */
-	moveCard(path: string, matterPath: string, statusId: string): void;
+	/** Cards in the user's own order: a drop within the cell keeps its place too. */
+	byHand: boolean;
+	/**
+	 * A card was dropped on another cell (or, by hand, anywhere): `index` is its place among the cell's cards other
+	 * than itself, where the placeholder was.
+	 */
+	moveCard(path: string, matterPath: string, statusId: string, index: number): void;
 	/**
 	 * A lane was dropped before `beforePath`, or at the end when null, in the band of Sphere `sphereKey`
 	 * (undefined when the board has no bands, or the drop was on the Inbox).
@@ -30,6 +35,17 @@ function placePlaceholder(cell: HTMLElement, y: number): void {
 	const anchor = before ?? cell.querySelector(':scope > .mtm-cell-add');
 	if (anchor) cell.insertBefore(placeholder, anchor);
 	else cell.appendChild(placeholder);
+}
+
+/**
+ * The placeholder's place among the cell's cards other than the dragged one. Without a placeholder (a collapsed
+ * lane shows dots, not cards) the card goes to the end; the caller clamps the index.
+ */
+function placeholderIndex(cell: HTMLElement): number {
+	const placeholder = cell.querySelector(':scope > .mtm-drop-placeholder');
+	if (!placeholder) return Number.POSITIVE_INFINITY;
+	const cards = Array.from(cell.querySelectorAll<HTMLElement>(':scope > .mtm-card:not(.is-dragging)'));
+	return cards.filter((c) => c.compareDocumentPosition(placeholder) & Node.DOCUMENT_POSITION_FOLLOWING).length;
 }
 
 /** Lane headers in board order, with the lane each one belongs to. */
@@ -149,7 +165,8 @@ export function attachDrag(root: HTMLElement, h: DragHandlers): void {
 			const cell = target.closest<HTMLElement>('.mtm-cell');
 			const to = { lane: cell?.dataset.lane ?? '', status: cell?.dataset.status ?? '' };
 			e.preventDefault();
-			if (cell && (to.lane !== card.lane || to.status !== card.status)) h.moveCard(card.path, to.lane, to.status);
+			const otherCell = to.lane !== card.lane || to.status !== card.status;
+			if (cell && (otherCell || h.byHand)) h.moveCard(card.path, to.lane, to.status, placeholderIndex(cell));
 		} else if (lane) {
 			e.preventDefault();
 			const drop = laneTarget(root, target, e.clientY);

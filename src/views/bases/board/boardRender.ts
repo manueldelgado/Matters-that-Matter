@@ -15,6 +15,8 @@ export interface BoardHandlers {
 	toggleType(typeId: string): void;
 	toggleSphere(key: string): void;
 	toggleDone(): void;
+	/** Automatic or by hand: the toolbar's card order switch. */
+	toggleCardOrder(): void;
 	newAction(statusId?: string, matterPath?: string): void;
 	newMatter(): void;
 	toggleLane(path: string): void;

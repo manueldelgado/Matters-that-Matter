@@ -1,7 +1,7 @@
 // What the list shows: the board's lanes as groups, rows in column order. Pure.
 
 import type { SphereDef, TypeDef } from '../settings';
-import { compareCards } from '../model/actions';
+import { compareCards, compareCardsByHand, type CardOrder } from '../model/actions';
 import type { ActionItem } from './actionItems';
 import type { BoardLane, BoardModel } from './boardModel';
 import type { SphereCounts } from './spheres';
@@ -12,7 +12,7 @@ export interface ListGroup {
 	rows: ActionItem[];
 }
 
-/** Groups without rows are left out (the list never shows empty Matters). */
+/** Groups without rows are left out (the list never shows empty Matters). Rows keep each cell's order (automatic or by hand). */
 export function buildList(board: BoardModel): ListGroup[] {
 	return board.lanes
 		.map((lane) => ({ lane, rows: board.columns.flatMap((c) => lane.cells.get(c.id) ?? []) }))
@@ -36,15 +36,19 @@ export interface TypeGroup {
 	waiting: number;
 }
 
-/** The board's rows regrouped by effective type, in settings order; types without rows are left out. */
-export function buildTypeGroups(board: BoardModel, types: readonly TypeDef[]): TypeGroup[] {
+/**
+ * The board's rows regrouped by effective type, in settings order; types without rows are left out.
+ * By hand, each status run follows mtm-order across Matters.
+ */
+export function buildTypeGroups(board: BoardModel, types: readonly TypeDef[], cardOrder: CardOrder = 'auto'): TypeGroup[] {
 	const order = new Map(board.columns.map((c, i) => [c.id, i]));
+	const compare = cardOrder === 'manual' ? compareCardsByHand : compareCards;
 	const rows = board.lanes.flatMap((lane) => [...lane.cells.values()].flat());
 	return types
 		.map((type) => {
 			const mine = rows
 				.filter((a) => a.effective.type.id === type.id)
-				.sort((a, b) => (order.get(a.effective.status.id) ?? 0) - (order.get(b.effective.status.id) ?? 0) || compareCards(a, b));
+				.sort((a, b) => (order.get(a.effective.status.id) ?? 0) - (order.get(b.effective.status.id) ?? 0) || compare(a, b));
 			const open = mine.filter((a) => a.category !== 'closed');
 			return { type, rows: mine, open: open.length, waiting: open.filter((a) => a.waitingOn !== null).length };
 		})

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
 	compareCards,
+	compareCardsByHand,
+	parseOrder,
+	resolveCardOrder,
 	waitAge,
 	isShownByDone,
 	isToday,
@@ -80,6 +83,50 @@ describe('compareCards', () => {
 
 	it('compares titles naturally', () => {
 		expect([card('Item 10', null), card('item 2', null)].sort(compareCards).map((c) => c.title)).toEqual(['item 2', 'Item 10']);
+	});
+});
+
+describe('parseOrder', () => {
+	it('reads any finite number, or a numeric string', () => {
+		expect(parseOrder(15)).toBe(15);
+		expect(parseOrder(-5)).toBe(-5);
+		expect(parseOrder(2.5)).toBe(2.5);
+		expect(parseOrder('20')).toBe(20);
+		expect(parseOrder(' -5 ')).toBe(-5);
+		expect(parseOrder('12.5')).toBe(12.5);
+	});
+
+	it('treats anything else as no number', () => {
+		for (const raw of ['', 'first', null, undefined, Number.NaN, Infinity, [], {}, '0x10', '1e3', 'Infinity', '.5', '5.', '+5']) expect(parseOrder(raw)).toBeNull();
+	});
+});
+
+describe('compareCardsByHand', () => {
+	const card = (title: string, order: number | null, priority: CardKey['priority'] = null): CardKey => ({ title, priority, due: null, order });
+
+	it('puts numbered cards first, lower first, then the rest in the automatic order', () => {
+		const cards = [card('Unnumbered high', null, 1), card('Thirty', 30), card('Unnumbered low', null, 3), card('Ten', 10, 3), card('Twenty', 20)];
+		expect(cards.sort(compareCardsByHand).map((c) => c.title)).toEqual(['Ten', 'Twenty', 'Thirty', 'Unnumbered high', 'Unnumbered low']);
+	});
+
+	it('falls back to the automatic order for equal numbers', () => {
+		expect([card('B', 10), card('A', 10, 1)].sort(compareCardsByHand).map((c) => c.title)).toEqual(['A', 'B']);
+	});
+
+	it('is the automatic order when no card has a number', () => {
+		const cards = [card('b', null), card('a', null, 2), card('c', null, 1)];
+		expect([...cards].sort(compareCardsByHand)).toEqual([...cards].sort(compareCards));
+	});
+
+	it('the automatic order ignores mtm-order', () => {
+		expect([card('A', 30), card('B', 10)].sort(compareCards).map((c) => c.title)).toEqual(['A', 'B']);
+	});
+
+	it('resolves the view option, automatic by default', () => {
+		expect(resolveCardOrder(undefined)).toBe('auto');
+		expect(resolveCardOrder('auto')).toBe('auto');
+		expect(resolveCardOrder('manual')).toBe('manual');
+		expect(resolveCardOrder('nonsense')).toBe('auto');
 	});
 });
 
