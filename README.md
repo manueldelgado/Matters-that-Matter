@@ -16,13 +16,14 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 
 - **Four views of the same notes.** Board, list, calendar and timeline are Bases views, so they live in a `.base` file next to your other bases and respect its filters.
 - **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector. On a phone, the board shows one Matter at a time.
+- **Cards in your own order.** Cells sort themselves by priority, due date and title, or select **Order by hand** and every card stays where you drop it. Right-click a card (touch and hold on a phone) for **Move to top**, **Move up** and **Move down**. Lists follow the same order.
 - **Colour means type.** Action types (call, message, write, meet, buy, visit, or your own) give every card its colour and icon. You choose labels, icons and colours in settings.
-- **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish.
+- **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish; turn off the one you don't write in.
 - **The inspector**, in the right sidebar, edits the selected Action: status, type, Matter, priority, dates, who you're waiting on, people, details and a checklist.
 - **What matters today?** in every new tab: what's due or late, what's waiting in the Inbox, which Matters are due a review, and long waits.
-- **Matter overviews**: the outcome you're aiming for, a review rhythm, progress, and the Matter's Actions by status.
+- **Matter overviews**: the outcome you're aiming for, a review rhythm, progress, and the Matter's Actions by status. **Show on board** opens the board at the Matter's lane.
 - **Process Inbox** steps through captured Actions one at a time and asks what each one needs.
-- **Review Matters** takes you through the Matters due a review, one at a time: what was done since, what needs a look, and four questions (the outcome, the next step, whether it's still on your mind, when to look again).
+- **Review Matters** takes you through the Matters due a review, one at a time: what was done since, what needs a look, and five questions (the outcome, the next step, whether it's still on your mind, when to look again, and anything to remember). A note to remember is kept as a dated line at the end of the Matter's note, and comes back at the next review.
 - **Notes stay notes.** Action notes, Matter notes and the people your Actions name get a small banner that mirrors the card. Everything else in the note is yours.
 - **Links to Actions show as chips** in any note, in reading view and Live Preview: the Action's type, its due date, and whether it's done. They're still links, and they update as the Action changes. A setting turns them off.
 - **Actions in a note.** A `matters` code block lists Actions as cards inside any note, from one line in quick add's tokens (`#Kitchen renovation`, `@Charlie waiting`, `/call today`). Empty, it shows a Matter's or a person's open Actions on their own note, or what's due today elsewhere.
