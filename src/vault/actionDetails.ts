@@ -8,7 +8,9 @@ import type { ActionItem } from '../services/actionItems';
 import { peopleList } from '../services/actionEdit';
 import { linkText } from '../services/effective';
 import type { MatterInfo } from '../services/boardModel';
-import { actionItem, allMatters, linkedFile, linkedNotes } from './index';
+import { attachments as attachmentTargets } from '../services/notesModel';
+import { now } from './clock';
+import { actionItem, allMatters, linkedFile, linkedNotes, targetResolver } from './index';
 import { frontmatterOf } from './notes';
 
 /** A person link: the resolved note, or only the link text when it does not resolve. */
@@ -45,18 +47,14 @@ function personRef(app: App, raw: unknown, sourcePath: string): PersonRef | null
 
 /** Embedded files that are not notes. */
 function attachments(app: App, file: TFile): TFile[] {
-	const out = new Map<string, TFile>();
-	for (const embed of app.metadataCache.getFileCache(file)?.embeds ?? []) {
-		const target = app.metadataCache.getFirstLinkpathDest(embed.link.split('#')[0] ?? '', file.path);
-		if (target && target.extension !== 'md') out.set(target.path, target);
-	}
-	return [...out.values()];
+	const embeds = (app.metadataCache.getFileCache(file)?.embeds ?? []).map((e) => e.link);
+	return attachmentTargets(embeds, targetResolver(app, file.path));
 }
 
 export async function readActionDetails(app: App, file: TFile, settings: MattersSettings): Promise<ActionDetails> {
 	const fm = frontmatterOf(app, file) ?? {};
 	const item = actionItem(app, file, settings);
-	const matters = allMatters(app, settings, toYmd(new Date()));
+	const matters = allMatters(app, settings, toYmd(now()));
 	const content = await app.vault.cachedRead(file);
 
 	const waitingOn = personRef(app, fm['mtm-waiting-on'], file.path);

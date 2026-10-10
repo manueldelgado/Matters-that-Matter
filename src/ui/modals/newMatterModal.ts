@@ -4,7 +4,7 @@ import { Modal, type App } from 'obsidian';
 import type { SphereDef } from '../../settings';
 import { formatCadence, parseCadence, parseOutcome } from '../../model/matters';
 import { STRINGS } from '../../strings';
-import { DEFAULT_MATTER_ICON } from '../../vault/index';
+import { DEFAULT_MATTER_ICON } from '../../services/notesModel';
 import { cadenceFields, type CadenceFields } from '../components/cadenceFields';
 import { appendIcon, tileEl } from '../components/dom';
 import { IconPickerModal } from './iconPickerModal';

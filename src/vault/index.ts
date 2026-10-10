@@ -4,14 +4,30 @@ import { normalizePath, TFile, type App } from 'obsidian';
 import type { PersonEntry } from '../services/personModel';
 import type { MattersSettings } from '../settings';
 import type { Ymd } from '../model/dates';
-import { matterState, parseCadence, parseLaneOrder, parseOutcome, reviewInfo } from '../model/matters';
 import { toActionItem, type ActionItem } from '../services/actionItems';
-import { linkText, type ResolveLink } from '../services/effective';
+import type { ResolveLink } from '../services/effective';
 import type { MatterInfo } from '../services/boardModel';
-import { effectiveSphere } from '../services/spheres';
+import {
+	linkedNotes as linkedNoteTargets,
+	linkedTarget,
+	matterInfo as matterInfoOf,
+	matterList,
+	peopleIndex as peopleIndexOf,
+	peoplePaths as peoplePathsOf,
+	type NoteData,
+	type ResolveTarget,
+} from '../services/notesModel';
 import { frontmatterOf, notesOfKind } from './notes';
 
-export const DEFAULT_MATTER_ICON = 'circle-dot';
+/** A file with its cached frontmatter, as the pure rules take notes. */
+export function noteData(app: App, file: TFile): NoteData {
+	return { path: file.path, basename: file.basename, frontmatter: frontmatterOf(app, file) };
+}
+
+/** Resolves link text from `sourcePath` to a vault file. */
+export function targetResolver(app: App, sourcePath: string): ResolveTarget<TFile> {
+	return (linkpath) => app.metadataCache.getFirstLinkpathDest(linkpath, sourcePath);
+}
 
 export function resolverFor(app: App, sourcePath: string): ResolveLink {
 	return (text) => {
@@ -23,31 +39,18 @@ export function resolverFor(app: App, sourcePath: string): ResolveLink {
 
 /** The file a frontmatter link value points to. */
 export function linkedFile(app: App, raw: unknown, sourcePath: string): TFile | null {
-	const text = linkText(raw);
-	return text ? app.metadataCache.getFirstLinkpathDest(text, sourcePath) : null;
+	return linkedTarget(raw, targetResolver(app, sourcePath));
 }
 
 /** Resolved outgoing body links to other notes, without the Matter and people. */
 export function linkedNotes(app: App, file: TFile, exclude: ReadonlySet<string>): TFile[] {
-	const cache = app.metadataCache.getFileCache(file);
-	const out = new Map<string, TFile>();
-	for (const link of cache?.links ?? []) {
-		const target = app.metadataCache.getFirstLinkpathDest(link.link.split('#')[0] ?? '', file.path);
-		if (target && target.extension === 'md' && target.path !== file.path && !exclude.has(target.path)) out.set(target.path, target);
-	}
-	return [...out.values()];
+	const links = (app.metadataCache.getFileCache(file)?.links ?? []).map((l) => l.link);
+	return linkedNoteTargets(links, file.path, targetResolver(app, file.path), exclude);
 }
 
 /** Resolved notes an Action names in mtm-people and mtm-waiting-on. */
 export function peoplePaths(app: App, fm: Record<string, unknown>, sourcePath: string): Set<string> {
-	const raw = fm['mtm-people'];
-	const values: unknown[] = [...(Array.isArray(raw) ? (raw as unknown[]) : [raw]), fm['mtm-waiting-on']];
-	const out = new Set<string>();
-	for (const v of values) {
-		const f = linkedFile(app, v, sourcePath);
-		if (f) out.add(f.path);
-	}
-	return out;
+	return peoplePathsOf(fm, targetResolver(app, sourcePath));
 }
 
 export function actionItem(app: App, file: TFile, settings: MattersSettings): ActionItem {
@@ -64,20 +67,11 @@ export function actionItem(app: App, file: TFile, settings: MattersSettings): Ac
  * the Actions that name it and whether they wait on it. People are ordinary notes; nothing is written.
  */
 export function peopleIndex(app: App, settings: MattersSettings): Map<string, PersonEntry[]> {
-	const index = new Map<string, PersonEntry[]>();
-	for (const file of notesOfKind(app, 'action')) {
-		const fm = frontmatterOf(app, file) ?? {};
-		const people = peoplePaths(app, fm, file.path);
-		if (!people.size) continue;
-		const item = actionItem(app, file, settings);
-		const waitingOn = linkedFile(app, fm['mtm-waiting-on'], file.path)?.path ?? null;
-		for (const path of people) {
-			const list = index.get(path) ?? [];
-			list.push({ item, waiting: path === waitingOn });
-			index.set(path, list);
-		}
-	}
-	return index;
+	return peopleIndexOf(
+		notesOfKind(app, 'action').map((file) => ({ ...noteData(app, file), file })),
+		(sourcePath) => targetResolver(app, sourcePath),
+		(note) => actionItem(app, note.file, settings),
+	);
 }
 
 /** Every Action in the vault (not only those in a Bases result). */
@@ -86,37 +80,14 @@ export function allActionItems(app: App, settings: MattersSettings): ActionItem[
 }
 
 export function matterInfo(app: App, file: TFile, settings: MattersSettings, today: Ymd): MatterInfo {
-	const fm = frontmatterOf(app, file) ?? {};
-	const isInbox = file.path === settings.inboxPath;
-	const icon = typeof fm['mtm-icon'] === 'string' && fm['mtm-icon'].trim() ? fm['mtm-icon'].trim() : DEFAULT_MATTER_ICON;
-	const state = isInbox ? 'active' : matterState(fm['mtm-state']);
-	const cadence = parseCadence(fm['mtm-review-every']);
-	const sphere = effectiveSphere(fm['mtm-sphere'], settings.spheres, isInbox);
-	return {
-		path: file.path,
-		name: file.basename,
-		laneOrder: parseLaneOrder(fm['mtm-lane-order']),
-		isInbox,
-		icon: isInbox && !fm['mtm-icon'] ? 'inbox' : icon,
-		state,
-		review: isInbox || !cadence ? null : reviewInfo(fm['mtm-review-every'], fm['mtm-last-reviewed'], today),
-		sphere: sphere.id,
-		sphereOrphan: sphere.orphan,
-		outcome: isInbox ? null : parseOutcome(fm['mtm-outcome']),
-	};
+	return matterInfoOf(noteData(app, file), settings, today);
 }
 
 /** All Matter notes, plus the Inbox even when its note is missing or lost its mtm-kind. */
 export function allMatters(app: App, settings: MattersSettings, today: Ymd): MatterInfo[] {
-	const files = notesOfKind(app, 'matter');
 	const inboxFile = app.vault.getFileByPath(normalizePath(settings.inboxPath));
-	if (inboxFile && !files.includes(inboxFile)) files.push(inboxFile);
-	const matters = files.map((f) => matterInfo(app, f, settings, today));
-	if (!inboxFile) {
-		const name = settings.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? 'Inbox';
-		matters.push({ path: settings.inboxPath, name, laneOrder: null, isInbox: true, icon: 'inbox', state: 'active', review: null, sphere: null, sphereOrphan: null, outcome: null });
-	}
-	return matters;
+	const notes = notesOfKind(app, 'matter').map((f) => noteData(app, f));
+	return matterList(notes, inboxFile ? noteData(app, inboxFile) : null, settings, today);
 }
 
 /** People in the Actions' mtm-people and mtm-waiting-on, most involved first. */

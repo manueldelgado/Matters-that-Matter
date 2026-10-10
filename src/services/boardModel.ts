@@ -92,7 +92,7 @@ export function buildBoard(
 	statuses: readonly StatusDef[],
 	options: BoardOptions,
 	today: Ymd,
-	now?: Date,
+	now: Date,
 	/** Every Action in the vault, for "No next Action" (a board's filter must not hide what keeps a Matter moving). */
 	everyAction: readonly ActionItem[] = actions,
 ): BoardModel {
@@ -161,7 +161,7 @@ export function buildBoard(
 			lanes: items,
 			counts: sphereCounts(
 				items.flatMap((l) => [...l.cells.values()].flat()),
-				now ?? new Date(),
+				now,
 			),
 			collapsed: options.spheresCollapsed.has(sphere?.id ?? NO_SPHERE),
 		}));

@@ -90,7 +90,7 @@ export interface TimelineSections {
 }
 
 /** `groups` (in board order) in Sphere sections; the Inbox stays outside them, where it was. */
-export function timelineSections(groups: readonly TimelineGroup[], spheres: readonly SphereDef[], collapsed: ReadonlySet<string>, now = new Date()): TimelineSections {
+export function timelineSections(groups: readonly TimelineGroup[], spheres: readonly SphereDef[], collapsed: ReadonlySet<string>, now: Date): TimelineSections {
 	const inbox = groups.find((g) => g.matter.isInbox) ?? null;
 	const sections = groupBySphere(
 		groups.filter((g) => !g.matter.isInbox),

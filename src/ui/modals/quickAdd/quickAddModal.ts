@@ -23,7 +23,7 @@ import {
 } from '../../../services/quickAdd';
 import { parseQuickAdd, type QuickAddContext, type QuickAddResult, type TypeCandidate } from '../../../services/quickAddParser';
 import { createAction } from '../../../vault/actionWrites';
-import { DEFAULT_MATTER_ICON } from '../../../vault/index';
+import { DEFAULT_MATTER_ICON } from '../../../services/notesModel';
 import { createMatter } from '../../../vault/matterWrites';
 import { createPersonNote } from '../../../vault/notes';
 import { loadCandidates } from '../../../vault/candidates';
