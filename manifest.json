@@ -1,7 +1,7 @@
 {
 	"id": "matters-that-matter",
 	"name": "Matters that Matter",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"minAppVersion": "1.13.0",
 	"description": "Plan your work on a kanban board with swimlanes, a list, a calendar and a timeline, where every card and every lane is a note.",
 	"author": "Manuel Delgado Tenorio",
