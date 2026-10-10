@@ -13,6 +13,8 @@ export default defineConfig(
 		'package.json',
 		'package-lock.json',
 		'tsconfig.json',
+		'cli/dist',
+		'cli/package.json',
 	]),
 	{
 		languageOptions: {
@@ -21,7 +23,7 @@ export default defineConfig(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs'],
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs', 'cli/build.mjs'],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],
@@ -30,8 +32,8 @@ export default defineConfig(
 	},
 	...obsidianmd.configs.recommended,
 	{
-		// Node scripts and the tests that read files or run scripts: they never ship in the plugin.
-		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**'],
+		// Node scripts, the test configuration and the tests that read files or run scripts: they never ship in the plugin.
+		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**', 'vitest.config.ts'],
 		languageOptions: {
 			globals: {
 				...globals.node,
@@ -40,6 +42,21 @@ export default defineConfig(
 		rules: {
 			'obsidianmd/no-nodejs-modules': 'off',
 			'obsidianmd/hardcoded-config-path': 'off',
+		},
+	},
+	{
+		// The command line runs in Node and reads the vault's configuration folder by name; it never ships in the plugin.
+		files: ['cli/src/**', 'cli/build.mjs', 'tests/cli/**'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			'obsidianmd/no-nodejs-modules': 'off',
+			'obsidianmd/hardcoded-config-path': 'off',
+			// Its build tools are the plugin's dev dependencies; its package has none.
+			'import/no-extraneous-dependencies': ['warn', { packageDir: [import.meta.dirname, `${import.meta.dirname}/cli`] }],
 		},
 	},
 	{

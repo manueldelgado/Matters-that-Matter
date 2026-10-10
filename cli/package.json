@@ -1,0 +1,39 @@
+{
+	"name": "matters-that-matter",
+	"version": "0.1.0",
+	"description": "Matters that Matter from the command line: read and change the Actions and Matters in an Obsidian vault, or run as an MCP server for AI assistants.",
+	"type": "module",
+	"bin": {
+		"mtm": "dist/mtm.mjs"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "node build.mjs",
+		"prepack": "node build.mjs"
+	},
+	"keywords": [
+		"obsidian",
+		"matters-that-matter",
+		"cli",
+		"mcp",
+		"model-context-protocol",
+		"productivity",
+		"kanban"
+	],
+	"author": "Manuel Delgado Tenorio",
+	"license": "MIT",
+	"homepage": "https://matters-that-matter.app/",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/manueldelgado/Matters-that-Matter.git",
+		"directory": "cli"
+	},
+	"bugs": {
+		"url": "https://github.com/manueldelgado/Matters-that-Matter/issues"
+	}
+}
