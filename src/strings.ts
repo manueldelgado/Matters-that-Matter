@@ -38,7 +38,7 @@ export const STRINGS = {
 		calendar: 'Calendar',
 		timeline: 'Timeline',
 		nextActions: 'Next actions',
-		setup: 'Set up Matters',
+		setup: 'Set up Matters that Matter',
 		options: {
 			inboxPosition: 'Inbox lane',
 			inherit: 'Inherit',
@@ -669,7 +669,7 @@ export const STRINGS = {
 		offerTitle: 'Make it look like the pictures',
 		offerLine: 'The Calm Matters theme adds a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault.',
 		get: 'Get the Calm Matters theme',
-		note: 'Opens Obsidian’s theme browser. Optional: Matters works with any theme.',
+		note: 'Opens Obsidian’s theme browser. Optional: Matters that Matter works with any theme.',
 		shotLabel: 'The board with the Calm Matters theme',
 		/** "You’re using the **Calm Matters** theme." */
 		activeBefore: 'You’re using the ',
@@ -747,8 +747,8 @@ export const STRINGS = {
 		addFailed: (message: string) => `A link tried to add an Action, but the note couldn’t be written: ${message}`,
 		openFailed: (message: string) => `The link couldn’t open it: ${message}`,
 		turnedOff:
-			'A link tried to add an Action, but links can’t add Actions in this vault. You can allow it in Matters’ settings, under Other tools.',
-		notSetUp: 'Matters isn’t set up in this vault yet, so the link wasn’t used. Run setup first.',
+			'A link tried to add an Action, but links can’t add Actions in this vault. You can allow it in Settings → Matters that Matter → Other tools.',
+		notSetUp: 'Matters that Matter isn’t set up in this vault yet, so the link wasn’t used. Run setup first.',
 		notAdded: (reason: string) => `A link tried to add an Action, but it wasn’t added. ${reason}`,
 		noAction: (name: string) => `No Action called “${name}” here.`,
 		severalActions: (name: string, example: string) => `Several Actions are called “${name}”. Use its path in the link, such as ${example}.`,
@@ -861,7 +861,7 @@ export const STRINGS = {
 				title: 'Welcome back.',
 				lead: (actions: number, matters: number) =>
 					`Your vault already has ${plural(actions, 'Action', 'Actions')} and ${plural(matters, 'Matter', 'Matters')}. Setup picks up from them and fills in what it can; nothing in your notes changes.`,
-				otherDeviceTitle: 'Using Matters on another device?',
+				otherDeviceTitle: 'Using Matters that Matter on another device?',
 				otherDevice: 'If your plugin settings sync, wait for them instead: they bring everything back exactly as it was.',
 				startFresh: 'Start fresh instead',
 				foundMatters: (n: number) => `Found ${plural(n, 'Matter', 'Matters')} here`,
@@ -909,7 +909,7 @@ export const STRINGS = {
 			},
 			arrived: {
 				title: 'Your settings arrived from another device.',
-				text: 'Matters is already set up there, so there’s nothing to do here: your statuses, types and Spheres are the ones you use everywhere.',
+				text: 'Matters that Matter is already set up there, so there’s nothing to do here: your statuses, types and Spheres are the ones you use everywhere.',
 				openBoard: 'Open board',
 			},
 		},
@@ -929,7 +929,7 @@ export const STRINGS = {
 		noSphere: (query: string) => `No Sphere matches “${query}”, so the Matter has no Sphere.`,
 		leftOut: (query: string, added = true) => `“${query}” matched nothing, so it ${added ? 'was' : 'is'} left out.`,
 		startAfterDue: 'It starts after it’s due; it keeps both dates and is placed by the due date.',
-		newerSettings: 'These settings come from a newer version of Matters; what you read may miss something new.',
+		newerSettings: 'These settings come from a newer version of Matters that Matter; what you read may miss something new.',
 		// Changing is strict: nothing is written.
 		actionNotFound: (ref: string) => `No Action matches “${ref}”.`,
 		severalActions: (ref: string) => `Several Actions match “${ref}”.`,
@@ -946,7 +946,7 @@ export const STRINGS = {
 		severalPeople: (query: string) => `Several notes match “${query}”.`,
 		// Values that can't be read.
 		badPriority: (value: string) => `“${value}” isn’t a priority. Use 1, 2 or 3, or high, medium or low.`,
-		badDate: (value: string) => `“${value}” isn’t a date Matters can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.`,
+		badDate: (value: string) => `“${value}” isn’t a date Matters that Matter can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.`,
 		dateRange: (value: string) => `“${value}” is a range. Give the start and the due date separately.`,
 		badLink: (value: string) => `“${value}” isn’t a note in this vault or a web address (http or https).`,
 		noTitle: 'An Action needs a title.',
@@ -960,9 +960,9 @@ export const STRINGS = {
 		badList: (field: string) => `${field} must be a list of text.`,
 		nothingToChange: 'Nothing to change: name at least one field.',
 		// The vault isn't ready for writes.
-		notSetUp: 'Matters isn’t set up in this vault yet. Run setup in Obsidian first.',
-		newerSettingsWrite: 'These settings come from a newer version of Matters, so nothing is written. Update Matters first.',
-		noWorkflow: 'The workflow has no statuses or no types. Check the statuses and types in Matters’ settings.',
+		notSetUp: 'Matters that Matter isn’t set up in this vault yet. Run setup in Obsidian first.',
+		newerSettingsWrite: 'These settings come from a newer version of Matters that Matter, so nothing is written. Update Matters that Matter first.',
+		noWorkflow: 'The workflow has no statuses or no types. Check the statuses and types in the settings of Matters that Matter.',
 	},
 
 	modals: {

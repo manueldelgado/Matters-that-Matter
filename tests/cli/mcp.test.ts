@@ -338,19 +338,19 @@ describe('errors are tool errors', () => {
 		writeFileSync(file, JSON.stringify({ ...settings, setupDone: false }));
 		const before = hashes(root);
 		const { client, stderr } = await connect(['--vault', root]);
-		expect(stderr()).toContain('Matters isn’t set up in this vault yet.');
+		expect(stderr()).toContain('Matters that Matter isn’t set up in this vault yet.');
 		const add = await call(client, 'add_action', { title: 'Too early' });
 		expect(add.isError).toBe(true);
-		expect(text(add)).toBe('Matters isn’t set up in this vault yet. Run setup in Obsidian first.');
+		expect(text(add)).toBe('Matters that Matter isn’t set up in this vault yet. Run setup in Obsidian first.');
 		const today = await call(client, 'get_today');
 		expect(today.isError).toBeFalsy();
-		expect(text(today).split('\n')[0]).toBe('Matters isn’t set up in this vault yet. Run setup in Obsidian first.');
+		expect(text(today).split('\n')[0]).toBe('Matters that Matter isn’t set up in this vault yet. Run setup in Obsidian first.');
 		expect(hashes(root)).toEqual(before);
 
 		rmSync(file);
 		const gone = await call(client, 'get_today');
 		expect(gone.isError).toBe(true);
-		expect(text(gone)).toMatch(/^Matters isn’t installed in .*: there’s no \.obsidian\/plugins\/matters-that-matter\/data\.json\./);
+		expect(text(gone)).toMatch(/^Matters that Matter isn’t installed in .*: there’s no \.obsidian\/plugins\/matters-that-matter\/data\.json\./);
 	});
 });
 

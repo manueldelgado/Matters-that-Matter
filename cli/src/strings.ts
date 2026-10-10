@@ -86,7 +86,7 @@ The statuses, Action types and Spheres, with the IDs notes store.`,
 	parse: `<b>mtm parse</b> <text>
 What quick add would make of the text. Nothing is written.`,
 	open: `<b>mtm open</b> <action|matter>
-Opens an Action or a Matter in Obsidian, through a link Matters handles (a version of Matters with links).`,
+Opens an Action or a Matter in Obsidian, through a link the plugin handles (a version of Matters that Matter with links).`,
 	mcp: `<b>mtm mcp</b> --vault <path>
 Runs as an MCP server over stdio, for AI assistants. Each tool reads the vault afresh. Tools that write say what
 they changed, and carry hints so the assistant’s app can ask first. Nothing is deleted and settings are never written.
@@ -116,17 +116,17 @@ export const CLI = {
 	badConfigDir: (dir: string) => `--config-dir names one folder in the vault, such as .obsidian; “${dir}” isn’t one.`,
 	noFolder: (path: string) => `There’s no folder at ${path}.`,
 	notAVault: (path: string, configDir: string) => `${path} isn’t an Obsidian vault: it has no ${configDir} folder.`,
-	noSettings: (path: string, file: string) => `Matters isn’t installed in ${path}: there’s no ${file}. Install Matters and run setup in Obsidian first.`,
-	badSettings: (file: string) => `Matters’ settings in ${file} can’t be read. Open the vault in Obsidian to repair them.`,
+	noSettings: (path: string, file: string) => `Matters that Matter isn’t installed in ${path}: there’s no ${file}. Install the plugin and run setup in Obsidian first.`,
+	badSettings: (file: string) => `The settings of Matters that Matter in ${file} can’t be read. Open the vault in Obsidian to repair them.`,
 
 	// Writing.
 	nothingChanged: 'Nothing was changed.',
-	changedMeanwhile: (path: string) => `${path} changed while Matters was about to write it, twice. Nothing was written; try again.`,
+	changedMeanwhile: (path: string) => `${path} changed just as it was about to be written, twice. Nothing was written; try again.`,
 	writeFailed: (path: string, error: string) => `Writing ${path} failed (${error}). Everything was put back as it was; nothing was changed.`,
 	writeFailedLeft: (path: string, error: string, left: readonly string[]) =>
 		`Writing ${path} failed (${error}), and these files couldn’t be put back as they were: ${left.join(', ')}. Check them in Obsidian.`,
-	exists: (path: string) => `${path} is there already (the vault changed while Matters was reading it). Nothing was written; try again.`,
-	missing: (path: string) => `${path} isn’t there any more (the vault changed while Matters was reading it). Nothing was written; try again.`,
+	exists: (path: string) => `${path} is there already (the vault changed while it was being read). Nothing was written; try again.`,
+	missing: (path: string) => `${path} isn’t there any more (the vault changed while it was being read). Nothing was written; try again.`,
 	unreadableProperties: (path: string) => `The properties of ${path} aren’t valid YAML, so nothing was written. Fix them in Obsidian first.`,
 	notMtm: (path: string) => `Only mtm- properties are ever written, so nothing was written to ${path}.`,
 	outsideVault: (path: string) => `${path} is outside the vault, so nothing was written.`,
@@ -228,7 +228,7 @@ export const MCP = {
 		add_action: {
 			title: 'Add an Action',
 			description:
-				'Adds a new Action, one thing to do, as a note in the vault. Use it when the user wants to remember, plan or hand over something that isn’t recorded yet; to change an Action that exists, use update_action instead. `text` works like Matters’ quick add: /type, #Matter, @person, !1 to !3 and dates in words, in English or Spanish (“Call Marco about the quote /call #Kitchen fri 10:00 !1”); fields given separately win over the text. A name that matches nothing falls back (the default type, the Inbox, the backlog status) and the result says so. No Matters or people are created. Returns the new Action and what was written.',
+				'Adds a new Action, one thing to do, as a note in the vault. Use it when the user wants to remember, plan or hand over something that isn’t recorded yet; to change an Action that exists, use update_action instead. `text` works like quick add in Matters that Matter: /type, #Matter, @person, !1 to !3 and dates in words, in English or Spanish (“Call Marco about the quote /call #Kitchen fri 10:00 !1”); fields given separately win over the text. A name that matches nothing falls back (the default type, the Inbox, the backlog status) and the result says so. No Matters or people are created. Returns the new Action and what was written.',
 		},
 		update_action: {
 			title: 'Change an Action',

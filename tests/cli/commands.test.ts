@@ -355,7 +355,7 @@ describe('a file that changes while writing', () => {
 		expect(r).toEqual({
 			code: 3,
 			stdout: '',
-			stderr: 'MTM/Actions/Send the invoice.md changed while Matters was about to write it, twice. Nothing was written; try again.\n',
+			stderr: 'MTM/Actions/Send the invoice.md changed just as it was about to be written, twice. Nothing was written; try again.\n',
 		});
 		const note = read(root, 'MTM/Actions/Send the invoice.md');
 		expect(note).toContain('mtm-status: doing');

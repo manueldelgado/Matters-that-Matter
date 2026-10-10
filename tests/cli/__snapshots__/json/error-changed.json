@@ -1,7 +1,7 @@
 {
   "error": {
     "code": "changed",
-    "message": "MTM/Actions/Send the invoice.md changed while Matters was about to write it, twice. Nothing was written; try again.",
+    "message": "MTM/Actions/Send the invoice.md changed just as it was about to be written, twice. Nothing was written; try again.",
     "path": "MTM/Actions/Send the invoice.md",
     "left": []
   }

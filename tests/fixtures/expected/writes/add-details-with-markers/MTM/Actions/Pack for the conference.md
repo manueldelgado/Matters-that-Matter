@@ -4,7 +4,7 @@ mtm-type: write
 mtm-status: later
 mtm-matter: "[[Inbox]]"
 ---
-<!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->
+<!-- mtm-details: the Action's details, as edited in Matters that Matter. Keep this line. -->
 Bring:
 - the poster
 - the adapter

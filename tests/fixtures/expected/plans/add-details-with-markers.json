@@ -25,7 +25,7 @@
 						"[[Inbox]]"
 					]
 				],
-				"body": "<!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->\nBring:\n- the poster\n- the adapter\n<!-- /mtm-details: end of the details. Write details above this line. -->\n\n- [ ] Print the boarding pass\n"
+				"body": "<!-- mtm-details: the Action's details, as edited in Matters that Matter. Keep this line. -->\nBring:\n- the poster\n- the adapter\n<!-- /mtm-details: end of the details. Write details above this line. -->\n\n- [ ] Print the boarding pass\n"
 			}
 		],
 		"edits": [],

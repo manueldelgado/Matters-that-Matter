@@ -102,7 +102,7 @@ Plain Markdown, which the plugin never restructures. It reads four things from i
 - **Details**: the text at the start of the body, up to the first list item, heading, embed (`![[…]]`) or code block. When the details themselves need such a line, they sit between two comment lines, the details markers:
 
   ```markdown
-  <!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->
+  <!-- mtm-details: the Action's details, as edited in Matters that Matter. Keep this line. -->
   Bring:
   - the floor plan
   - the samples

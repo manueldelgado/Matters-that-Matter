@@ -2,7 +2,7 @@
 
 `mtm` reads and changes the Actions and Matters of [Matters that Matter](https://matters-that-matter.app/), the Obsidian plugin, straight from the notes in your vault. Obsidian doesn't need to be running; if it is, it picks the changes up like any other edit.
 
-It works only with Matters data (Actions, Matters, the workflow), never deletes anything, and never changes settings. Every write says what it changed, property by property. It can also run as an [MCP server](#mcp-server) for AI assistants.
+It works only with the data of Matters that Matter (Actions, Matters, the workflow), never deletes anything, and never changes settings. Every write says what it changed, property by property. It can also run as an [MCP server](#mcp-server) for AI assistants.
 
 ## Install
 
@@ -19,7 +19,7 @@ npm install -g matters-that-matter
 mtm today --vault ~/Notes
 ```
 
-The vault must have Matters installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
+The vault must have Matters that Matter installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
 
 ```bash
 export MTM_VAULT=~/Notes
@@ -111,7 +111,7 @@ When the setting is off, the links are left as they are, as Obsidian would leave
 
 ### Opening in Obsidian
 
-`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that Matters handles (a version of Matters with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). Opening links on Windows hasn't been tried yet.
+`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that the plugin handles (a version of Matters that Matter with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). Opening links on Windows hasn't been tried yet.
 
 ## Options
 
@@ -126,7 +126,7 @@ When the setting is off, the links are left as they are, as Obsidian would leave
 
 ## Output for scripts
 
-`--json` prints JSON on standard output. Reads give the values as they are, with both the raw properties and the values Matters shows (so scripts never re-implement its rules):
+`--json` prints JSON on standard output. Reads give the values as they are, with both the raw properties and the values the plugin shows (so scripts never re-implement its rules):
 
 ```bash
 mtm list --matter Kitchen --json | jq '.[0]'
@@ -150,7 +150,7 @@ mtm list --matter Kitchen --json | jq '.[0]'
 
 Writes give the Action (or Matter) after the write, `changed`, `dryRun`, `written`, every change (`changes`), `warnings`, the links a rename updated (`links`: each note and its lines) and `danglingLinks`, the number of links left pointing to the old name when Obsidian's "Automatically update internal links" is off. `parse` gives what quick add would make of the text with its `warnings`.
 
-Errors are JSON on standard output too: `{ "error": { "code", "message", … } }`; when a name matches several things, `candidates` lists them, and a failed write lists in `left` any file it couldn't put back. Other warnings (settings from a newer version of Matters, setup not done) go to standard error, so standard output stays the answer.
+Errors are JSON on standard output too: `{ "error": { "code", "message", … } }`; when a name matches several things, `candidates` lists them, and a failed write lists in `left` any file it couldn't put back. Other warnings (settings from a newer version of Matters that Matter, setup not done) go to standard error, so standard output stays the answer.
 
 Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Nothing is said by colour alone.
 
@@ -160,7 +160,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 |---|---|
 | 0 | Done |
 | 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML so they can't be changed. Nothing was written. |
-| 2 | The vault isn't ready: no vault named, no Matters settings, setup not done, or settings from a newer version of Matters (reads still work then, with a warning; writes are refused) |
+| 2 | The vault isn't ready: no vault named, no settings of Matters that Matter, setup not done, or settings from a newer version of the plugin (reads still work then, with a warning; writes are refused) |
 | 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
@@ -173,7 +173,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 
 ## MCP server
 
-`mtm mcp` runs Matters as an MCP server for AI assistants such as Claude, Codex and others. The assistant's app starts it and talks to it over standard input and output; it opens no network port. Each tool reads the vault afresh, so the assistant sees the notes as they are now, and writes go through the same all-or-nothing writer as the commands above.
+`mtm mcp` runs Matters that Matter as an MCP server for AI assistants such as Claude, Codex and others. The assistant's app starts it and talks to it over standard input and output; it opens no network port. Each tool reads the vault afresh, so the assistant sees the notes as they are now, and writes go through the same all-or-nothing writer as the commands above.
 
 ### Setup
 
@@ -237,7 +237,7 @@ The tools carry MCP's hints, so an assistant's app can let reads run freely and 
 
 | Option | |
 |---|---|
-| `--vault <path>` | The vault (or `MTM_VAULT`). Required: the server serves one vault, and only one with Matters set up |
+| `--vault <path>` | The vault (or `MTM_VAULT`). Required: the server serves one vault, and only one with Matters that Matter set up |
 | `--read-only` | Offer only the tools that read: `get_action`, `list_actions`, `get_today`, `list_matters`, `get_workflow` |
 | `--tools <a,b>` | Offer only these tools, such as `--tools get_today,list_actions`. A name that isn't a tool stops the server before it starts (exit code 2) |
 | `--dry-run` | Tools that write say what they would change, and write nothing |
@@ -251,7 +251,7 @@ npx -y matters-that-matter mcp --vault ~/Notes --read-only --tools get_today,lis
 
 An assistant can be misled by something it reads, such as a web page, an email or a note, so the server keeps what it can do small and visible, and tells the assistant to treat titles, details and checklist items as information, never as instructions:
 
-- It reads and writes only Matters data: Actions, Matters and the workflow. `get_action` gives an Action's details, checklist and the names of the notes it links to, never their content, and no tool reads other notes.
+- It reads and writes only the data of Matters that Matter: Actions, Matters and the workflow. `get_action` gives an Action's details, checklist and the names of the notes it links to, never their content, and no tool reads other notes.
 - Nothing is deleted and settings are never written. Every write says what it changed, property by property, so you can put it back: `reopen_action` after `mark_as_done`, another `update_action` for a change; an added Action or Matter can be deleted in Obsidian, and checklist items and links can be removed there too.
 - A new title renames the note, and a rename also updates links to the Action in other notes, as Obsidian does (when its "Automatically update internal links" is on). A new Action or Matter never takes a name another note in the vault has, so links to that note keep reaching it; a rename onto such a name is refused when the vault doesn't update links.
 - No Matters or people are created as a side effect: `add_action` falls back to the Inbox for a Matter it can't find, and says so.

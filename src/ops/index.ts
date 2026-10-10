@@ -1,4 +1,4 @@
-// The operations other tools use to read and change Matters data. Each takes its input and a snapshot of the vault and
+// The operations other tools use to read and change the plugin's data. Each takes its input and a snapshot of the vault and
 // returns a result with a plan of writes (empty for reads); nothing here touches files.
 
 export { addAction } from './addAction';

@@ -38,12 +38,12 @@ describe('the vault isn’t ready: exit 2', () => {
 		expect((await mtm(['today', '--vault', root])).stderr).toBe(`${root} isn’t an Obsidian vault: it has no .obsidian folder.\n`);
 	});
 
-	it('a vault without Matters’ settings', async () => {
+	it('a vault without the plugin’s settings', async () => {
 		const root = keep(join(tempDir(), 'Bare'));
 		mkdirSync(join(root, CONFIG), { recursive: true });
 		const r = await mtm(['today', '--vault', root]);
 		expect(r.code).toBe(2);
-		expect(r.stderr).toBe(`Matters isn’t installed in ${root}: there’s no .obsidian/plugins/matters-that-matter/data.json. Install Matters and run setup in Obsidian first.\n`);
+		expect(r.stderr).toBe(`Matters that Matter isn’t installed in ${root}: there’s no .obsidian/plugins/matters-that-matter/data.json. Install the plugin and run setup in Obsidian first.\n`);
 		const json = await mtm(['today', '--json', '--vault', root]);
 		expect(json.code).toBe(2);
 		expect(JSON.parse(json.stdout)).toMatchObject({ error: { code: 'not-ready' } });
@@ -72,10 +72,10 @@ describe('the vault isn’t ready: exit 2', () => {
 		const root = keep(syntheticVault({ settings: { setupDone: false } }));
 		const read = await mtm(['today', '--vault', root]);
 		expect(read.code).toBe(0);
-		expect(read.stderr).toBe('Matters isn’t set up in this vault yet. Run setup in Obsidian first.\n');
+		expect(read.stderr).toBe('Matters that Matter isn’t set up in this vault yet. Run setup in Obsidian first.\n');
 		const before = hashes(root);
 		const r = await mtm(['add', 'Something', '--vault', root], writer);
-		expect(r).toEqual({ code: 2, stdout: '', stderr: 'Matters isn’t set up in this vault yet. Run setup in Obsidian first.\n' });
+		expect(r).toEqual({ code: 2, stdout: '', stderr: 'Matters that Matter isn’t set up in this vault yet. Run setup in Obsidian first.\n' });
 		expect(hashes(root)).toEqual(before);
 	});
 
@@ -84,10 +84,10 @@ describe('the vault isn’t ready: exit 2', () => {
 		const read = await mtm(['list', '--vault', root]);
 		expect(read.code).toBe(0);
 		expect(read.stdout).toContain('Send the invoice');
-		expect(read.stderr).toBe('These settings come from a newer version of Matters; what you read may miss something new.\n');
+		expect(read.stderr).toBe('These settings come from a newer version of Matters that Matter; what you read may miss something new.\n');
 		const before = hashes(root);
 		const write = await mtm(['done', 'Send the invoice', '--vault', root], writer);
-		expect(write).toEqual({ code: 2, stdout: '', stderr: 'These settings come from a newer version of Matters, so nothing is written. Update Matters first.\n' });
+		expect(write).toEqual({ code: 2, stdout: '', stderr: 'These settings come from a newer version of Matters that Matter, so nothing is written. Update Matters that Matter first.\n' });
 		expect(hashes(root)).toEqual(before);
 	});
 });
@@ -124,7 +124,7 @@ describe('nothing matched, several did, or the input can’t be read: exit 1', (
 		expect(r).toEqual({
 			code: 1,
 			stdout: '',
-			stderr: '“the day after never” isn’t a date Matters can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.\nNothing was changed.\n',
+			stderr: '“the day after never” isn’t a date Matters that Matter can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.\nNothing was changed.\n',
 		});
 	});
 
@@ -248,7 +248,7 @@ describe('a plan the files layer can’t apply', () => {
 			error: {
 				code: 'exists',
 				path: 'MTM/Actions/Send the invoice.md',
-				message: 'MTM/Actions/Send the invoice.md is there already (the vault changed while Matters was reading it). Nothing was written; try again.',
+				message: 'MTM/Actions/Send the invoice.md is there already (the vault changed while it was being read). Nothing was written; try again.',
 			},
 		});
 	});

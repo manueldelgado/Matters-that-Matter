@@ -6,7 +6,7 @@ license: MIT
 
 # Matters that Matter
 
-Matters that Matter (Matters for short) is an Obsidian plugin for personal work. It shows a board, a list, a calendar and a timeline, and every item on them is an ordinary Markdown note with `mtm-` properties.
+Matters that Matter is an Obsidian plugin for personal work. It shows a board, a list, a calendar and a timeline, and every item on them is an ordinary Markdown note with `mtm-` properties.
 
 - A **Matter** is an open line of work that needs attention from time to time (a renovation, a client, the household admin). Each Matter is one lane on the board.
 - An **Action** is one thing to do in a Matter. Each Action is one card. An Action with a date and time is an appointment.
@@ -21,7 +21,7 @@ Use the plugin's words with the user, capitalised as shown: **Action**, **Matter
 ## Add or update?
 
 - When the user refers to something that already exists ("move the call with Marco to Friday", "I've sent the quote"), **find that Action and update it**. Don't add a second one. If several Actions could be meant, show them and ask.
-- Add an Action only for something new. Matters doesn't check for duplicates, so check yourself when in doubt.
+- Add an Action only for something new. Matters that Matter doesn't check for duplicates, so check yourself when in doubt.
 - **Adding never creates a Matter.** If the user names a Matter that doesn't exist, the Action goes to the Inbox (say so), or ask whether to create the Matter first. Create a Matter only when the user agrees.
 - Never create person notes on your own. Link people who already have a note; otherwise mention the person in the title or details.
 - New Actions go to the backlog status (the first column, often "Later") unless the user says otherwise; use the default type unless the kind of Action is clear (a call, a purchase).
@@ -29,7 +29,7 @@ Use the plugin's words with the user, capitalised as shown: **Action**, **Matter
 
 ## With the MCP server (preferred)
 
-When Matters' MCP tools are available (`add_action`, `get_today` and the others below, under whatever name the host gave the server; it is started as `npx -y matters-that-matter mcp --vault <path>`), use them. They apply all of the plugin's rules, so you never need the file format.
+When the MCP tools of Matters that Matter are available (`add_action`, `get_today` and the others below, under whatever name the host gave the server; it is started as `npx -y matters-that-matter mcp --vault <path>`), use them. They apply all of the plugin's rules, so you never need the file format.
 
 | Tool | Does |
 |---|---|
