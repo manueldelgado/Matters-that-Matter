@@ -15,14 +15,17 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 ## Features
 
 - **Four views of the same notes.** Board, list, calendar and timeline are Bases views, so they live in a `.base` file next to your other bases and respect its filters.
-- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector.
+- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector. On a phone, the board shows one Matter at a time.
 - **Colour means type.** Action types (call, message, write, meet, buy, visit, or your own) give every card its colour and icon. You choose labels, icons and colours in settings.
 - **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish.
 - **The inspector**, in the right sidebar, edits the selected Action: status, type, Matter, priority, dates, who you're waiting on, people, details and a checklist.
 - **What matters today?** in every new tab: what's due or late, what's waiting in the Inbox, which Matters are due a review, and long waits.
 - **Matter overviews**: the outcome you're aiming for, a review rhythm, progress, and the Matter's Actions by status.
 - **Process Inbox** steps through captured Actions one at a time and asks what each one needs.
+- **Review Matters** takes you through the Matters due a review, one at a time: what was done since, what needs a look, and four questions (the outcome, the next step, whether it's still on your mind, when to look again).
 - **Notes stay notes.** Action notes, Matter notes and the people your Actions name get a small banner that mirrors the card. Everything else in the note is yours.
+- **Links to Actions show as chips** in any note, in reading view and Live Preview: the Action's type, its due date, and whether it's done. They're still links, and they update as the Action changes. A setting turns them off.
+- **Actions in a note.** A `matters` code block lists Actions as cards inside any note, from one line in quick add's tokens (`#Kitchen renovation`, `@Charlie waiting`, `/call today`). Empty, it shows a Matter's or a person's open Actions on their own note, or what's due today elsewhere.
 
 | | |
 |---|---|
@@ -95,6 +98,7 @@ The plugin never rewrites a value on its own. If an Action names a status, type 
 | Open Matter overview | Opens the overview of the current Matter note |
 | Mark as reviewed | Records today as the current Matter's last review |
 | Process Inbox | Steps through the Inbox one Action at a time |
+| Review Matters | Steps through the Matters whose review is due, one at a time |
 | Run setup | Opens setup again |
 | Fix orphaned Actions | Gives every Action with an unknown status, type or Matter the fallback value, after asking |
 | Remove sample content | Moves the sample notes to the trash |
@@ -104,9 +108,9 @@ No command has a default hotkey.
 ## Good to know
 
 - **All-day dates in Obsidian's own panels.** `mtm-start` and `mtm-due` hold either a date (`2026-10-15`, all day) or a date and time (`2026-10-15T10:00`). Obsidian's Properties panel and Bases tables show an all-day date as "00:00", and editing it with Obsidian's date picker adds a time, which makes the Action timed. Edit dates in the inspector to keep them all day.
-- **Sync your plugin settings.** Statuses, types and Spheres live in the plugin's settings, and notes store their IDs. If your sync doesn't include plugin settings, another device shows badges on those Actions until the settings arrive. Nothing is rewritten in the meantime.
+- **Sync your plugin settings.** Statuses, types and Spheres live in the plugin's settings, and notes store their IDs. If your sync doesn't include plugin settings, another device shows badges on those Actions until the settings arrive. Nothing is rewritten in the meantime. On a vault that has notes but no settings at all (after reinstalling, or a copy without its `.obsidian` folder), setup reads the statuses, types, Spheres and folders back from the notes, changing none of them.
 - **Keep links up to date.** Leave Settings → Files and links → **Automatically update internal links** on. Actions point to their Matter with a link, so renaming a Matter should update every Action that names it.
-- **Phones.** The board scrolls sideways, and everything you can do by dragging you can also do from the inspector or a lane's menu.
+- **Phones.** The board shows one Matter at a time: choose it from the pills under the toolbar, swipe sideways between its statuses, and touch and hold a card to move it to another status or Matter. The round + adds an Action where you are. Tablets get the full board.
 
 ### Obsidian internals
 
