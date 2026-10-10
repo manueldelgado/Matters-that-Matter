@@ -1,0 +1,62 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://matters-that-matter.app/schema/v1/matter.json",
+	"title": "Matter note properties",
+	"description": "The properties of a Matter note in Matters that Matter: an open line of work that needs attention from time to time, shown as one lane on the board. The note's file name is the Matter's name. The Inbox is a Matter too; which note it is comes from the plugin's settings (inboxPath in data.json; see settings.json), not from its properties. Only the mtm- properties listed here belong to a Matter; any property without the mtm- prefix is allowed and left alone. This schema describes what a tool should write; Matters reads more than it allows (older forms and values written by hand) and never rewrites them on its own. Later versions of Matters may add mtm- properties; the file at this address is updated to list them, and a change that would refuse what was valid before gets a new address (v2).",
+	"type": "object",
+	"required": [
+		"mtm-kind"
+	],
+	"properties": {
+		"mtm-kind": {
+			"description": "Marks the note as a Matter. Notes are recognised by this property, never by their folder.",
+			"const": "matter"
+		},
+		"mtm-icon": {
+			"description": "The name of a Lucide icon shown with the Matter, such as house or briefcase. Matters have no colour; the icon and the name identify them. When absent, circle-dot is shown. The Inbox uses inbox.",
+			"type": "string",
+			"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+		},
+		"mtm-state": {
+			"description": "active (the default when absent), dormant (set aside for now) or closed (finished). Dormant and closed Matters start collapsed on the board. The Inbox is always active.",
+			"enum": [
+				"active",
+				"dormant",
+				"closed"
+			]
+		},
+		"mtm-lane-order": {
+			"description": "The lane's place on the board, lower first. Matters without one come after those with one, by name. A new Matter takes the highest value in use plus one.",
+			"type": "number"
+		},
+		"mtm-sphere": {
+			"description": "The ID of the Sphere (a sphere of life such as Home or Work) that the Matter belongs to, from the plugin's settings (data.json; see settings.json). Leave it out for no Sphere. An ID that is not in settings counts as no Sphere and shows a badge. Ignored on the Inbox.",
+			"type": "string",
+			"minLength": 1
+		},
+		"mtm-review-every": {
+			"description": "How often the Matter is due for a review: a whole number followed by d (days), w (weeks) or m (calendar months), such as 2w. Leave it out for no reviews. Ignored on the Inbox.",
+			"type": "string",
+			"pattern": "^[1-9][0-9]*[dwm]$"
+		},
+		"mtm-last-reviewed": {
+			"description": "The day the Matter was last reviewed: a real calendar day, as YYYY-MM-DD. The next review falls due one rhythm (mtm-review-every) later; a Matter with a rhythm and no review yet counts as due.",
+			"type": "string",
+			"pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
+		},
+		"mtm-outcome": {
+			"description": "One line saying what done looks like, or the standard to keep. Optional; leave it out rather than writing it empty. Not used on the Inbox.",
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"
+		},
+		"mtm-sample": {
+			"description": "Marks the note as sample content, so that \"Remove sample content\" can find it. Other tools should not set it.",
+			"type": "boolean"
+		}
+	},
+	"patternProperties": {
+		"^(?![Mm][Tt][Mm]-)": true
+	},
+	"additionalProperties": false
+}
