@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "open-failed",
+    "message": "The system couldn’t open the link. Open it yourself: obsidian://mtm-open?vault=Notes&matter=MTM%2FMatters%2FGarden.md",
+    "url": "obsidian://mtm-open?vault=Notes&matter=MTM%2FMatters%2FGarden.md"
+  }
+}

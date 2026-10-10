@@ -1,12 +1,13 @@
 // The command line's parts: arguments, safe writes, the vault's file list, the open link, the package.
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from '../../cli/src/args';
-import { applyOutcome, keepStyle } from '../../cli/src/apply';
-import { fsVaultReader } from '../../cli/src/fsVault';
-import { openUrl } from '../../cli/src/open';
+import { applyOutcome, keepStyle, nodeFs, type ApplyFs } from '../../cli/src/apply';
+import type { FileOutcome } from '../../cli/src/filesLayer';
+import { cachingReader, fsVaultReader } from '../../cli/src/fsVault';
+import { obsidianSettingsDir, openUrl, vaultRef } from '../../cli/src/open';
 import { vaultPath } from '../../cli/src/vault';
 import { PACKAGE_NAME, VERSION } from '../../cli/src/version';
 import { tempDir, writeFiles } from './helpers';
@@ -62,6 +63,32 @@ describe('arguments', () => {
 });
 
 describe('safe writes', () => {
+	const outcome = (files: FileOutcome['files']): FileOutcome => ({ files, links: [], danglingLinks: 0 });
+	const temps = (root: string) => {
+		const out: string[] = [];
+		const walk = (d: string) => {
+			for (const e of readdirSync(d, { withFileTypes: true })) {
+				if (e.isDirectory()) walk(join(d, e.name));
+				else if (e.name.endsWith('.tmp')) out.push(e.name);
+			}
+		};
+		walk(root);
+		return out;
+	};
+	/** Node's file operations, with the `nth` link or rename into place (not into a temporary file) failing. */
+	const failingAt = (nth: number, extra: Partial<ApplyFs> = {}): ApplyFs => {
+		let n = 0;
+		const maybeFail = (to: string) => {
+			if (!to.endsWith('.tmp') && ++n === nth) throw new Error('disk full');
+		};
+		return {
+			...nodeFs,
+			rename: (a, b) => (maybeFail(b), nodeFs.rename(a, b)),
+			link: (a, b) => (maybeFail(b), nodeFs.link(a, b)),
+			...extra,
+		};
+	};
+
 	it('keeps CRLF line endings and the presence of a final newline', () => {
 		expect(keepStyle('a\r\nb\r\n', 'a\nb\nc\n')).toBe('a\r\nb\r\nc\r\n');
 		expect(keepStyle('a\nb', 'a\nb\nc\n')).toBe('a\nb\nc');
@@ -69,56 +96,167 @@ describe('safe writes', () => {
 		expect(keepStyle(null, 'new\n')).toBe('new\n');
 	});
 
-	it('writes, renames and creates, leaving no temporary files', () => {
+	it('writes, renames and creates, keeping each file’s mode and leaving no temporary files', () => {
 		const root = dir();
 		writeFiles(root, { 'A/One.md': 'one\r\n', 'A/Two.md': 'two\n' });
-		const r = applyOutcome(root, {
-			files: [
+		chmodSync(join(root, 'A/One.md'), 0o640);
+		const r = applyOutcome(
+			root,
+			outcome([
 				{ path: 'A/One.md', from: 'A/One.md', before: 'one\r\n', after: 'one changed\n' },
 				{ path: 'B/Deux.md', from: 'A/Two.md', before: 'two\n', after: 'deux\n' },
 				{ path: 'C/Three.md', from: null, before: null, after: 'three\n' },
-			],
-			links: [],
-			danglingLinks: 0,
-		});
+			]),
+		);
 		expect(r).toEqual({ ok: true, written: ['A/One.md', 'B/Deux.md', 'C/Three.md'] });
 		expect(readFileSync(join(root, 'A/One.md'), 'utf8')).toBe('one changed\r\n');
+		expect(statSync(join(root, 'A/One.md')).mode & 0o777).toBe(0o640);
 		expect(existsSync(join(root, 'A/Two.md'))).toBe(false);
 		expect(readFileSync(join(root, 'B/Deux.md'), 'utf8')).toBe('deux\n');
 		expect(readFileSync(join(root, 'C/Three.md'), 'utf8')).toBe('three\n');
-		for (const folder of ['A', 'B', 'C']) expect(readdirSync(join(root, folder)).filter((n) => n.endsWith('.tmp'))).toEqual([]);
+		expect(temps(root)).toEqual([]);
 	});
 
 	it('a rename that only changes case', () => {
 		const root = dir();
 		writeFiles(root, { 'call marco.md': 'x\n' });
-		const r = applyOutcome(root, { files: [{ path: 'Call Marco.md', from: 'call marco.md', before: 'x\n', after: 'y\n' }], links: [], danglingLinks: 0 });
+		const r = applyOutcome(root, outcome([{ path: 'Call Marco.md', from: 'call marco.md', before: 'x\n', after: 'y\n' }]));
 		expect(r.ok).toBe(true);
 		expect(readdirSync(root)).toEqual(['Call Marco.md']);
 		expect(readFileSync(join(root, 'Call Marco.md'), 'utf8')).toBe('y\n');
 	});
 
+	it('a rename that only changes case never replaces another file (a case-sensitive file system)', () => {
+		const root = dir();
+		writeFiles(root, { 'call marco.md': 'x\n' });
+		// As a case-sensitive file system would answer: another file is at the new name.
+		const fs: ApplyFs = { ...nodeFs, stat: (p) => (p.endsWith('Call Marco.md') ? { dev: 1n, ino: 999_999n, mode: 0o644 } : nodeFs.stat(p)) };
+		const r = applyOutcome(root, outcome([{ path: 'Call Marco.md', from: 'call marco.md', before: 'x\n', after: 'y\n' }]), fs);
+		expect(r).toEqual({ ok: false, reason: 'changed', path: 'Call Marco.md' });
+		expect(readFileSync(join(root, 'call marco.md'), 'utf8')).toBe('x\n');
+	});
+
 	it('refuses, writing nothing, when a file changed since the plan was made or a new file’s path was taken', () => {
 		const root = dir();
-		writeFiles(root, { 'One.md': 'edited elsewhere\n', 'Taken.md': 'here\n' });
-		const changed = applyOutcome(root, {
-			files: [
-				{ path: 'Two.md', from: null, before: null, after: 'two\n' },
+		writeFiles(root, { 'One.md': 'edited elsewhere\n', 'Taken.md': 'here\n', 'Two.md': 'two\n' });
+		const changed = applyOutcome(
+			root,
+			outcome([
+				{ path: 'New.md', from: null, before: null, after: 'new\n' },
 				{ path: 'One.md', from: 'One.md', before: 'one\n', after: 'one changed\n' },
-			],
-			links: [],
-			danglingLinks: 0,
-		});
-		expect(changed).toEqual({ ok: false, conflict: 'One.md', written: [] });
-		expect(existsSync(join(root, 'Two.md'))).toBe(false);
-		const taken = applyOutcome(root, { files: [{ path: 'Taken.md', from: null, before: null, after: 'mine\n' }], links: [], danglingLinks: 0 });
-		expect(taken).toEqual({ ok: false, conflict: 'Taken.md', written: [] });
+			]),
+		);
+		expect(changed).toEqual({ ok: false, reason: 'changed', path: 'One.md' });
+		expect(existsSync(join(root, 'New.md'))).toBe(false);
+		expect(applyOutcome(root, outcome([{ path: 'Taken.md', from: null, before: null, after: 'mine\n' }]))).toEqual({ ok: false, reason: 'changed', path: 'Taken.md' });
+		expect(applyOutcome(root, outcome([{ path: 'Taken.md', from: 'Two.md', before: 'two\n', after: 'mine\n' }]))).toEqual({ ok: false, reason: 'changed', path: 'Taken.md' });
 		expect(readFileSync(join(root, 'Taken.md'), 'utf8')).toBe('here\n');
+		expect(temps(root)).toEqual([]);
+	});
+
+	describe('a failure while writing puts everything back', () => {
+		const three = (root: string) => {
+			writeFiles(root, { 'A.md': 'a\n', 'B.md': 'b\n' });
+			return outcome([
+				{ path: 'A.md', from: 'A.md', before: 'a\n', after: 'a changed\n' },
+				{ path: 'Moved/B2.md', from: 'B.md', before: 'b\n', after: 'b changed\n' },
+				{ path: 'C.md', from: null, before: null, after: 'c\n' },
+			]);
+		};
+		const asBefore = (root: string) => {
+			expect(readFileSync(join(root, 'A.md'), 'utf8')).toBe('a\n');
+			expect(readFileSync(join(root, 'B.md'), 'utf8')).toBe('b\n');
+			expect(existsSync(join(root, 'Moved'))).toBe(false);
+			expect(existsSync(join(root, 'C.md'))).toBe(false);
+			expect(temps(root)).toEqual([]);
+		};
+
+		it('failing on the 2nd of 3 files', () => {
+			const root = dir();
+			const r = applyOutcome(root, three(root), failingAt(2));
+			expect(r).toEqual({ ok: false, reason: 'failed', path: 'Moved/B2.md', error: 'disk full', left: [] });
+			asBefore(root);
+		});
+
+		it('failing on the 3rd, after a rename', () => {
+			const root = dir();
+			const r = applyOutcome(root, three(root), failingAt(3));
+			expect(r).toEqual({ ok: false, reason: 'failed', path: 'C.md', error: 'disk full', left: [] });
+			asBefore(root);
+		});
+
+		it('a new file whose path is taken just before it is linked', () => {
+			const root = dir();
+			const fs: ApplyFs = {
+				...nodeFs,
+				link: (a, b) => {
+					if (b.endsWith('C.md') && !existsSync(b)) writeFileSync(b, 'someone else’s\n');
+					nodeFs.link(a, b);
+				},
+			};
+			const r = applyOutcome(root, three(root), fs);
+			expect(r).toMatchObject({ ok: false, reason: 'failed', path: 'C.md', left: [] });
+			expect(readFileSync(join(root, 'C.md'), 'utf8')).toBe('someone else’s\n');
+			expect(readFileSync(join(root, 'A.md'), 'utf8')).toBe('a\n');
+			expect(readFileSync(join(root, 'B.md'), 'utf8')).toBe('b\n');
+		});
+
+		it('says which files couldn’t be put back', () => {
+			const root = dir();
+			// C can't be written, and then A can't be put back.
+			let failed = false;
+			const fs: ApplyFs = {
+				...nodeFs,
+				link: (a, b) => {
+					if (b.endsWith('C.md')) {
+						failed = true;
+						throw new Error('disk full');
+					}
+					nodeFs.link(a, b);
+				},
+				rename: (a, b) => {
+					if (failed && b.endsWith('A.md')) throw new Error('locked');
+					nodeFs.rename(a, b);
+				},
+			};
+			const r = applyOutcome(root, three(root), fs);
+			expect(r).toMatchObject({ ok: false, reason: 'failed', path: 'C.md', error: 'disk full' });
+			if (r.ok || r.reason !== 'failed') throw new Error('expected a failure');
+			expect(r.left).toEqual(['A.md']);
+			// B was put back.
+			expect(readFileSync(join(root, 'B.md'), 'utf8')).toBe('b\n');
+			expect(temps(root)).toEqual([]);
+		});
+	});
+
+	describe('writes stay inside the vault', () => {
+		it.each(['../Outside.md', '/abs/Note.md', 'A/../../Up.md', 'A/./B.md', 'A//B.md', 'C:/x.md', 'A\\B.md', ''])('refuses %j', (path) => {
+			const root = dir();
+			const r = applyOutcome(root, outcome([{ path, from: null, before: null, after: 'x\n' }]));
+			expect(r).toEqual({ ok: false, reason: 'unsafe', path });
+		});
+
+		it('refuses a folder that is a link to somewhere else', () => {
+			const outside = dir();
+			const root = dir();
+			symlinkSync(outside, join(root, 'Elsewhere'));
+			const r = applyOutcome(root, outcome([{ path: 'Elsewhere/Note.md', from: null, before: null, after: 'x\n' }]));
+			expect(r).toEqual({ ok: false, reason: 'unsafe', path: 'Elsewhere/Note.md' });
+			expect(readdirSync(outside)).toEqual([]);
+		});
+
+		it('accepts a vault that is itself reached through a link', () => {
+			const real = dir();
+			const root = join(dir(), 'Linked');
+			symlinkSync(real, root);
+			expect(applyOutcome(root, outcome([{ path: 'Note.md', from: null, before: null, after: 'x\n' }])).ok).toBe(true);
+			expect(readFileSync(join(real, 'Note.md'), 'utf8')).toBe('x\n');
+		});
 	});
 });
 
 describe('the vault’s files', () => {
-	it('lists every file but the configuration folder, the trash and dot-folders; reads any', () => {
+	it('lists every file but the configuration folder, the trash, dot-folders and links; reads any', () => {
 		const root = dir();
 		writeFiles(root, {
 			'Note.md': 'n',
@@ -131,6 +269,11 @@ describe('the vault’s files', () => {
 			'conf/app.json': '{}',
 		});
 		mkdirSync(join(root, 'Empty'));
+		// Linked folders and files are skipped.
+		const outside = dir();
+		writeFiles(outside, { 'Other.md': 'o' });
+		symlinkSync(outside, join(root, 'Linked'));
+		symlinkSync(join(outside, 'Other.md'), join(root, 'Linked note.md'));
 		expect([...fsVaultReader(root, '.obsidian').list()].sort()).toEqual(['A/B/Deep.md', 'A/picture.png', 'Note.md', 'conf/app.json']);
 		expect([...fsVaultReader(root, 'conf').list()].sort()).toEqual(['A/B/Deep.md', 'A/picture.png', 'Note.md']);
 		const reader = fsVaultReader(root, '.obsidian');
@@ -144,6 +287,49 @@ describe('the vault’s files', () => {
 		expect(vaultPath('~', '/work', '/home/me')).toBe('/home/me');
 		expect(vaultPath('Notes', '/work', '/home/me')).toBe('/work/Notes');
 		expect(vaultPath('/abs/Notes/', '/work', '/home/me')).toBe('/abs/Notes');
+	});
+});
+
+describe('reading a vault once per attempt', () => {
+	it('every read of a path gives what the first read gave', () => {
+		const root = dir();
+		writeFiles(root, { 'Note.md': 'first\n' });
+		const reader = cachingReader(fsVaultReader(root, '.obsidian'));
+		expect(reader.read('Note.md')).toBe('first\n');
+		writeFileSync(join(root, 'Note.md'), 'second\n');
+		expect(reader.read('Note.md')).toBe('first\n');
+		expect(reader.read('Missing.md')).toBeNull();
+	});
+});
+
+describe('naming the vault in links', () => {
+	it('by its ID when Obsidian’s list of vaults knows the folder, through links too', () => {
+		const settings = dir();
+		const real = join(dir(), 'Notes');
+		mkdirSync(real);
+		const viaLink = join(dir(), 'Shortcut');
+		symlinkSync(real, viaLink);
+		const other = join(dir(), 'Notes');
+		mkdirSync(other);
+		writeFiles(settings, { 'obsidian.json': JSON.stringify({ vaults: { a1b2c3: { path: other, ts: 1 }, d4e5f6: { path: real, ts: 2, open: true } } }) });
+		expect(vaultRef(viaLink, settings)).toBe('d4e5f6');
+		expect(vaultRef(other, settings)).toBe('a1b2c3');
+	});
+
+	it('by the real folder’s name otherwise', () => {
+		const real = join(dir(), 'Notes');
+		mkdirSync(real);
+		const viaLink = join(dir(), 'Shortcut');
+		symlinkSync(real, viaLink);
+		expect(vaultRef(viaLink, null)).toBe('Notes');
+		expect(vaultRef(viaLink, dir())).toBe('Notes');
+	});
+
+	it('Obsidian’s settings folder on each system', () => {
+		expect(obsidianSettingsDir('darwin', {}, '/Users/me')).toBe('/Users/me/Library/Application Support/obsidian');
+		expect(obsidianSettingsDir('linux', {}, '/home/me')).toBe('/home/me/.config/obsidian');
+		expect(obsidianSettingsDir('linux', { XDG_CONFIG_HOME: '/cfg' }, '/home/me')).toBe('/cfg/obsidian');
+		expect(obsidianSettingsDir('win32', {}, 'C:/Users/me')).toBeNull();
 	});
 });
 

@@ -1,0 +1,94 @@
+[
+  {
+    "path": "MTM/Matters/Inbox.md",
+    "name": "Inbox",
+    "icon": "inbox",
+    "isInbox": true,
+    "state": "active",
+    "sphere": null,
+    "sphereOrphan": null,
+    "outcome": null,
+    "laneOrder": 50,
+    "review": null,
+    "counts": {
+      "open": 3,
+      "today": 1,
+      "waiting": 0,
+      "closed": 0,
+      "total": 3
+    },
+    "noNextAction": false
+  },
+  {
+    "path": "MTM/Matters/Kitchen renovation.md",
+    "name": "Kitchen renovation",
+    "icon": "cooking-pot",
+    "isInbox": false,
+    "state": "active",
+    "sphere": {
+      "id": "home",
+      "label": "Home"
+    },
+    "sphereOrphan": null,
+    "outcome": "A kitchen we can cook in",
+    "laneOrder": 1,
+    "review": {
+      "every": "2w",
+      "lastReviewed": "2026-09-20",
+      "nextDue": "2026-10-04",
+      "due": true,
+      "daysSince": 19
+    },
+    "counts": {
+      "open": 3,
+      "today": 1,
+      "waiting": 1,
+      "closed": 1,
+      "total": 4
+    },
+    "noNextAction": false
+  },
+  {
+    "path": "MTM/Matters/Advisory work.md",
+    "name": "Advisory work",
+    "icon": "briefcase",
+    "isInbox": false,
+    "state": "active",
+    "sphere": {
+      "id": "work",
+      "label": "Work"
+    },
+    "sphereOrphan": null,
+    "outcome": null,
+    "laneOrder": 2,
+    "review": null,
+    "counts": {
+      "open": 1,
+      "today": 0,
+      "waiting": 0,
+      "closed": 0,
+      "total": 1
+    },
+    "noNextAction": false
+  },
+  {
+    "path": "MTM/Matters/Garden.md",
+    "name": "Garden",
+    "icon": "flower",
+    "isInbox": false,
+    "state": "dormant",
+    "sphere": null,
+    "sphereOrphan": null,
+    "outcome": null,
+    "laneOrder": 3,
+    "review": null,
+    "counts": {
+      "open": 0,
+      "today": 0,
+      "waiting": 0,
+      "closed": 0,
+      "total": 0
+    },
+    "noNextAction": false
+  }
+]

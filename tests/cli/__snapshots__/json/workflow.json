@@ -1,0 +1,100 @@
+{
+  "statuses": [
+    {
+      "id": "later",
+      "label": "Later",
+      "category": "open",
+      "tone": "ink",
+      "backlog": true,
+      "done": false
+    },
+    {
+      "id": "next",
+      "label": "Next",
+      "category": "open",
+      "tone": "sky",
+      "backlog": false,
+      "done": false
+    },
+    {
+      "id": "doing",
+      "label": "Doing",
+      "category": "active",
+      "tone": "butter",
+      "backlog": false,
+      "done": false
+    },
+    {
+      "id": "waiting",
+      "label": "Waiting",
+      "category": "active",
+      "tone": "lavender",
+      "backlog": false,
+      "done": false
+    },
+    {
+      "id": "done",
+      "label": "Done",
+      "category": "closed",
+      "tone": "mint",
+      "backlog": false,
+      "done": true
+    }
+  ],
+  "types": [
+    {
+      "id": "call",
+      "label": "Call",
+      "icon": "phone",
+      "tone": "mint",
+      "default": false
+    },
+    {
+      "id": "message",
+      "label": "Message",
+      "icon": "message-circle",
+      "tone": "sky",
+      "default": false
+    },
+    {
+      "id": "write",
+      "label": "Write",
+      "icon": "pencil-line",
+      "tone": "butter",
+      "default": true
+    },
+    {
+      "id": "meet",
+      "label": "Meet",
+      "icon": "users",
+      "tone": "lavender",
+      "default": false
+    },
+    {
+      "id": "buy",
+      "label": "Buy",
+      "icon": "shopping-bag",
+      "tone": "peach",
+      "default": false
+    },
+    {
+      "id": "visit",
+      "label": "Visit",
+      "icon": "map-pin",
+      "tone": "bubblegum",
+      "default": false
+    }
+  ],
+  "spheres": [
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "house"
+    },
+    {
+      "id": "work",
+      "label": "Work",
+      "icon": "briefcase"
+    }
+  ]
+}

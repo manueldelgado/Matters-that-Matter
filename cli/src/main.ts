@@ -9,12 +9,12 @@ import { toYmd } from '../../src/model/dates';
 import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, parseQuickAdd, reopen, today, updateAction } from '../../src/ops';
 import { findMatter } from '../../src/ops/fields';
 import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
-import { applyOutcome } from './apply';
+import { applyOutcome, type ApplyFs, type ApplyResult } from './apply';
 import { boolFlag, listFlag, parseArgs, textFlag, type Command, type FlagValue } from './args';
 import { contentsAfter as defaultContentsAfter, snapshotOf, type ContentsAfter, type FileOutcome } from './filesLayer';
-import { fsVaultReader } from './fsVault';
+import { cachingReader, fsVaultReader } from './fsVault';
 import { errorJson, stringify, writeJson, type ErrorJson } from './json';
-import { systemOpener, openUrl, type Opener, type OpenTarget } from './open';
+import { obsidianSettingsDir, openUrl, systemOpener, vaultRef, type Opener, type OpenTarget } from './open';
 import {
 	colourFor,
 	formatAdded,
@@ -31,6 +31,7 @@ import {
 	style,
 	type Style,
 } from './output';
+import { STRINGS } from '../../src/strings';
 import { CLI, COMMAND_HELP, HELP } from './strings';
 import { openVault, type Vault } from './vault';
 
@@ -56,6 +57,10 @@ export interface CliIo {
 	contentsAfter?: ContentsAfter | null;
 	/** The vault's files; on disk when absent. */
 	reader?: (root: string, configDir: string) => VaultReader;
+	/** The file operations writes use; Node's when absent. */
+	fs?: ApplyFs;
+	/** Obsidian's own settings folder (where `obsidian.json` lists the vaults); the system's when absent, none when null. */
+	obsidianDir?: string | null;
 }
 
 interface Context {
@@ -84,8 +89,11 @@ export function parseNow(value: string): Date | null {
 export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 	const out = style(colourFor(io.stdout.isTTY, io.env));
 	const err = style(colourFor(io.stderr.isTTY, io.env));
-	const parsed = parseArgs(argv);
-	const json = argv.includes('--json');
+	// `mtm help` and `mtm help <command>` are `--help`.
+	const args = argv[0] === 'help' ? [...argv.slice(1), '--help'] : argv;
+	const parsed = parseArgs(args);
+	// Arguments that can't be parsed still answer in JSON when they ask for it.
+	const json = parsed.ok ? boolFlag(parsed.args.flags, 'json') : args.includes('--json');
 	const usage = (message: string) => {
 		if (json) print(io.stdout, stringify(errorJson({ code: 'usage', message })));
 		else print(io.stderr, err.r(message));
@@ -212,7 +220,8 @@ function listInput(flags: Record<string, FlagValue>): ListActionsInput {
 
 function snapshot(ctx: Context): { snap: Snapshot; reader: VaultReader } {
 	const { root, configDir, settings } = ctx.vault;
-	const reader = (ctx.io.reader ?? fsVaultReader)(root, configDir);
+	// One read per file per attempt, so a plan's `before` is exactly what the snapshot saw.
+	const reader = cachingReader((ctx.io.reader ?? fsVaultReader)(root, configDir));
 	return { snap: snapshotOf(reader, configDir, settings, ctx.now), reader };
 }
 
@@ -244,13 +253,24 @@ function usageError(ctx: Context, message: string): number {
 	return EXIT.unmatched;
 }
 
+/** Reads work before setup, but say so: what they show may not be what Matters will show. */
+function setupHint(ctx: Context): void {
+	if (!ctx.vault.settings.setupDone) print(ctx.io.stderr, ctx.err.y(STRINGS.ops.notSetUp));
+}
+
+/**
+ * A read: the value on stdout, warnings about the vault on stderr. With `keepWarnings` (parse), the warnings about
+ * the input belong to the answer: in the human output, and in the JSON as `warnings`.
+ */
 function read<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>, human: (value: T, s: Snapshot, warnings: Warning[]) => string[], keepWarnings = false): number {
 	const { snap } = snapshot(ctx);
 	const r = op(snap);
 	if (!r.ok) return opError(ctx, r.error, false);
+	setupHint(ctx);
 	vaultWarnings(ctx, r.warnings);
 	const warnings = keepWarnings ? r.warnings.filter((w) => w.code !== 'newer-settings') : [];
-	print(ctx.io.stdout, ctx.json ? stringify(r.value) : human(r.value, snap, warnings));
+	if (ctx.json) print(ctx.io.stdout, stringify(keepWarnings ? { ...r.value, warnings } : r.value));
+	else print(ctx.io.stdout, human(r.value, snap, warnings));
 	return EXIT.done;
 }
 
@@ -261,8 +281,9 @@ const planIsEmpty = (p: Plan) => !p.creates.length && !p.edits.length && !p.bodi
 type Written<T> = { r: Extract<OpResult<T>, { ok: true }>; snap: Snapshot; outcome: FileOutcome | null; written: boolean };
 
 /**
- * Plans on a fresh snapshot, then writes. A file that changed after it was read stops the write; the whole write is
- * planned again once, and a second change gives exit code 3.
+ * Plans on a fresh snapshot, then writes all or nothing. A file that changed after it was read stops the write
+ * before anything is written; the whole write is planned again once, and a second change gives exit code 3. A write
+ * that fails is put back and gives exit code 3 too.
  */
 function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | number {
 	const writer = ctx.io.contentsAfter === undefined ? defaultContentsAfter : ctx.io.contentsAfter;
@@ -286,14 +307,26 @@ function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | 
 			else print(ctx.io.stderr, ctx.err.r(CLI.cantWriteYet));
 			return EXIT.notReady;
 		}
-		const applied = applyOutcome(ctx.vault.root, outcome);
+		const applied = applyOutcome(ctx.vault.root, outcome, ctx.io.fs);
 		if (applied.ok) return { r, snap, outcome, written: true };
-		if (attempt === 1 && !applied.written.length) continue;
-		const message = [CLI.changedMeanwhile(applied.conflict), ...(applied.written.length ? [CLI.alreadyWritten(applied.written)] : [])].join(' ');
-		if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: 'changed', message, path: applied.conflict })));
-		else print(ctx.io.stderr, ctx.err.r(message));
-		return EXIT.changed;
+		if (attempt === 1 && applied.reason === 'changed') continue;
+		return writeFailure(ctx, applied);
 	}
+}
+
+/** Why a write stopped, and whether anything was left changed. Exit code 3. */
+function writeFailure(ctx: Context, failed: Exclude<ApplyResult, { ok: true }>): number {
+	let message: string;
+	let left: string[] = [];
+	if (failed.reason === 'changed') message = CLI.changedMeanwhile(failed.path);
+	else if (failed.reason === 'unsafe') message = CLI.outsideVault(failed.path);
+	else {
+		left = failed.left;
+		message = left.length ? CLI.writeFailedLeft(failed.path, failed.error, left) : CLI.writeFailed(failed.path, failed.error);
+	}
+	if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: failed.reason, message, path: failed.path, left })));
+	else print(ctx.io.stderr, ctx.err.r(message));
+	return EXIT.changed;
 }
 
 /** Add, update, done, reopen: `verb` is null for add. */
@@ -343,6 +376,7 @@ function writeMatter(ctx: Context, name: string): number {
 
 async function open(ctx: Context, ref: string): Promise<number> {
 	const { snap } = snapshot(ctx);
+	setupHint(ctx);
 	let target: OpenTarget;
 	let name: string;
 	const action = getAction(ref, snap);
@@ -360,7 +394,8 @@ async function open(ctx: Context, ref: string): Promise<number> {
 		target = { matter: matter.value.path };
 		name = matter.value.name;
 	}
-	const url = openUrl(ctx.vault.name, target);
+	const obsidianDir = ctx.io.obsidianDir === undefined ? obsidianSettingsDir(process.platform, ctx.io.env, ctx.io.home) : ctx.io.obsidianDir;
+	const url = openUrl(vaultRef(ctx.vault.root, obsidianDir), target);
 	try {
 		await (ctx.io.opener ?? systemOpener())(url);
 	} catch {

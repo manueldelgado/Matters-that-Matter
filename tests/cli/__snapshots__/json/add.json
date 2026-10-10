@@ -1,0 +1,101 @@
+{
+  "action": {
+    "path": "MTM/Actions/Ask about the gym.md",
+    "title": "Ask about the gym",
+    "matter": {
+      "path": "MTM/Matters/Inbox.md",
+      "name": "Inbox",
+      "isInbox": true
+    },
+    "status": {
+      "id": "later",
+      "label": "Later",
+      "category": "open"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": "2026-10-10",
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "write",
+      "mtm-status": "later",
+      "mtm-matter": "[[Inbox]]",
+      "mtm-due": "2026-10-10"
+    }
+  },
+  "changed": true,
+  "dryRun": false,
+  "written": true,
+  "changes": [
+    {
+      "kind": "create",
+      "path": "MTM/Actions/Ask about the gym.md"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "key": "mtm-kind",
+      "from": null,
+      "to": "action"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "key": "mtm-type",
+      "from": null,
+      "to": "write"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "key": "mtm-status",
+      "from": null,
+      "to": "later"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "key": "mtm-matter",
+      "from": null,
+      "to": "[[Inbox]]"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "key": "mtm-due",
+      "from": null,
+      "to": "2026-10-10"
+    },
+    {
+      "kind": "details",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "from": "",
+      "to": "Opening hours too"
+    },
+    {
+      "kind": "link",
+      "path": "MTM/Actions/Ask about the gym.md",
+      "line": "[[Some note]]"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "unmatched-matter",
+      "field": "text",
+      "value": "Gym",
+      "message": "No Matter matches “Gym”, so it went to the Inbox."
+    }
+  ],
+  "links": [],
+  "danglingLinks": 0
+}

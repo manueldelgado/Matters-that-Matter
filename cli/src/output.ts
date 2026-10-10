@@ -125,11 +125,12 @@ export function actionLine(a: ActionSummary, today: Ymd): string {
 	);
 }
 
-/** The date cell of a row: red when late, yellow when due today. */
-function dateCell(a: ActionSummary, today: Ymd, st: Style): Cell {
+/** The date cell of a row: red when late, yellow when due today; with `sayLate`, late rows also say so in words. */
+function dateCell(a: ActionSummary, today: Ymd, st: Style, sayLate = false): Cell {
 	const words = dateWords(a.due, today);
 	if (!words) return '';
-	return [words, a.overdue ? st.r : a.today ? st.y : (t) => t];
+	const text = sayLate && a.overdue ? `${words}, ${STRINGS.embed.late.toLowerCase()}` : words;
+	return [text, a.overdue ? st.r : a.today ? st.y : (t) => t];
 }
 
 const typeCell = (a: ActionSummary, tones: ReadonlyMap<string, string>, st: Style): Cell => [`● ${a.type.label}`, (t) => st.tone(tones.get(a.type.id) ?? 'ink')('●') + t.slice(1)];
@@ -170,7 +171,7 @@ export function formatList(list: readonly ActionSummary[], today: Ymd, tones: Re
 		const waiting = a.waitingOn ? CLI.waitingOn(a.waitingOn.name, a.waitingSince ? waitAge(a.waitingSince, today).long : '').replace(/, $/, '') : '';
 		const orphans = orphanText(a);
 		const note: Cell = orphans ? [[waiting, orphans].filter(Boolean).join(' · '), st.y] : [waiting, st.d];
-		return [typeCell(a, tones, st), a.title, a.status.label, dateCell(a, today, st), [priorityWord(a.priority), st.d], note];
+		return [typeCell(a, tones, st), a.title, a.status.label, dateCell(a, today, st, true), [priorityWord(a.priority), st.d], note];
 	});
 	const lines = columns(rows, [2, 3, 2, 2, 2]);
 	const out: string[] = [];
@@ -212,20 +213,25 @@ export function formatShow(a: ActionDetail, today: Ymd, st: Style): string[] {
 	return out;
 }
 
+/** A label from the plugin mid-line: its first letter in lower case ("dormant", "no next Action"). */
+const midLine = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
+
 export function formatMatters(list: readonly MatterSummary[], st: Style): string[] {
 	const rows: Cell[][] = list.map((m) => {
 		const parts: string[] = [];
+		const add = (label: string) => parts.push(parts.length ? midLine(label) : label);
+		// The Sphere is the user's own label, as they wrote it.
 		if (m.sphere) parts.push(m.sphere.label);
-		if (m.state === 'dormant') parts.push(STRINGS.board.dormant);
-		if (m.state === 'closed') parts.push(STRINGS.board.closed);
-		parts.push(STRINGS.board.open(m.counts.open));
-		if (m.counts.today) parts.push(STRINGS.noteBanner.late(m.counts.today));
-		if (m.counts.waiting) parts.push(STRINGS.board.waiting(m.counts.waiting));
+		if (m.state === 'dormant') add(STRINGS.board.dormant);
+		if (m.state === 'closed') add(STRINGS.board.closed);
+		add(STRINGS.board.open(m.counts.open));
+		if (m.counts.today) add(STRINGS.noteBanner.late(m.counts.today));
+		if (m.counts.waiting) add(STRINGS.board.waiting(m.counts.waiting));
 		if (m.review) {
-			if (m.review.due) parts.push(STRINGS.board.reviewDue);
-			else if (m.review.daysSince !== null) parts.push(STRINGS.board.reviewedAgo(m.review.daysSince));
+			if (m.review.due) add(STRINGS.board.reviewDue);
+			else if (m.review.daysSince !== null) add(STRINGS.board.reviewedAgo(m.review.daysSince));
 		}
-		if (m.noNextAction) parts.push(STRINGS.nextAction.hint);
+		if (m.noNextAction) add(STRINGS.nextAction.hint);
 		return [[m.name, st.b], parts.join(' · ')];
 	});
 	return [...columns(rows, [3], ''), '', st.d(CLI.matters(list.length))];
@@ -316,7 +322,8 @@ export function formatMatterAdded(m: MatterSummary, warnings: readonly Warning[]
 	const head = dryRun ? st.b(CLI.wouldAddMatter) : st.g(CLI.addedMatter);
 	const parts: string[] = [];
 	if (m.sphere) parts.push(m.sphere.label);
-	parts.push(m.state === 'active' ? STRINGS.categories.active : m.state === 'dormant' ? STRINGS.board.dormant : STRINGS.board.closed);
+	const state = m.state === 'active' ? STRINGS.categories.active : m.state === 'dormant' ? STRINGS.board.dormant : STRINGS.board.closed;
+	parts.push(parts.length ? midLine(state) : state);
 	const cadence = m.review ? parseCadence(m.review.every) : null;
 	if (cadence) {
 		const unit = STRINGS.cadence.units(cadence.n).find(([u]) => u === cadence.unit)?.[1] ?? '';

@@ -41,7 +41,18 @@ export function writeJson(
 }
 
 /** Every error, from the vault guards to an operation's refusal, in one shape. */
-export type ErrorJson = { error: OpError | { code: 'changed' | 'usage' | 'open-failed'; message: string; path?: string; url?: string } };
+export type ErrorJson = {
+	error:
+		| OpError
+		| {
+				/** `changed` and `failed` (nothing changed, or `left` lists what couldn't be put back) and `unsafe` exit with 3. */
+				code: 'changed' | 'failed' | 'unsafe' | 'usage' | 'open-failed';
+				message: string;
+				path?: string;
+				left?: string[];
+				url?: string;
+		  };
+};
 
 export const errorJson = (error: ErrorJson['error']): ErrorJson => ({ error });
 

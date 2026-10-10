@@ -1,0 +1,263 @@
+[
+  {
+    "path": "MTM/Actions/Call Marco back.md",
+    "title": "Call Marco back",
+    "matter": {
+      "path": "MTM/Matters/Inbox.md",
+      "name": "Inbox",
+      "isInbox": true
+    },
+    "status": {
+      "id": "later",
+      "label": "Later",
+      "category": "open"
+    },
+    "type": {
+      "id": "call",
+      "label": "Call"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "call",
+      "mtm-status": "later",
+      "mtm-matter": "[[Inbox]]"
+    }
+  },
+  {
+    "path": "MTM/Actions/Mystery.md",
+    "title": "Mystery",
+    "matter": {
+      "path": "MTM/Matters/Inbox.md",
+      "name": "Inbox",
+      "isInbox": true
+    },
+    "status": {
+      "id": "later",
+      "label": "Later",
+      "category": "open"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [
+      {
+        "field": "status",
+        "raw": "someday"
+      },
+      {
+        "field": "type",
+        "raw": "fax"
+      },
+      {
+        "field": "matter",
+        "raw": "[[Nowhere]]"
+      }
+    ],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "fax",
+      "mtm-status": "someday",
+      "mtm-matter": "[[Nowhere]]"
+    }
+  },
+  {
+    "path": "MTM/Actions/Pay the council tax.md",
+    "title": "Pay the council tax",
+    "matter": {
+      "path": "MTM/Matters/Inbox.md",
+      "name": "Inbox",
+      "isInbox": true
+    },
+    "status": {
+      "id": "next",
+      "label": "Next",
+      "category": "open"
+    },
+    "type": {
+      "id": "buy",
+      "label": "Buy"
+    },
+    "priority": null,
+    "start": null,
+    "due": "2026-10-08",
+    "today": true,
+    "overdue": true,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "buy",
+      "mtm-status": "next",
+      "mtm-matter": "[[Inbox]]",
+      "mtm-due": "2026-10-08"
+    }
+  },
+  {
+    "path": "MTM/Actions/Confirm the worktop measurements.md",
+    "title": "Confirm the worktop measurements",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "next",
+      "label": "Next",
+      "category": "open"
+    },
+    "type": {
+      "id": "call",
+      "label": "Call"
+    },
+    "priority": 1,
+    "start": null,
+    "due": "2026-10-09T10:00",
+    "today": true,
+    "overdue": true,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "call",
+      "mtm-status": "next",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-due": "2026-10-09T10:00",
+      "mtm-priority": 1
+    }
+  },
+  {
+    "path": "MTM/Actions/Call Marco about the quote.md",
+    "title": "Call Marco about the quote",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "next",
+      "label": "Next",
+      "category": "open"
+    },
+    "type": {
+      "id": "call",
+      "label": "Call"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "call",
+      "mtm-status": "next",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-order": 20,
+      "mtm-people": [
+        "[[Marco Rossi]]",
+        "[[Lucía Pérez]]"
+      ]
+    }
+  },
+  {
+    "path": "MTM/Actions/Revised quote from Marco.md",
+    "title": "Revised quote from Marco",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "waiting",
+      "label": "Waiting",
+      "category": "active"
+    },
+    "type": {
+      "id": "message",
+      "label": "Message"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": {
+      "path": "MTM/People/Marco Rossi.md",
+      "name": "Marco Rossi"
+    },
+    "waitingSince": "2026-09-23",
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "message",
+      "mtm-status": "waiting",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-waiting-on": "[[Marco Rossi]]",
+      "mtm-people": [
+        "[[Marco Rossi]]"
+      ],
+      "mtm-waiting-since": "2026-09-23"
+    }
+  },
+  {
+    "path": "MTM/Actions/Send the invoice.md",
+    "title": "Send the invoice",
+    "matter": {
+      "path": "MTM/Matters/Advisory work.md",
+      "name": "Advisory work",
+      "isInbox": false
+    },
+    "status": {
+      "id": "doing",
+      "label": "Doing",
+      "category": "active"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": "2026-10-20",
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "write",
+      "mtm-status": "doing",
+      "mtm-matter": "[[Advisory work]]",
+      "mtm-due": "2026-10-20"
+    }
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "unsafe",
+    "message": "../Escape.md is outside the vault, so nothing was written.",
+    "path": "../Escape.md",
+    "left": []
+  }
+}

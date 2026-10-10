@@ -54,19 +54,19 @@ describe('reading', () => {
 		expect(r.code).toBe(0);
 		expect(r.stdout).toMatchInlineSnapshot(`
 			"Inbox                      7 open
-			Kitchen renovation         Home · 20 open · 2 today or late · 2 waiting · Reviewed 3 days ago
-			Household admin            Home · 4 open · 1 today or late · 1 waiting · Review due
-			Learn to sail              Home · Dormant · 1 open
-			Lakeside strategy review   Advisory · 5 open · 1 today or late · 1 waiting · Reviewed yesterday
-			Advisory practice          Advisory · 3 open · 1 today or late · Review due
-			Doctoral thesis            Research · 8 open · 3 waiting · Reviewed 5 days ago
-			Conference paper           Research · 4 open · Reviewed 10 days ago
-			Research methods course    Teaching · 5 open · 1 today or late · 1 waiting · Reviewed 2 days ago
-			Course redesign            Teaching · 2 open · Reviewed 12 days ago · No next Action
-			Half marathon              2 open · Review due
+			Kitchen renovation         Home · 20 open · 2 today or late · 2 waiting · reviewed 3 days ago
+			Household admin            Home · 4 open · 1 today or late · 1 waiting · review due
+			Learn to sail              Home · dormant · 1 open
+			Lakeside strategy review   Advisory · 5 open · 1 today or late · 1 waiting · reviewed yesterday
+			Advisory practice          Advisory · 3 open · 1 today or late · review due
+			Doctoral thesis            Research · 8 open · 3 waiting · reviewed 5 days ago
+			Conference paper           Research · 4 open · reviewed 10 days ago
+			Research methods course    Teaching · 5 open · 1 today or late · 1 waiting · reviewed 2 days ago
+			Course redesign            Teaching · 2 open · reviewed 12 days ago · no next Action
+			Half marathon              2 open · review due
 			Old blog                   Closed · 0 open
 			Edge - twin                1 open
-			Edge - unknown Sphere      0 open · No next Action
+			Edge - unknown Sphere      0 open · no next Action
 
 			14 Matters
 			"
@@ -80,13 +80,13 @@ describe('reading', () => {
 		expect((await mtm(['list', '--vault', root])).stdout).toMatchInlineSnapshot(`
 			"Inbox
 			  ● Call     Call Marco back                    Later
-			  ● Write    Mystery                            Later                       Not recognised: status “someday” (shown as Later), type “fax” (shown as Write), Matter “[[Nowhere]]” (shown in the Inbox)
-			  ● Buy      Pay the council tax                Next     Yesterday
+			  ● Write    Mystery                            Later                             Not recognised: status “someday” (shown as Later), type “fax” (shown as Write), Matter “[[Nowhere]]” (shown in the Inbox)
+			  ● Buy      Pay the council tax                Next     Yesterday, late
 
 			Kitchen renovation
-			  ● Call     Confirm the worktop measurements   Next     Today 10:00  high
+			  ● Call     Confirm the worktop measurements   Next     Today 10:00, late  high
 			  ● Call     Call Marco about the quote         Next
-			  ● Message  Revised quote from Marco           Waiting                     waiting on Marco Rossi, 2 weeks
+			  ● Message  Revised quote from Marco           Waiting                           waiting on Marco Rossi, 2 weeks
 
 			Advisory work
 			  ● Write    Send the invoice                   Doing    Tue 20 Oct
@@ -273,7 +273,7 @@ describe('writing', () => {
 		const r = await mtm(['add-matter', 'Garden shed', '--sphere', 'Home', '--review-every', '2w', '--outcome', 'A dry place for the tools', '--vault', root], writer);
 		expect(r.stdout).toMatchInlineSnapshot(`
 			"Added Matter “Garden shed”
-			  Home · Active · review every 2 weeks
+			  Home · active · review every 2 weeks
 			  A dry place for the tools
 			  MTM/Matters/Garden shed.md
 			"
@@ -355,13 +355,13 @@ describe('a file that changes while writing', () => {
 		expect(note).toContain('Edited elsewhere.');
 	});
 
-	it('changing twice gives exit code 3, with the other program’s edit kept', async () => {
+	it('changing twice gives exit code 3, nothing written, the other program’s edit kept', async () => {
 		const root = keep(syntheticVault());
 		const r = await mtm(['done', 'Send the invoice', '--vault', root], { contentsAfter: racing(root, 2) });
 		expect(r).toEqual({
 			code: 3,
 			stdout: '',
-			stderr: 'MTM/Actions/Send the invoice.md changed while Matters was writing it, twice. Nothing more was written; try again.\n',
+			stderr: 'MTM/Actions/Send the invoice.md changed while Matters was about to write it, twice. Nothing was written; try again.\n',
 		});
 		const note = read(root, 'MTM/Actions/Send the invoice.md');
 		expect(note).toContain('mtm-status: doing');

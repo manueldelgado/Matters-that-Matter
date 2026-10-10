@@ -96,7 +96,6 @@ Runs as an MCP server over stdio, for AI assistants.
 
 export const CLI = {
 	version: `${PACKAGE_NAME} ${VERSION}`,
-	seeHelp: 'See mtm --help.',
 
 	// Arguments.
 	unknownOption: (flag: string) => `There’s no option ${flag}. See mtm --help.`,
@@ -108,12 +107,11 @@ export const CLI = {
 	nameAction: 'Name the Action: its path or its title.',
 	nameMatter: 'Name the Matter: its name or its path.',
 	nameNew: 'Give the new Matter a name.',
-	noText: 'Give the Action’s text, or a title with --title.',
 	noParseText: 'Give the text to read.',
-	badTools: (names: string) => `--tools: there’s no tool ${names}.`,
 
 	// The vault isn't ready.
 	noVault: 'Name the vault with --vault <path>, or set MTM_VAULT.',
+	badConfigDir: (dir: string) => `--config-dir names one folder in the vault, such as .obsidian; “${dir}” isn’t one.`,
 	noFolder: (path: string) => `There’s no folder at ${path}.`,
 	notAVault: (path: string, configDir: string) => `${path} isn’t an Obsidian vault: it has no ${configDir} folder.`,
 	noSettings: (path: string, file: string) => `Matters isn’t installed in ${path}: there’s no ${file}. Install Matters and run setup in Obsidian first.`,
@@ -123,8 +121,11 @@ export const CLI = {
 
 	// Writing.
 	nothingChanged: 'Nothing was changed.',
-	changedMeanwhile: (path: string) => `${path} changed while Matters was writing it, twice. Nothing more was written; try again.`,
-	alreadyWritten: (paths: readonly string[]) => `Already written: ${paths.join(', ')}.`,
+	changedMeanwhile: (path: string) => `${path} changed while Matters was about to write it, twice. Nothing was written; try again.`,
+	writeFailed: (path: string, error: string) => `Writing ${path} failed (${error}). Everything was put back as it was; nothing was changed.`,
+	writeFailedLeft: (path: string, error: string, left: readonly string[]) =>
+		`Writing ${path} failed (${error}), and these files couldn’t be put back as they were: ${left.join(', ')}. Check them in Obsidian.`,
+	outsideVault: (path: string) => `${path} is outside the vault, so nothing was written.`,
 	planOutFailed: (file: string) => `The plan couldn’t be written to ${file}.`,
 
 	// Ambiguity.
@@ -157,7 +158,6 @@ export const CLI = {
 	detailsKey: 'details',
 	checklistKey: 'checklist',
 	linkKey: 'link',
-	renameKey: 'file',
 
 	// Reading.
 	dueTodayOrLate: 'Due today or late',
@@ -183,11 +183,9 @@ export const CLI = {
 	read: 'Read',
 	noMatch: 'matched nothing',
 	nothingRead: 'No words quick add reads; it’s all title.',
-	nextReview: (day: string) => `next review ${day}`,
 
 	// Opening.
 	opening: (name: string) => `Opening “${name}” in Obsidian.`,
 	openFailed: (url: string) => `The system couldn’t open the link. Open it yourself: ${url}`,
 	nothingToOpen: (ref: string) => `No Action or Matter matches “${ref}”.`,
-	newerSettingsNote: 'warning',
 } as const;

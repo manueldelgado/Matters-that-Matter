@@ -19,7 +19,7 @@ npm install -g matters-that-matter
 mtm today --vault ~/Notes
 ```
 
-The vault must have Matters installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Name it with `--vault`, or set `MTM_VAULT` once:
+The vault must have Matters installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
 
 ```bash
 export MTM_VAULT=~/Notes
@@ -44,7 +44,7 @@ mtm open <action|matter>     Open it in Obsidian
 mtm mcp                      Run as an MCP server (stdio)
 ```
 
-`mtm <command> --help` shows each command's fields and filters.
+`mtm <command> --help` (or `mtm help <command>`) shows each command's fields and filters.
 
 An Action is named by its path (`MTM/Actions/Call Marco.md`, `.md` optional) or its title. When a name matches several Actions, nothing is written and `mtm` lists them. Matters and people are named by name, path or link text; statuses, types and Spheres by label or ID.
 
@@ -96,18 +96,18 @@ A new title renames the note. When Obsidian's "Automatically update internal lin
 
 ### Listing
 
-`mtm list` shows open Actions grouped by Matter, in board order. Filters: `--matter`, `--status`, `--type`, `--sphere`, `--person`, `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
+`mtm list` shows open Actions grouped by Matter, in board order; late ones say "late". Filters: `--matter`, `--status`, `--type`, `--sphere`, `--person`, `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
 
 ### Opening in Obsidian
 
-`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that Matters handles (a version of Matters with links).
+`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that Matters handles (a version of Matters with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). Opening links on Windows hasn't been tried yet.
 
 ## Options
 
 | Option | |
 |---|---|
 | `--vault <path>` | The vault (or `MTM_VAULT`) |
-| `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` |
+| `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` (one folder in the vault's root) |
 | `--json` | Output for scripts |
 | `--dry-run` | Show what would change, without writing |
 | `--help`, `-h` | Help |
@@ -137,7 +137,9 @@ mtm list --matter Kitchen --json | jq '.[0]'
 }
 ```
 
-Writes give the Action (or Matter) after the write, `changed`, `dryRun`, `written`, every change (`changes`), `warnings`, and the links a rename updated. Errors give `{ "error": { "code", "message", … } }`; when a name matches several things, `candidates` lists them.
+Writes give the Action (or Matter) after the write, `changed`, `dryRun`, `written`, every change (`changes`), `warnings`, the links a rename updated (`links`: each note and its lines) and `danglingLinks`, the number of links left pointing to the old name when Obsidian's "Automatically update internal links" is off. `parse` gives what quick add would make of the text with its `warnings`.
+
+Errors are JSON on standard output too: `{ "error": { "code", "message", … } }`; when a name matches several things, `candidates` lists them, and a failed write lists in `left` any file it couldn't put back. Other warnings (settings from a newer version of Matters, setup not done) go to standard error, so standard output stays the answer.
 
 Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Nothing is said by colour alone.
 
@@ -148,12 +150,14 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | 0 | Done |
 | 1 | Nothing matched, several things did, or a value can't be read. Nothing was written. |
 | 2 | The vault isn't ready: no vault named, no Matters settings, setup not done, or settings from a newer version of Matters (reads still work then, with a warning; writes are refused) |
-| 3 | A file changed while it was being written, twice. Try again. |
+| 3 | The write didn't happen: a file changed after it was read (and again when tried a second time), or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
 
 - Only `mtm-` properties change, and the body only where an Action's details, checklist or link go. Everything else in a note stays as it is.
-- Each file is written to a temporary file next to it and moved into place, and only if it hasn't changed since it was read. Line endings are kept.
+- A write is all or nothing. Every file is checked against what was read; the new contents are written to hidden temporary files next to them; then they are moved into place. If a step fails, everything already moved is put back. A new note never replaces a file that appeared meanwhile.
+- Line endings and file permissions are kept.
+- Writes stay inside the vault: nothing is written through a link (symlink) to a folder elsewhere. Linked files and folders are skipped when reading.
 - Nothing is deleted and settings are never written.
 
 ## AI assistants (MCP)

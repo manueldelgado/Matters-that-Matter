@@ -1,26 +1,74 @@
 // `mtm open`: an `obsidian://mtm-open` link for an Action or a Matter, handed to the system to open. The plugin
 // handles the link (it needs a version of Matters with links).
+//
+// The link names the vault by its ID when Obsidian's own list of vaults (`obsidian.json`) knows the folder, so two
+// vaults with the same folder name can't be confused; otherwise by the folder's name, as Obsidian shows it.
 
 import { spawn } from 'node:child_process';
+import { readFileSync, realpathSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 export type Opener = (url: string) => Promise<void>;
 
 /** What a link opens: an Action note (`file`, as Obsidian's own links name notes), a Matter or a board. */
 export type OpenTarget = { file: string } | { matter: string } | { board: string };
 
-/** The link Matters opens: `obsidian://mtm-open?vault=<name>&file=<path>` (or `matter=`, `board=`). */
-export function openUrl(vaultName: string, target: OpenTarget): string {
+/** The link Matters opens: `obsidian://mtm-open?vault=<ID or name>&file=<path>` (or `matter=`, `board=`). */
+export function openUrl(vault: string, target: OpenTarget): string {
 	const [key, value] = Object.entries(target)[0] as [string, string];
-	return `obsidian://mtm-open?vault=${encodeURIComponent(vaultName)}&${key}=${encodeURIComponent(value)}`;
+	return `obsidian://mtm-open?vault=${encodeURIComponent(vault)}&${key}=${encodeURIComponent(value)}`;
 }
 
-/** Asks the system to open a link: `open` on macOS, `start` on Windows, `xdg-open` elsewhere. */
+/**
+ * Obsidian's own settings folder, which holds `obsidian.json`: `~/Library/Application Support/obsidian` on macOS,
+ * `%APPDATA%\obsidian` on Windows, `$XDG_CONFIG_HOME/obsidian` (or `~/.config/obsidian`) elsewhere.
+ */
+export function obsidianSettingsDir(platform: string, env: Readonly<Record<string, string | undefined>>, home: string): string | null {
+	if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'obsidian');
+	if (platform === 'win32') return env.APPDATA ? join(env.APPDATA, 'obsidian') : null;
+	return join(env.XDG_CONFIG_HOME || join(home, '.config'), 'obsidian');
+}
+
+const real = (path: string): string | null => {
+	try {
+		return realpathSync(path);
+	} catch {
+		return null;
+	}
+};
+
+/**
+ * How a link names this vault: its ID in `obsidian.json` when a listed vault is this folder (both paths resolved),
+ * else the name of the folder (resolved too, so a link to the vault opens the vault itself).
+ */
+export function vaultRef(root: string, obsidianDir: string | null): string {
+	const here = real(root) ?? root;
+	if (obsidianDir) {
+		try {
+			const listed = (JSON.parse(readFileSync(join(obsidianDir, 'obsidian.json'), 'utf8')) as { vaults?: Record<string, { path?: unknown }> }).vaults ?? {};
+			for (const [id, vault] of Object.entries(listed)) {
+				if (typeof vault?.path === 'string' && real(vault.path) === here) return id;
+			}
+		} catch {
+			// No list, or one that can't be read: the folder's name.
+		}
+	}
+	return basename(here);
+}
+
+/**
+ * Asks the system to open a link: `open` on macOS, `xdg-open` on Linux and others, `start` through `cmd` on Windows
+ * (the link quoted as one argument; not yet tried on Windows).
+ */
 export function systemOpener(platform: string = process.platform): Opener {
 	return (url) =>
 		new Promise((resolve, reject) => {
-			const [command, args] =
-				platform === 'darwin' ? ['open', [url]] : platform === 'win32' ? ['cmd', ['/c', 'start', '""', url.replace(/&/g, '^&')]] : ['xdg-open', [url]];
-			const child = spawn(command, args, { stdio: 'ignore', detached: true, windowsHide: true });
+			const child =
+				platform === 'darwin'
+					? spawn('open', [url], { stdio: 'ignore', detached: true })
+					: platform === 'win32'
+						? spawn('cmd', ['/d', '/s', '/c', `start "" "${url}"`], { stdio: 'ignore', detached: true, windowsHide: true, windowsVerbatimArguments: true })
+						: spawn('xdg-open', [url], { stdio: 'ignore', detached: true });
 			child.once('error', reject);
 			child.once('spawn', () => {
 				child.unref();

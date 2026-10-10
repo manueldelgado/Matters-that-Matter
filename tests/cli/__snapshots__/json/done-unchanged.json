@@ -1,0 +1,43 @@
+{
+  "action": {
+    "path": "MTM/Actions/Order the tiles.md",
+    "title": "Order the tiles",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "done",
+      "label": "Done",
+      "category": "closed"
+    },
+    "type": {
+      "id": "buy",
+      "label": "Buy"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": "2026-10-01",
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "buy",
+      "mtm-status": "done",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-completed": "2026-10-01"
+    }
+  },
+  "changed": false,
+  "dryRun": false,
+  "written": false,
+  "changes": [],
+  "warnings": [],
+  "links": [],
+  "danglingLinks": 0
+}

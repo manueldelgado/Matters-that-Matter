@@ -12,7 +12,7 @@ function skipped(name: string, relative: string, configDir: string): boolean {
 /**
  * Lists every file under the vault (vault paths, `/`-separated) without entering the configuration folder, `.trash`
  * or dot-folders, and reads files as UTF-8 text (null when there is no such file). Reads of the configuration
- * folder still work, for `app.json`.
+ * folder still work, for `app.json`. Symbolic links (to files or folders) are skipped.
  */
 export function fsVaultReader(root: string, configDir: string): VaultReader {
 	return {
@@ -41,6 +41,18 @@ export function fsVaultReader(root: string, configDir: string): VaultReader {
 			} catch {
 				return null;
 			}
+		},
+	};
+}
+
+/** A reader that reads each file once: every later read of a path gives the same text. */
+export function cachingReader(reader: VaultReader): VaultReader {
+	const texts = new Map<string, string | null>();
+	return {
+		list: () => reader.list(),
+		read(path) {
+			if (!texts.has(path)) texts.set(path, reader.read(path));
+			return texts.get(path) ?? null;
 		},
 	};
 }

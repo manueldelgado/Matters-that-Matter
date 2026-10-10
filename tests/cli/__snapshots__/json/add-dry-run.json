@@ -1,0 +1,75 @@
+{
+  "action": {
+    "path": "MTM/Actions/Ring the bank.md",
+    "title": "Ring the bank",
+    "matter": {
+      "path": "MTM/Matters/Inbox.md",
+      "name": "Inbox",
+      "isInbox": true
+    },
+    "status": {
+      "id": "later",
+      "label": "Later",
+      "category": "open"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "write",
+      "mtm-status": "later",
+      "mtm-matter": "[[Inbox]]"
+    }
+  },
+  "changed": true,
+  "dryRun": true,
+  "written": false,
+  "changes": [
+    {
+      "kind": "create",
+      "path": "MTM/Actions/Ring the bank.md"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ring the bank.md",
+      "key": "mtm-kind",
+      "from": null,
+      "to": "action"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ring the bank.md",
+      "key": "mtm-type",
+      "from": null,
+      "to": "write"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ring the bank.md",
+      "key": "mtm-status",
+      "from": null,
+      "to": "later"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ring the bank.md",
+      "key": "mtm-matter",
+      "from": null,
+      "to": "[[Inbox]]"
+    }
+  ],
+  "warnings": [],
+  "links": [],
+  "danglingLinks": 0
+}

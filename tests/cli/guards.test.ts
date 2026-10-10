@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { nodeFs, type ApplyFs } from '../../cli/src/apply';
 import { parseNow } from '../../cli/src/main';
 import { CONFIG, hashes, mtm, SETTINGS_FILE, syntheticVault, tempDir, writeFiles } from './helpers';
 import { tempContentsAfter } from './tempWriter';
@@ -52,6 +53,12 @@ describe('the vault isn’t ready: exit 2', () => {
 		expect((await mtm(['today', '--vault', root])).code).toBe(2);
 	});
 
+	it.each(['../elsewhere', 'a/b', 'a\\b', '..', '.'])('--config-dir %j isn’t one folder', async (dir) => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['workflow', '--config-dir', dir, '--vault', root]);
+		expect(r).toEqual({ code: 2, stdout: '', stderr: `--config-dir names one folder in the vault, such as .obsidian; “${dir}” isn’t one.\n` });
+	});
+
 	it('another configuration folder, with --config-dir', async () => {
 		const root = keep(syntheticVault());
 		writeFiles(root, { '.config/plugins/matters-that-matter/data.json': JSON.stringify({ setupDone: true }) });
@@ -59,9 +66,11 @@ describe('the vault isn’t ready: exit 2', () => {
 		expect((await mtm(['workflow', '--config-dir', '.nothing', '--vault', root])).code).toBe(2);
 	});
 
-	it('setup not done: reads work, writes are refused', async () => {
+	it('setup not done: reads work, with a hint; writes are refused', async () => {
 		const root = keep(syntheticVault({ settings: { setupDone: false } }));
-		expect((await mtm(['today', '--vault', root])).code).toBe(0);
+		const read = await mtm(['today', '--vault', root]);
+		expect(read.code).toBe(0);
+		expect(read.stderr).toBe('Matters isn’t set up in this vault yet. Run setup in Obsidian first.\n');
 		const before = hashes(root);
 		const r = await mtm(['add', 'Something', '--vault', root], writer);
 		expect(r).toEqual({ code: 2, stdout: '', stderr: 'Matters isn’t set up in this vault yet. Run setup in Obsidian first.\n' });
@@ -133,6 +142,11 @@ describe('nothing matched, several did, or the input can’t be read: exit 1', (
 		expect(JSON.parse((await mtm(['today', '--json', '--vault'])).stdout)).toEqual({ error: { code: 'usage', message: '--vault needs a value.' } });
 	});
 
+	it('mtm help is --help', async () => {
+		expect((await mtm(['help'])).stdout).toBe((await mtm(['--help'])).stdout);
+		expect((await mtm(['help', 'list'])).stdout).toBe((await mtm(['list', '--help'])).stdout);
+	});
+
 	it('the MCP server isn’t in this version yet', async () => {
 		expect(await mtm(['mcp'])).toEqual({ code: 1, stdout: '', stderr: 'The MCP server isn’t in this version of mtm yet.\n' });
 	});
@@ -168,6 +182,27 @@ describe('colour', () => {
 		const root = keep(syntheticVault());
 		const r = await mtm(['update', 'Send the invoice', '--status', 'Someday', '--vault', root], { tty: true, ...writer });
 		expect(r.stderr.startsWith(`${ESC}31mNo status matches “Someday”.${ESC}39m Statuses here:`)).toBe(true);
+	});
+});
+
+describe('a write that fails: exit 3, everything put back', () => {
+	it('says what failed and that nothing was changed', async () => {
+		const root = keep(syntheticVault());
+		const before = hashes(root);
+		const fs: ApplyFs = {
+			...nodeFs,
+			rename: (a, b) => {
+				if (b.endsWith('Send the invoice.md')) throw new Error('disk full');
+				nodeFs.rename(a, b);
+			},
+		};
+		const r = await mtm(['done', 'Send the invoice', '--vault', root], { ...writer, fs });
+		expect(r).toEqual({
+			code: 3,
+			stdout: '',
+			stderr: 'Writing MTM/Actions/Send the invoice.md failed (disk full). Everything was put back as it was; nothing was changed.\n',
+		});
+		expect(hashes(root)).toEqual(before);
 	});
 });
 

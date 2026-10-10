@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "usage",
+    "message": "There’s no option --colour. See mtm --help."
+  }
+}

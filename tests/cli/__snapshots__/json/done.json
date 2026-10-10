@@ -1,0 +1,59 @@
+{
+  "action": {
+    "path": "MTM/Actions/Send the invoice.md",
+    "title": "Send the invoice",
+    "matter": {
+      "path": "MTM/Matters/Advisory work.md",
+      "name": "Advisory work",
+      "isInbox": false
+    },
+    "status": {
+      "id": "done",
+      "label": "Done",
+      "category": "closed"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": "2026-10-20",
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": "2026-10-09",
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "write",
+      "mtm-status": "done",
+      "mtm-matter": "[[Advisory work]]",
+      "mtm-due": "2026-10-20",
+      "mtm-completed": "2026-10-09"
+    }
+  },
+  "changed": true,
+  "dryRun": false,
+  "written": true,
+  "changes": [
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-status",
+      "from": "doing",
+      "to": "done"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-completed",
+      "from": null,
+      "to": "2026-10-09"
+    }
+  ],
+  "warnings": [],
+  "links": [],
+  "danglingLinks": 0
+}

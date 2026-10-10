@@ -1,7 +1,7 @@
 // Running the command line in-process against vaults in temporary folders: the synthetic vault of the operations'
 // tests written out as files, or a copy of the fixture vault.
 
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -84,12 +84,14 @@ export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean }
 		env: {},
 		cwd: tmpdir(),
 		home: '/home/nobody',
+		// No list of vaults: links name the vault by its folder.
+		obsidianDir: null,
 		...io,
 	});
 	return { code, stdout, stderr };
 }
 
-/** Output with the vault's folder written as `<vault>`. */
-export const normalise = (text: string, root: string) => text.split(root).join('<vault>');
+/** Output with the vault's folder written as `<vault>` (as given, and as the system resolves it). */
+export const normalise = (text: string, root: string) => text.split(realpathSync(root)).join('<vault>').split(root).join('<vault>');
 
 export const read = (root: string, path: string) => readFileSync(join(root, ...path.split('/')), 'utf8');
