@@ -1,5 +1,5 @@
 {
-	"schemaVersion": 6,
+	"schemaVersion": 7,
 	"setupDone": true,
 	"folders": {
 		"matters": "MTM/Matters",
@@ -113,5 +113,6 @@
 	],
 	"openMattersAsOverview": true,
 	"todayInNewTabs": "every",
-	"inlineChips": true
+	"inlineChips": true,
+	"linksAddActions": true
 }

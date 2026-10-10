@@ -17,6 +17,7 @@ const CASES: Record<
 	weekStart: { read: 'monday', valid: 'sunday', changes: { weekStart: 'sunday' }, invalid: [['tuesday', 'monday'], [null, 'monday'], [0, 'monday']] },
 	openMattersAsOverview: { read: true, valid: false, changes: { openMattersAsOverview: false }, invalid: [['yes', false], [1, false], [null, false]] },
 	inlineChips: { read: true, valid: false, changes: { inlineChips: false }, invalid: [['true', false], [1, false], [undefined, false]] },
+	linksAddActions: { read: true, valid: false, changes: { linksAddActions: false }, invalid: [['true', false], [1, false], [undefined, false]] },
 	todayInNewTabs: { read: 'every', valid: 'alone', changes: { todayInNewTabs: 'alone' }, invalid: [['never', 'every'], [undefined, 'every'], [false, 'every']] },
 	datesEnglish: { read: true, valid: false, changes: { dateLanguages: ['es'] }, invalid: [['true', false], [1, false], [undefined, false]] },
 	datesSpanish: { read: true, valid: false, changes: { dateLanguages: ['en'] }, invalid: [['true', false], [1, false], [undefined, false]] },
@@ -25,7 +26,7 @@ const CASES: Record<
 describe('settings controls', () => {
 	it('has a control for each built-in setting the tab shows (keep in step with its control() calls)', () => {
 		expect([...CONTROL_KEYS].sort()).toEqual(
-			['datesEnglish', 'datesSpanish', 'defaultInboxPosition', 'inlineChips', 'openMattersAsOverview', 'showDone', 'todayInNewTabs', 'weekStart'],
+			['datesEnglish', 'datesSpanish', 'defaultInboxPosition', 'inlineChips', 'linksAddActions', 'openMattersAsOverview', 'showDone', 'todayInNewTabs', 'weekStart'],
 		);
 	});
 

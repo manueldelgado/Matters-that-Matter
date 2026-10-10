@@ -3,7 +3,7 @@
 import { DATE_LANGUAGES, DEFAULT_SETTINGS, TONES, type DateLanguage, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
-export const CURRENT_SCHEMA = 6;
+export const CURRENT_SCHEMA = 7;
 
 type Data = Record<string, unknown>;
 
@@ -19,6 +19,8 @@ const STEPS: Record<number, (data: Data) => Data> = {
 	4: (data) => ({ ...data, todayInNewTabs: 'every' }),
 	// 6: links to Actions render as chips, on by default.
 	5: (data) => ({ ...data, inlineChips: true }),
+	// 7: links may add Actions, on by default.
+	6: (data) => ({ ...data, linksAddActions: typeof data.linksAddActions === 'boolean' ? data.linksAddActions : true }),
 };
 
 const isObject = (v: unknown): v is Data => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -95,6 +97,7 @@ export function migrateSettings(saved: unknown): MattersSettings {
 	}));
 	if (!['every', 'alone', 'off'].includes(settings.todayInNewTabs)) settings.todayInNewTabs = defaults.todayInNewTabs;
 	if (typeof settings.inlineChips !== 'boolean') settings.inlineChips = defaults.inlineChips;
+	if (typeof settings.linksAddActions !== 'boolean') settings.linksAddActions = defaults.linksAddActions;
 	settings.dateLanguages = repairDateLanguages(settings.dateLanguages);
 	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 

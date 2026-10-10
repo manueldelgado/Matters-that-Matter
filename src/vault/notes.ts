@@ -4,6 +4,7 @@ import { normalizePath, TFile, type App, type TAbstractFile } from 'obsidian';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import type { Frontmatter } from '../services/notesModel';
+import { STRINGS } from '../strings';
 
 export type { Frontmatter } from '../services/notesModel';
 
@@ -71,6 +72,6 @@ export function linkTo(app: App, target: TFile, sourcePath: string): string {
 export async function createPersonNote(app: App, peopleFolder: string, name: string): Promise<TFile> {
 	const folder = normalizePath(peopleFolder);
 	await ensureFolder(app, folder);
-	const title = uniqueTitle(sanitiseTitle(name) || name, (t) => pathTaken(app, `${folder}/${t}.md`));
+	const title = uniqueTitle(sanitiseTitle(name) || STRINGS.untitledPerson, (t) => pathTaken(app, `${folder}/${t}.md`));
 	return app.vault.create(`${folder}/${title}.md`, '');
 }

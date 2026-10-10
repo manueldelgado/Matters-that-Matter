@@ -28,6 +28,7 @@ import { createMatter } from '../../../vault/matterWrites';
 import { createPersonNote } from '../../../vault/notes';
 import { loadCandidates } from '../../../vault/candidates';
 import { appendIcon, swapClasses, tileEl, typeClasses } from '../../components/dom';
+import { showAddedNotice } from '../../components/addedNotice';
 import {
 	isSuggestion,
 	renderSuggestions,
@@ -485,17 +486,12 @@ export class QuickAddModal extends Modal {
 	}
 
 	private notifyAdded(file: TFile, draft: Draft, matterPath: string): void {
-		const type = this.typeOf(draft.typeId);
-		const matter = this.matters.find((m) => m.path === matterPath)?.name ?? matterPath;
-		const status = this.settings.statuses.find((x) => x.id === draft.statusId)?.label ?? draft.statusId;
-		const fragment = createFragment((f) => {
-			const row = f.createDiv({ cls: ['mtm-added', ...(type ? typeClasses(type) : [])] });
-			if (type) tileEl(row, type.icon, 'mod-sm');
-			const text = row.createSpan({ cls: 'mtm-added-text' });
-			text.createSpan({ cls: 'mtm-added-title', text: file.basename });
-			text.createSpan({ cls: 'mtm-added-dest', text: STRINGS.quickAdd.added(matter, status) });
+		showAddedNotice(this.plugin, {
+			path: file.path,
+			title: file.basename,
+			type: this.typeOf(draft.typeId),
+			matter: this.matters.find((m) => m.path === matterPath)?.name ?? matterPath,
+			status: this.settings.statuses.find((x) => x.id === draft.statusId)?.label ?? draft.statusId,
 		});
-		const notice = new Notice(fragment, 6000);
-		notice.messageEl.addEventListener('click', () => void this.plugin.selectAction(file.path));
 	}
 }

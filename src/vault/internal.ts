@@ -196,3 +196,16 @@ export async function selectBasesView(leaf: WorkspaceLeaf, name: string): Promis
 		return false;
 	}
 }
+
+/**
+ * Whether the metadata cache has read every note (after a vault opens, it may still be indexing at layout-ready);
+ * null when that can't be read.
+ */
+export function cacheResolved(app: App): boolean | null {
+	try {
+		const value = (app.metadataCache as unknown as Record<string, unknown>).resolved;
+		return typeof value === 'boolean' ? value : null;
+	} catch {
+		return null;
+	}
+}

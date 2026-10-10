@@ -10,7 +10,7 @@ export function sanitiseTitle(raw: string): string {
 		.replace(/\s+/g, ' ')
 		.trim()
 		// A leading dot would hide the file.
-		.replace(/^\.+\s*/, '');
+		.replace(/^[.\s]+/, '');
 	return capLength(clean, MAX_TITLE_LENGTH);
 }
 

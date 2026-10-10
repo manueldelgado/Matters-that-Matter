@@ -1,4 +1,4 @@
-// Settings tab: folders, board defaults, quick add's date languages, and the status, type and Sphere editors.
+// Settings tab: folders, board defaults, quick add's date languages, other tools, and the status, type and Sphere editors.
 // Declarative, so Obsidian's settings search indexes every setting.
 
 import { debounce, normalizePath, Notice, PluginSettingTab, type App, type Setting, type SettingDefinition, type SettingDefinitionItem } from 'obsidian';
@@ -109,6 +109,19 @@ export class MattersSettingTab extends PluginSettingTab {
 			},
 			{
 				type: 'group',
+				heading: s.otherTools,
+				items: [
+					{
+						name: s.linksAddActions,
+						desc: s.linksAddActionsDesc,
+						aliases: [...s.linksAddActionsAliases],
+						control: { type: 'toggle', key: control('linksAddActions') },
+					},
+					{ name: s.otherToolsNote, searchable: false, render: (setting) => this.renderOtherToolsNote(setting) },
+				],
+			},
+			{
+				type: 'group',
 				heading: s.statuses,
 				items: [{ name: s.statuses, desc: s.statusesDesc, aliases: [...s.statusesAliases], render: (setting) => this.renderStatuses(setting) }],
 			},
@@ -189,6 +202,17 @@ export class MattersSettingTab extends PluginSettingTab {
 				);
 			},
 		};
+	}
+
+	/** The line on scripts and AI assistants, with a link to the docs (opened in the browser; the plugin requests nothing). */
+	private renderOtherToolsNote(setting: Setting): void {
+		const s = STRINGS.settings;
+		setting.setName('').setDesc(
+			createFragment((f) => {
+				f.appendText(`${s.otherToolsNote} `);
+				f.createEl('a', { text: s.otherToolsDocs, href: s.otherToolsDocsUrl });
+			}),
+		);
 	}
 
 	private renderHero(setting: Setting): void {

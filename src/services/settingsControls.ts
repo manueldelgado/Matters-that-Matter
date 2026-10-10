@@ -52,6 +52,10 @@ const CONTROLS = {
 		read: (s) => s.inlineChips,
 		apply: (s, v) => void (s.inlineChips = v === true),
 	},
+	linksAddActions: {
+		read: (s) => s.linksAddActions,
+		apply: (s, v) => void (s.linksAddActions = v === true),
+	},
 	todayInNewTabs: {
 		read: (s) => s.todayInNewTabs,
 		apply: (s, v) => void (s.todayInNewTabs = v === 'alone' || v === 'off' ? v : 'every'),
