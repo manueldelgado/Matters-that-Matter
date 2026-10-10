@@ -1,0 +1,117 @@
+{
+	"schemaVersion": 6,
+	"setupDone": true,
+	"folders": {
+		"matters": "MTM/Matters",
+		"actions": "MTM/Actions",
+		"boards": "MTM/Boards",
+		"people": "MTM/People"
+	},
+	"statuses": [
+		{
+			"id": "later",
+			"label": "Later",
+			"tone": "ink",
+			"category": "open",
+			"backlog": true
+		},
+		{
+			"id": "next",
+			"label": "Next",
+			"tone": "sky",
+			"category": "open"
+		},
+		{
+			"id": "doing",
+			"label": "Doing",
+			"tone": "butter",
+			"category": "active"
+		},
+		{
+			"id": "waiting",
+			"label": "Waiting",
+			"tone": "lavender",
+			"category": "active"
+		},
+		{
+			"id": "done",
+			"label": "Done",
+			"tone": "mint",
+			"category": "closed",
+			"done": true
+		}
+	],
+	"types": [
+		{
+			"id": "call",
+			"label": "Call",
+			"icon": "phone",
+			"tone": "mint"
+		},
+		{
+			"id": "message",
+			"label": "Message",
+			"icon": "message-circle",
+			"tone": "sky"
+		},
+		{
+			"id": "write",
+			"label": "Write",
+			"icon": "pencil-line",
+			"tone": "butter",
+			"default": true
+		},
+		{
+			"id": "meet",
+			"label": "Meet",
+			"icon": "users",
+			"tone": "lavender"
+		},
+		{
+			"id": "buy",
+			"label": "Buy",
+			"icon": "shopping-bag",
+			"tone": "peach"
+		},
+		{
+			"id": "visit",
+			"label": "Visit",
+			"icon": "map-pin",
+			"tone": "bubblegum"
+		}
+	],
+	"spheres": [
+		{
+			"id": "home",
+			"label": "Home",
+			"icon": "house"
+		},
+		{
+			"id": "advisory",
+			"label": "Advisory",
+			"icon": "briefcase"
+		},
+		{
+			"id": "research",
+			"label": "Research",
+			"icon": "graduation-cap"
+		},
+		{
+			"id": "teaching",
+			"label": "Teaching",
+			"icon": "presentation"
+		}
+	],
+	"inboxPath": "MTM/Matters/Inbox.md",
+	"boardPath": "MTM/Boards/Matters.base",
+	"defaultInboxPosition": "top",
+	"showDone": true,
+	"weekStart": "monday",
+	"dateLanguages": [
+		"en",
+		"es"
+	],
+	"openMattersAsOverview": true,
+	"todayInNewTabs": "every",
+	"inlineChips": true
+}

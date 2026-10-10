@@ -21,7 +21,7 @@ export default defineConfig(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json'],
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs'],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],
@@ -29,4 +29,24 @@ export default defineConfig(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		// Node scripts and the tests that run them: they never ship in the plugin.
+		files: ['scripts/**', 'tests/scripts/**'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			'obsidianmd/no-nodejs-modules': 'off',
+			'obsidianmd/hardcoded-config-path': 'off',
+		},
+	},
+	{
+		// It imports its own bundle of the plugin's source from a data URL; the rule guards against injected markup.
+		files: ['scripts/fixture-vault.mjs'],
+		rules: {
+			'no-unsanitized/method': 'off',
+		},
+	},
 );

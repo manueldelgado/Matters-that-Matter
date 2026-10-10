@@ -1,0 +1,18 @@
+filters:
+  and:
+    - "note[\"mtm-kind\"] == \"action\""
+views:
+  - type: mtm-board
+    name: "Board"
+  - type: mtm-list
+    name: "List"
+  - type: mtm-calendar
+    name: "Calendar"
+  - type: mtm-timeline
+    name: "Timeline"
+  - type: mtm-list
+    name: "Next actions"
+    mtmGroupBy: type
+    mtmShowBacklog: false
+    mtmInboxPosition: hidden
+    mtmShowDone: hide
