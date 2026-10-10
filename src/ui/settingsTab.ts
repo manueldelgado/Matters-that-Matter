@@ -1,4 +1,4 @@
-// Settings tab: folders, board defaults, and the status and type editors.
+// Settings tab: folders, board defaults, quick add's date languages, and the status, type and Sphere editors.
 // Declarative, so Obsidian's settings search indexes every setting.
 
 import { debounce, normalizePath, Notice, PluginSettingTab, type App, type Setting, type SettingDefinition, type SettingDefinitionItem } from 'obsidian';
@@ -101,6 +101,14 @@ export class MattersSettingTab extends PluginSettingTab {
 			},
 			{
 				type: 'group',
+				heading: s.quickAdd,
+				items: [
+					this.dateLanguage(control('datesEnglish'), s.datesEnglish, s.datesEnglishDesc),
+					this.dateLanguage(control('datesSpanish'), s.datesSpanish, s.datesSpanishDesc),
+				],
+			},
+			{
+				type: 'group',
 				heading: s.statuses,
 				items: [{ name: s.statuses, desc: s.statusesDesc, aliases: [...s.statusesAliases], render: (setting) => this.renderStatuses(setting) }],
 			},
@@ -132,7 +140,7 @@ export class MattersSettingTab extends PluginSettingTab {
 			this.saveSoon();
 			return;
 		}
-		if (!applyControlValue(settings, key, value)) return;
+		if (applyControlValue(settings, key, value) !== 'applied') return;
 		return this.plugin.saveSettings();
 	}
 
@@ -153,6 +161,32 @@ export class MattersSettingTab extends PluginSettingTab {
 					const path = normalizePath(value.trim());
 					return !value.trim() || path === '/' ? STRINGS.settings.folderRequired : undefined;
 				},
+			},
+		};
+	}
+
+	/**
+	 * A date language toggle. A render row rather than a built-in control: turning off the last language on is
+	 * refused, and a built-in toggle can't be set back (update() doesn't redraw it), while this one can.
+	 */
+	private dateLanguage(key: ControlKey, name: string, desc: string): SettingDefinition {
+		return {
+			name,
+			desc,
+			aliases: [...STRINGS.settings.datesAliases],
+			render: (setting) => {
+				setting.setName(name).setDesc(desc);
+				setting.addToggle((toggle) =>
+					toggle.setValue(readControlValue(this.plugin.settings, key) === true).onChange((on) => {
+						const result = applyControlValue(this.plugin.settings, key, on);
+						if (result === 'applied') {
+							void this.plugin.saveSettings();
+							return;
+						}
+						new Notice(STRINGS.notices.oneDateLanguage);
+						toggle.setValue(readControlValue(this.plugin.settings, key) === true);
+					}),
+				);
 			},
 		};
 	}

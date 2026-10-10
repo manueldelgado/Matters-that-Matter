@@ -103,3 +103,24 @@ describe('schema 6', () => {
 		expect(migrateSettings({ schemaVersion: 6, inlineChips: 'yes' }).inlineChips).toBe(true);
 	});
 });
+
+describe('date languages', () => {
+	it.each([
+		['missing', undefined, ['en', 'es']],
+		['not a list', 'en', ['en', 'es']],
+		['empty', [], ['en', 'es']],
+		['only unknown languages', ['fr', 'de'], ['en', 'es']],
+		['not strings', [1, null, { en: true }], ['en', 'es']],
+		['English only', ['en'], ['en']],
+		['Spanish only', ['es'], ['es']],
+		['duplicated', ['es', 'es'], ['es']],
+		['an unknown one beside a known one', ['fr', 'en'], ['en']],
+		['in another order', ['es', 'en'], ['en', 'es']],
+	])('repairs %s', (_name, dateLanguages, expected) => {
+		expect(migrateSettings({ schemaVersion: CURRENT_SCHEMA, dateLanguages }).dateLanguages).toEqual(expected);
+	});
+
+	it('repairs without a schema change', () => {
+		expect(migrateSettings({ schemaVersion: CURRENT_SCHEMA, dateLanguages: [] }).schemaVersion).toBe(CURRENT_SCHEMA);
+	});
+});

@@ -6,9 +6,10 @@ import { casual as chronoEs } from 'chrono-node/es';
 import type { ParsedResult } from 'chrono-node/en';
 import { addDays, formatMtmDate, toHm, toYmd, type MtmDate } from '../model/dates';
 import type { Priority } from '../model/actions';
+import { DATE_LANGUAGES, type DateLanguage } from '../settings';
 import { bestStrong, normalise, type Candidate } from './fuzzy';
 
-export type DateLanguage = 'en' | 'es';
+export type { DateLanguage };
 
 export interface TypeCandidate extends Candidate {
 	id: string;
@@ -362,7 +363,7 @@ function trimWeakLead(span: DateSpan): DateSpan {
 }
 
 function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
-	const languages = ctx.languages ?? ['en', 'es'];
+	const languages = ctx.languages ?? DATE_LANGUAGES;
 	const spans: DateSpan[] = [];
 	for (const lang of languages) {
 		const parser = lang === 'en' ? chronoEnDayFirst : chronoEs;

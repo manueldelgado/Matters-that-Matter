@@ -185,6 +185,24 @@ describe('dates', () => {
 		expect(parse('Llamar mañana', { languages: ['en'] }).due).toBeNull();
 	});
 
+	it('with English only, leaves Spanish dates in the title', () => {
+		for (const input of ['Llamar a Marco el viernes', 'Llamar a Marco viernes por la tarde', 'Pagar el día 5', 'Revisar el martes que viene']) {
+			const r = parse(input, { languages: ['en'] });
+			expect([input, r.due, r.start]).toEqual([input, null, null]);
+			expect(r.title).toBe(input);
+		}
+		expect(parse('Call Marco friday', { languages: ['en'] }).due).toBe('2026-10-16');
+	});
+
+	it('with Spanish only, leaves English dates in the title', () => {
+		for (const input of ['Call Marco friday', 'Call Marco tomorrow afternoon', 'Pay on the 1st', 'Review next Tuesday']) {
+			const r = parse(input, { languages: ['es'] });
+			expect([input, r.due, r.start]).toEqual([input, null, null]);
+			expect(r.title).toBe(input);
+		}
+		expect(parse('Llamar a Marco el viernes', { languages: ['es'] }).due).toBe('2026-10-16');
+	});
+
 	it('returns the date chip with its source text', () => {
 		const chip = parse('Call Marco tomorrow 10am').chips.find((c) => c.kind === 'date');
 		expect(chip).toMatchObject({ kind: 'date', text: 'tomorrow 10am', startDate: null, due: '2026-10-10T10:00' });

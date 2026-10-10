@@ -5,6 +5,10 @@ export type Tone = (typeof TONES)[number];
 
 export type StatusCategory = 'open' | 'active' | 'closed';
 
+/** Languages quick add reads dates in, in the order they are stored. */
+export const DATE_LANGUAGES = ['en', 'es'] as const;
+export type DateLanguage = (typeof DATE_LANGUAGES)[number];
+
 export interface StatusDef {
 	id: string;
 	label: string;
@@ -46,7 +50,8 @@ export interface MattersSettings {
 	defaultInboxPosition: 'top' | 'bottom';
 	showDone: boolean;
 	weekStart: 'monday' | 'sunday';
-	dateLanguages: ('en' | 'es')[];
+	/** Languages quick add, Process Inbox and the matters block read dates in; at least one. */
+	dateLanguages: DateLanguage[];
 	/** Opening a Matter note shows its overview. */
 	openMattersAsOverview: boolean;
 	/** "What matters today?" in new tabs: every new tab, only when no other tab is open, or never. */

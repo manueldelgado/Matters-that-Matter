@@ -1,6 +1,6 @@
 // Settings loading: schema migrations, defaults for missing keys, and flag repair.
 
-import { DEFAULT_SETTINGS, TONES, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
+import { DATE_LANGUAGES, DEFAULT_SETTINGS, TONES, type DateLanguage, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
 
 export const CURRENT_SCHEMA = 6;
@@ -61,6 +61,13 @@ function uniqueId(base: string, items: readonly { id: string }[]): string {
 	return id;
 }
 
+/** Known date languages only, once each, English first; none left means all of them. */
+function repairDateLanguages(saved: unknown): DateLanguage[] {
+	const list: unknown[] = Array.isArray(saved) ? saved : [];
+	const languages = DATE_LANGUAGES.filter((l) => list.includes(l));
+	return languages.length ? languages : [...DATE_LANGUAGES];
+}
+
 /** Turns whatever loadData returned into valid settings. Data from a newer schema is kept as is. */
 export function migrateSettings(saved: unknown): MattersSettings {
 	const defaults = structuredClone(DEFAULT_SETTINGS);
@@ -88,6 +95,7 @@ export function migrateSettings(saved: unknown): MattersSettings {
 	}));
 	if (!['every', 'alone', 'off'].includes(settings.todayInNewTabs)) settings.todayInNewTabs = defaults.todayInNewTabs;
 	if (typeof settings.inlineChips !== 'boolean') settings.inlineChips = defaults.inlineChips;
+	settings.dateLanguages = repairDateLanguages(settings.dateLanguages);
 	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 
 	return { ...settings, ...normaliseFlags(settings.statuses, settings.types) };
