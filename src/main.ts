@@ -15,6 +15,7 @@ import { QuickAddModal, type QuickAddInit } from './ui/modals/quickAdd/quickAddM
 import { registerCollectionViews } from './views/bases/registerViews';
 import { SetupView, VIEW_SETUP } from './views/setup/setupView';
 import { InlineChips } from './views/notes/inlineChips';
+import { registerMattersEmbed } from './views/notes/mattersEmbed';
 import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
 import { MatterOverviewView, VIEW_MATTER_OVERVIEW } from './views/matter-overview/overviewView';
 import { ensureDateTimeTypes, rewriteViewStates } from './vault/internal';
@@ -98,6 +99,7 @@ export default class MattersPlugin extends Plugin {
 		this.watchers = new Watchers(this);
 		this.watchers.start(this.ribbonEl);
 		new NoteDecorations(this).start();
+		registerMattersEmbed(this);
 		new InlineChips(this).start();
 		new TodayPanels(this).start();
 	}
