@@ -685,6 +685,8 @@ export const STRINGS = {
 		todayEvery: 'Every new tab',
 		todayAlone: 'Only when no other tab is open',
 		todayOff: 'Off',
+		inlineChips: 'Show links to Actions as chips',
+		inlineChipsDesc: 'Links to Action notes show the Action’s type, its due date and whether it’s done, in reading view and Live Preview. They still open the note and show a preview on hover.',
 		openMattersAsOverview: 'Open Matters as their overview',
 		openMattersAsOverviewDesc: 'Opening a Matter note shows its overview. “Open note” in the overview, or “Open as note” in the tab menu, shows the note itself.',
 		monday: 'Monday',

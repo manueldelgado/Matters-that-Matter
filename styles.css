@@ -1325,3 +1325,16 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .mtm-status-row select,.mtm-status-row .mtm-row-markers,.mtm-type-row .mtm-swatches,.mtm-type-row .mtm-marker{order:2}
 .mtm-status-row select,.mtm-type-row .mtm-swatches{margin-left:26px}
 }
+/* ——— Chips for links to Actions in notes ——— */
+/* The tile in the type's colours, as on cards. */
+.mtm-inline .mtm-tile{color:var(--mtm-icon);background:linear-gradient(180deg,var(--mtm-soft),var(--mtm-edge));box-shadow:inset 0 0 0 1px var(--mtm-edge)}
+/* The due date: the card's, smaller, its icon scaled with the text. */
+.mtm-inline .mtm-due{display:inline-flex;align-items:center;gap:3px;border-radius:999px;white-space:nowrap}
+.mtm-inline .mtm-due .svg-icon{width:.95em;height:.95em}
+/* Headings: the chip keeps the text face at a smaller size. Tables and callouts: a little tighter. */
+:is(h1,h2,h3,h4,h5,h6,.HyperMD-header) .mtm-inline{font-family:var(--font-text);font-size:.7em;vertical-align:.12em}
+:is(td,th,.callout-content) .mtm-inline{font-size:.88em}
+/* Live Preview: the chip is a link, without the editor's underline or accent; done chips struck through there too. */
+.cm-line .mtm-inline{cursor:pointer}
+.cm-line .mtm-inline .cm-hmd-internal-link{color:var(--text-normal);font-weight:600;text-decoration:none}
+.mtm-inline.is-done .cm-hmd-internal-link,.cm-line .mtm-inline.is-done .cm-hmd-internal-link{color:var(--text-faint);text-decoration:line-through}
