@@ -1,0 +1,35 @@
+{
+	"case": "add-with-details-checklist-link",
+	"description": "Details, a checklist and a link to a note, in the body of a new Action.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Plan the tiling.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"write"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Kitchen renovation]]"
+					]
+				],
+				"body": "Behind the hob first.\nThen the window wall.\n\n- [ ] Measure the wall\n- [ ] Pick the grout\n\n[[Kitchen ideas]]\n"
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

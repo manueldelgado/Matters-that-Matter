@@ -1,0 +1,39 @@
+{
+	"case": "add-done",
+	"description": "Added straight into the done status: the completion date is today.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Called the bank.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"call"
+					],
+					[
+						"mtm-status",
+						"done"
+					],
+					[
+						"mtm-matter",
+						"[[Inbox]]"
+					],
+					[
+						"mtm-completed",
+						"2026-10-09"
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"case": "rename-links-on",
+	"description": "A new title renames the note; links of every kind to it are rewritten (links updated automatically).",
+	"alwaysUpdateLinks": true,
+	"setup": {
+		"MTM/Sample/Notes/Worktop links.md": "---\nrelated: \"[[Confirm the worktop measurements]]\"\nsee:\n  - \"[[Confirm the worktop measurements#^corner|the corner]]\"\n  - \"[[Kitchen ideas]]\"\nsource: \"[confirm](Confirm%20the%20worktop%20measurements.md)\"\n---\nLinks to an Action, in every form.\n\n- Plain: [[Confirm the worktop measurements]]\n- With an alias: [[Confirm the worktop measurements|measure first]]\n- To a heading: [[Confirm the worktop measurements#Checklist]]\n- To a block: [[Confirm the worktop measurements#^corner]]\n- By path: [[MTM/Sample/Actions/Confirm the worktop measurements|Confirm the worktop measurements]]\n- Relative: [[../Actions/Confirm the worktop measurements]]\n- Markdown: [confirm](../Actions/Confirm%20the%20worktop%20measurements.md)\n- Markdown with the name: [Confirm the worktop measurements](Confirm%20the%20worktop%20measurements.md)\n- In angle brackets: [brackets](<../Actions/Confirm the worktop measurements.md>)\n- In code, not a link: `[[Confirm the worktop measurements]]`\n\n![[Confirm the worktop measurements]]\n",
+		"MTM/Sample/Notes/Worktop links in CRLF.md": "Seen from a note with Windows line endings:\r\n\r\n- [[Confirm the worktop measurements]]\r\n- [md](Confirm%20the%20worktop%20measurements.md)\r\n"
+	},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+				"to": "MTM/Sample/Actions/Measure the worktop.md"
+			}
+		]
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"case": "rename-markdown-backlink",
+	"description": "A relative Markdown link to the renamed note is rewritten, encoded.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Edge cases/Edge - unknown status.md",
+				"set": {
+					"mtm-type": "write",
+					"mtm-status": "later",
+					"mtm-matter": "[[Kitchen renovation]]"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Edge cases/Edge - unknown status.md",
+				"to": "MTM/Sample/Edge cases/Edge - renamed status.md"
+			}
+		]
+	}
+}

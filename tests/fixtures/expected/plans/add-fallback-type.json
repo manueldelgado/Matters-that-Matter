@@ -1,0 +1,35 @@
+{
+	"case": "add-fallback-type",
+	"description": "A type that matches nothing: the default type, with a warning.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Fly to Lisbon.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"write"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Inbox]]"
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

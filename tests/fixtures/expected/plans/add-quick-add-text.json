@@ -1,0 +1,49 @@
+{
+	"case": "add-quick-add-text",
+	"description": "Add an Action from quick add text alone: Matter, type, person, priority and a date with a time.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Ask Charlie about the corner unit.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"call"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Kitchen renovation]]"
+					],
+					[
+						"mtm-due",
+						"2026-10-16T10:00"
+					],
+					[
+						"mtm-priority",
+						2
+					],
+					[
+						"mtm-people",
+						[
+							"[[Charlie Carter]]"
+						]
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

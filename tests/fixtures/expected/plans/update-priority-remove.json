@@ -1,0 +1,24 @@
+{
+	"case": "update-priority-remove",
+	"description": null,
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+				"set": {
+					"mtm-type": "call",
+					"mtm-status": "next",
+					"mtm-matter": "[[Kitchen renovation]]"
+				},
+				"remove": [
+					"mtm-priority"
+				]
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

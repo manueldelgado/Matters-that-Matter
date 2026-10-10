@@ -1,0 +1,17 @@
+{
+	"case": "rename-to-a-taken-name",
+	"description": "A new title another note already has elsewhere: links to both get the path form where the name is no longer unique.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Actions/Book the hotel.md",
+				"to": "MTM/Sample/Actions/Link target.md"
+			}
+		]
+	}
+}
