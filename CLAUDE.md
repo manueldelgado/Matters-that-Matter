@@ -40,6 +40,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 ## Conventions
 
 - Code, identifiers, comments and UI strings in British English. UI text in sentence case.
+- Name the plugin "Matters that Matter" in full in UI strings, CLI output, READMEs and docs, never "Matters": on its own, "Matters" means several Matters. "The plugin" may stand in where the name would repeat. The Details marker text in notes stays as it is.
 - Formatting follows `.editorconfig`: tabs, single quotes.
 - Use `this.app`, never the global `app`.
 - Build DOM with `createEl`/`createDiv`; never `innerHTML` with dynamic content. Icons with `setIcon`.
