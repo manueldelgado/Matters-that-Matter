@@ -1,6 +1,6 @@
 # Matters that Matter
 
-A kanban board with swimlanes, a list, a calendar and a timeline for Obsidian, where every card and every lane is a note.
+Plan your work in Obsidian on a kanban board with swimlanes, a list, a calendar and a timeline, where every card and every lane is a note.
 
 A **Matter** is anything worth keeping an eye on: a kitchen renovation, the household bills, a thesis. An **Action** is one step that moves a Matter forward. Each Matter is a lane on the board and each Action a card in it. Both are ordinary notes in your vault, so they take part in links, backlinks, search and Bases like anything else.
 
