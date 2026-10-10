@@ -8,7 +8,7 @@ A **Matter** is anything worth keeping an eye on: a kitchen renovation, the hous
 
 ## Looks best with the Calm Matters theme
 
-Matters that Matter works with any theme. Its companion theme, [Calm Matters](https://github.com/manueldelgado/calm-matters), gives it the look in these pictures: a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault. It changes how things look, not what they do.
+Matters that Matter works with any theme. Its companion theme, [Calm Matters](https://community.obsidian.md/themes/calm-matters), gives it the look in these pictures: a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault. It changes how things look, not what they do.
 
 To add it: **Settings → Appearance → Themes → Manage**, search for *Calm Matters*, then **Install and use**. Setup offers the same in one click, and so does the top of the plugin's settings.
 
