@@ -12,7 +12,8 @@
 		"lint": "eslint .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"fixture": "node scripts/fixture-vault.mjs tests/fixtures/mtm-fixture --replace"
+		"fixture": "node scripts/fixture-vault.mjs tests/fixtures/mtm-fixture --replace",
+		"perf": "node scripts/perf-files.mjs"
 	},
 	"keywords": [
 		"obsidian-plugin"
