@@ -24,6 +24,7 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 - **Process Inbox** steps through captured Actions one at a time and asks what each one needs.
 - **Review Matters** takes you through the Matters due a review, one at a time: what was done since, what needs a look, and four questions (the outcome, the next step, whether it's still on your mind, when to look again).
 - **Notes stay notes.** Action notes, Matter notes and the people your Actions name get a small banner that mirrors the card. Everything else in the note is yours.
+- **Links to Actions show as chips** in any note, in reading view and Live Preview: the Action's type, its due date, and whether it's done. They're still links, and they update as the Action changes. A setting turns them off.
 
 | | |
 |---|---|
