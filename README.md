@@ -15,7 +15,7 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 ## Features
 
 - **Four views of the same notes.** Board, list, calendar and timeline are Bases views, so they live in a `.base` file next to your other bases and respect its filters.
-- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector.
+- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector. On a phone, the board shows one Matter at a time.
 - **Colour means type.** Action types (call, message, write, meet, buy, visit, or your own) give every card its colour and icon. You choose labels, icons and colours in settings.
 - **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish.
 - **The inspector**, in the right sidebar, edits the selected Action: status, type, Matter, priority, dates, who you're waiting on, people, details and a checklist.
@@ -106,7 +106,7 @@ No command has a default hotkey.
 - **All-day dates in Obsidian's own panels.** `mtm-start` and `mtm-due` hold either a date (`2026-10-15`, all day) or a date and time (`2026-10-15T10:00`). Obsidian's Properties panel and Bases tables show an all-day date as "00:00", and editing it with Obsidian's date picker adds a time, which makes the Action timed. Edit dates in the inspector to keep them all day.
 - **Sync your plugin settings.** Statuses, types and Spheres live in the plugin's settings, and notes store their IDs. If your sync doesn't include plugin settings, another device shows badges on those Actions until the settings arrive. Nothing is rewritten in the meantime.
 - **Keep links up to date.** Leave Settings → Files and links → **Automatically update internal links** on. Actions point to their Matter with a link, so renaming a Matter should update every Action that names it.
-- **Phones.** The board scrolls sideways, and everything you can do by dragging you can also do from the inspector or a lane's menu.
+- **Phones.** The board shows one Matter at a time: choose it from the pills under the toolbar, swipe sideways between its statuses, and touch and hold a card to move it to another status or Matter. The round + adds an Action where you are. Tablets get the full board.
 
 ### Obsidian internals
 
