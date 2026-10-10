@@ -163,3 +163,36 @@ export function showThemeInBrowser(app: App, name: string): boolean {
 		return false;
 	}
 }
+
+/** The Bases query controller of a tab showing a .base file, or null. */
+function basesController(leaf: WorkspaceLeaf): unknown {
+	const controller = (leaf.view as unknown as Record<string, unknown>).controller;
+	return typeof controller === 'object' && controller !== null ? controller : null;
+}
+
+/**
+ * The type of the view a Bases tab shows ('mtm-board', 'table'…), or null while it is loading or when it can't
+ * be read. Bases has no API for this.
+ */
+export function basesViewType(leaf: WorkspaceLeaf): string | null {
+	try {
+		const view = (basesController(leaf) as Record<string, unknown> | null)?.view;
+		const type = typeof view === 'object' && view !== null ? (view as Record<string, unknown>).type : undefined;
+		return typeof type === 'string' ? type : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Switches a Bases tab to one of its file's views by name, as its view selector does; false when it can't. */
+export async function selectBasesView(leaf: WorkspaceLeaf, name: string): Promise<boolean> {
+	try {
+		const select = method(basesController(leaf), 'selectView');
+		if (!select) return false;
+		await select(name);
+		return true;
+	} catch (e) {
+		console.warn('Matters that Matter: could not switch the Bases view', e);
+		return false;
+	}
+}

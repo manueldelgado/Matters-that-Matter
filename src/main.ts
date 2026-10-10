@@ -19,6 +19,8 @@ import { registerMattersEmbed } from './views/notes/mattersEmbed';
 import { InspectorView, VIEW_INSPECTOR } from './views/inspector/inspectorView';
 import { MatterOverviewView, VIEW_MATTER_OVERVIEW } from './views/matter-overview/overviewView';
 import { ensureDateTimeTypes, rewriteViewStates } from './vault/internal';
+import { handReveal } from './views/bases/board/boardReveal';
+import { pendingRevealFor, REVEAL_WAIT_MS, type PendingReveal } from './services/reveal';
 import { matterOpenDecision } from './services/matterOpening';
 import { frontmatterOf } from './vault/notes';
 import { editAction } from './vault/actionWrites';
@@ -42,6 +44,8 @@ export default class MattersPlugin extends Plugin {
 	private ribbonEl: HTMLElement | null = null;
 	/** Tabs asked to show a Matter as a note ("Open note"), with that Matter's path. */
 	private notePaths = new WeakMap<WorkspaceLeaf, string>();
+	/** Show on board: the Matter whose lane the next board of that file to render brings into view. */
+	private pendingReveal: PendingReveal | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -154,24 +158,18 @@ export default class MattersPlugin extends Plugin {
 		});
 	}
 
-	/** Opens the board file, or a picker when the boards folder holds several. */
-	async openBoard(): Promise<void> {
-		const { vault, workspace } = this.app;
+	/**
+	 * Opens the board file, or a picker when the boards folder holds several. With `reveal` (a Matter's path), the
+	 * board then brings that Matter's lane into view.
+	 */
+	async openBoard(options: { reveal?: string } = {}): Promise<void> {
+		const { vault } = this.app;
+		// A plain open (even one that ends at a notice or a cancelled picker) drops an earlier reveal.
+		if (!options.reveal) this.pendingReveal = null;
 		const folder = vault.getAbstractFileByPath(normalizePath(this.settings.folders.boards));
 		const boards =
 			folder instanceof TFolder ? folder.children.filter((f): f is TFile => f instanceof TFile && f.extension === 'base') : [];
-		// A board already open is brought forward; otherwise it opens in a new tab, never over the note being read.
-		const open = (file: TFile) => {
-			const existing = workspace.getLeavesOfType('bases').find((leaf) => leaf.view instanceof FileView && leaf.view.file?.path === file.path);
-			if (existing) {
-				void workspace.revealLeaf(existing);
-				workspace.setActiveLeaf(existing, { focus: true });
-				return;
-			}
-			const active = workspace.getMostRecentLeaf();
-			const leaf = active && active.view.getViewType() === 'empty' ? active : workspace.getLeaf('tab');
-			void leaf.openFile(file);
-		};
+		const open = (file: TFile) => void this.showBoardFile(file, options.reveal ?? null);
 
 		if (boards.length > 1) {
 			new BoardPicker(this.app, boards, open).open();
@@ -180,6 +178,35 @@ export default class MattersPlugin extends Plugin {
 		const board = vault.getFileByPath(normalizePath(this.settings.boardPath)) ?? boards[0];
 		if (board) open(board);
 		else new Notice(STRINGS.notices.boardMissing(this.settings.boardPath));
+	}
+
+	/** A board already open is brought forward; otherwise it opens in a new tab, never over the note being read. */
+	private async showBoardFile(file: TFile, reveal: string | null): Promise<void> {
+		const { workspace } = this.app;
+		this.pendingReveal = reveal && this.basesAvailable ? { matterPath: reveal, boardPath: file.path, expires: Date.now() + REVEAL_WAIT_MS } : null;
+		let leaf = workspace.getLeavesOfType('bases').find((l) => l.view instanceof FileView && l.view.file?.path === file.path);
+		if (leaf) {
+			void workspace.revealLeaf(leaf);
+			workspace.setActiveLeaf(leaf, { focus: true });
+		} else {
+			const active = workspace.getMostRecentLeaf();
+			leaf = active && active.view.getViewType() === 'empty' ? active : workspace.getLeaf('tab');
+			await leaf.openFile(file);
+		}
+		if (this.pendingReveal) await handReveal(this, leaf, file);
+	}
+
+	hasPendingReveal(): boolean {
+		return this.pendingReveal !== null;
+	}
+
+	/** The Matter to reveal on a board of this file, once: taken, or dropped when it waited too long. */
+	takeReveal(boardPath: string): string | null {
+		const pending = this.pendingReveal;
+		const decision = pendingRevealFor(pending, boardPath, Date.now());
+		if (decision === 'keep' || !pending) return null;
+		this.pendingReveal = null;
+		return decision === 'take' ? pending.matterPath : null;
 	}
 
 	/** Opens quick add; from a board cell it starts in that lane's Matter and that column's status. */
