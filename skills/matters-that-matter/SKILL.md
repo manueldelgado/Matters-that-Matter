@@ -29,7 +29,7 @@ Use the plugin's words with the user, capitalised as shown: **Action**, **Matter
 
 ## With the MCP server (preferred)
 
-When the `matters-that-matter` MCP server is connected (started as `npx -y matters-that-matter mcp --vault <path>`), use its tools. They apply all of the plugin's rules, so you never need the file format.
+When Matters' MCP tools are available (`add_action`, `get_today` and the others below, under whatever name the host gave the server; it is started as `npx -y matters-that-matter mcp --vault <path>`), use them. They apply all of the plugin's rules, so you never need the file format.
 
 | Tool | Does |
 |---|---|
@@ -50,6 +50,7 @@ When the `matters-that-matter` MCP server is connected (started as `npx -y matte
 - Every write reports what it changed, property by property. Tell the user in a line or two (where the Action went, its status, its date).
 - The host usually asks before each write. The server may run read-only (`--read-only`) or offer only some tools (`--tools`); if a tool is missing, say what you'd have done and don't work around it by editing files.
 - Dates take the stored forms (`2026-10-16`, `2026-10-16T10:00`) or words as quick add reads them ("fri 10:00", "tomorrow").
+- `get_today` returns the vault's today in `date`. Use that as today, for what is due or late and for relative dates, even if your own clock says otherwise; prefer passing dates in words ("next tue") and let the tools resolve them.
 
 ## With the command line
 
