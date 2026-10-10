@@ -33,7 +33,7 @@ export class DeleteModal extends Modal {
 
 	onOpen(): void {
 		const { opts, contentEl } = this;
-		this.modalEl.addClasses(['mtm-modal', 'mod-danger']);
+		this.modalEl.addClasses(['mtm-modal', 'mod-danger', 'has-head-tile']);
 		contentEl.empty();
 
 		const head = contentEl.createDiv({ cls: 'mtm-modal-head' });

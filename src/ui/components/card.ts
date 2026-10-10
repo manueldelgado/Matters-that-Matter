@@ -155,7 +155,7 @@ export function renderCard(parent: HTMLElement, item: ActionItem, ctx: CardConte
 		if (value !== undefined) orphanBadge(card, field, value, true, () => ctx.onDismiss(item));
 	}
 	if (ctx.matterName) {
-		const matter = card.createDiv({ cls: 'mtm-card-matter' });
+		const matter = card.createDiv({ cls: ['mtm-card-matter', ...(ctx.matterIcon ? ['has-icon'] : [])] });
 		if (ctx.matterIcon) setIcon(matter.createSpan({ cls: 'mtm-matter-icon' }), ctx.matterIcon);
 		matter.appendText(ctx.matterName);
 	}

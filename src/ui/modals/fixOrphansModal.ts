@@ -22,7 +22,7 @@ export class FixOrphansModal extends Modal {
 		const f = STRINGS.fixOrphans;
 		const n = this.summary.items.length;
 		const { contentEl } = this;
-		this.modalEl.addClass('mtm-modal');
+		this.modalEl.addClasses(['mtm-modal', 'has-head-tile']);
 		contentEl.empty();
 
 		const head = contentEl.createDiv({ cls: 'mtm-modal-head' });

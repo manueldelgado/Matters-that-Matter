@@ -581,7 +581,7 @@ body .mtm-setup textarea,body .mtm-textarea{width:100%;min-height:110px;padding:
 /* The close button (.modal-header-button since Obsidian 1.13, absolutely placed) sits on the head's title row on desktop;
    a head that starts with a 40px tile has a taller row. Phones lay out modals their own way. */
 body:not(.is-phone) .modal.mtm-modal > .modal-header-button{top:29px;right:16px}
-body:not(.is-phone) .modal.mtm-modal:has(.mtm-modal-head > .mtm-tile.mod-lg) > .modal-header-button{top:37px}
+body:not(.is-phone) .modal.mtm-modal.has-head-tile > .modal-header-button{top:37px}
 .mtm-modal .modal-content{padding:0}
 .mtm-modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px 6px}
 .mtm-modal-title{margin:0;font-family:var(--mtm-font-display);font-size:20px;font-weight:400;line-height:1.2}
@@ -790,7 +790,7 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .mtm-table-row>.mtm-table-title{grid-area:title}
 .mtm-table-row>.mtm-table-meta{grid-area:meta;display:flex;align-items:center;gap:10px;min-width:0;padding-left:34px}
 .mtm-table-row>.mtm-table-num{grid-area:num}
-.mtm-table-meta>span:has(>.mtm-table-empty){display:none}
+.mtm-table-meta>span.is-blank{display:none}
 .mtm-table-meta :is(.mtm-priority-label,.mtm-table-waiting-name){display:none}
 .mtm-table-meta .mtm-link-chip{height:22px;padding:0 2px}
 }
@@ -952,7 +952,7 @@ body:not(.is-mobile) .mod-right-split .mtm-inspector-footer{padding-bottom:calc(
 .mtm-waiting-age.is-long,.mtm-link-chip+.mtm-waiting-age.is-long,.mtm-table-meta .mtm-waiting-age.is-long{color:var(--mtm-review-late)}
 /* The list shows the long age after the chip, the short one in two-line rows. */
 .mtm-waiting-age.mod-short{display:none}
-@container (max-width:600px){.mtm-table-meta .mtm-waiting-age.mod-long{display:none}.mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:2px}.mtm-table-meta>span:has(>.mtm-waiting-age){display:inline-flex;align-items:center;white-space:nowrap}}
+@container (max-width:600px){.mtm-table-meta .mtm-waiting-age.mod-long{display:none}.mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:2px}.mtm-table-meta>span.has-age{display:inline-flex;align-items:center;white-space:nowrap}}
 /* Inspector: the date under the Waiting on chip, editable, with the age. */
 .mtm-waiting-since{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-faint)}
 .mtm-waiting-since>.svg-icon{width:13px;height:13px}
@@ -979,7 +979,7 @@ body .mtm-waiting-since input[type=date]{height:24px;padding:0 6px;font-size:12p
 .mtm-note-banner-outcome{display:flex;align-items:flex-start;gap:5px;font-size:12.5px;line-height:1.4;color:var(--text-muted)}
 .mtm-note-banner-outcome .svg-icon{flex:none;width:12px;height:12px;margin-top:2px;color:var(--text-faint)}
 /* A long outcome keeps a readable width: the counts and button wrap below it instead. */
-.mtm-note-banner-text:has(>.mtm-note-banner-outcome){flex:1 1 280px;min-width:min(100%,280px)}
+.mtm-note-banner-text.has-outcome{flex:1 1 280px;min-width:min(100%,280px)}
 /* ——— No next Action ——— */
 /* No next Action: a dashed outline token stronger than --mtm-line, which is too faint dashed. */
 body{--mtm-dash:color-mix(in srgb,var(--text-faint) 55%,transparent)}
@@ -1041,7 +1041,7 @@ body .mtm-stalled:not(.clickable-icon):hover,body .mtm-stalled:not(.clickable-ic
 .mtm-person-banner-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 16px}
 .mtm-person-banner .mtm-section-title{margin-bottom:6px}
 .mtm-person-banner .mtm-stack{gap:6px}
-.mtm-card-matter:has(>.mtm-matter-icon){display:flex;align-items:center;gap:5px}
+.mtm-card-matter.has-icon{display:flex;align-items:center;gap:5px}
 .mtm-card-matter>.mtm-matter-icon .svg-icon{width:12px;height:12px}
 .is-phone .mtm-person-banner{padding:12px}
 .mtm-person-banner.mod-quiet{flex-direction:row;align-items:center;gap:10px;padding:8px 12px;box-shadow:none;background:transparent;border-style:dashed;font-size:12.5px;color:var(--text-muted)}
@@ -1137,14 +1137,14 @@ body .mtm-table-group .mtm-process-button:not(.clickable-icon){align-self:center
 .mtm-lane-meta .mtm-review{white-space:normal;text-wrap:balance}
 .mtm-lane-meta .mtm-review .svg-icon{flex:none;align-self:flex-start;margin-top:1px}
 /* List rows, Waiting on: one line, the short age ("2w", as on cards) and a name that shortens (the tooltip has it whole). */
-.mtm-table-meta>span:has(>.mtm-link-chip){display:flex;align-items:center;min-width:0;white-space:nowrap}
+.mtm-table-meta>span.has-chip{display:flex;align-items:center;min-width:0;white-space:nowrap}
 .mtm-table-meta .mtm-link-chip.mod-waiting{min-width:0;max-width:100%}
 .mtm-table-meta .mtm-table-waiting-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mtm-table-meta .mtm-link-chip.mod-waiting>.mtm-avatar,.mtm-table-meta .mtm-waiting-age{flex:none}
 .mtm-table-meta .mtm-waiting-age.mod-long{display:none}
 .mtm-table-meta .mtm-waiting-age.mod-short{display:inline;margin-left:4px}
 /* Two-line rows keep the cell at its natural size. */
-@container (max-width:600px){.mtm-table-meta>span:has(>.mtm-link-chip){flex:none;min-width:auto}}
+@container (max-width:600px){.mtm-table-meta>span.has-chip{flex:none;min-width:auto}}
 /* ——— "What matters today?" in a new tab: the plugin's panel in Obsidian's empty view ——— */
 /* The host: Obsidian's heading and actions give way to the panel, which scrolls and measures its own width. */
 .empty-state.mtm-has-today{display:block;height:100%;overflow-y:auto;container-type:inline-size;text-align:left}

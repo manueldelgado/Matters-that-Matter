@@ -150,7 +150,10 @@ function renderGroupHeader(table: HTMLElement, group: ListGroup, h: ListHandlers
 	}
 }
 
-const empty = (cell: HTMLElement) => cell.createSpan({ cls: 'mtm-table-empty', text: '—' });
+const empty = (cell: HTMLElement) => {
+	cell.addClass('is-blank');
+	cell.createSpan({ cls: 'mtm-table-empty', text: '—' });
+};
 
 /** A row; with `matter`, the Matter column follows the title (grouped by type). */
 function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: ListHandlers, matter?: MatterInfo): void {
@@ -204,6 +207,7 @@ function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: Li
 	const waitingCell = meta.createSpan();
 	if (item.waitingOn) {
 		const name = item.waitingOn.split('/').pop() ?? item.waitingOn;
+		waitingCell.addClass('has-chip');
 		const waiting = waitingCell.createSpan({ cls: ['mtm-link-chip', 'mod-waiting'] });
 		avatarEl(waiting, name, 'mod-sm');
 		waiting.createSpan({ cls: 'mtm-table-waiting-name', text: name });
@@ -213,6 +217,7 @@ function renderRow(table: HTMLElement, item: ActionItem, input: ListInput, h: Li
 		if (item.waitingSince) {
 			// Long after the chip in the table; short in two-line rows (CSS shows one).
 			const age = waitAge(item.waitingSince, toYmd(input.now));
+			waitingCell.addClass('has-age');
 			waitAgeEl(waitingCell, age, false, 'mod-long');
 			waitAgeEl(waitingCell, age, true, 'mod-short');
 		}

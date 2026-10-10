@@ -126,6 +126,7 @@ export function renderMatterBanner(input: MatterBannerInput, h: MatterBannerHand
 		text: matter.isInbox ? s.inbox : [s.matter, ...(input.sphere ? [input.sphere] : []), STRINGS.overview.states[matter.state]].join(' · '),
 	});
 	if (matter.outcome) {
+		text.addClass('has-outcome');
 		const outcome = text.createSpan({ cls: 'mtm-note-banner-outcome' });
 		appendIcon(outcome, 'flag');
 		outcome.appendText(matter.outcome);
