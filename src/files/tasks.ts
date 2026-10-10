@@ -12,11 +12,11 @@ export interface TaskLine {
 /** A list item (bullet or numbered, at any depth, in quotes too) holding `[c]` and then a space or the end of the line. */
 const TASK = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[([^\]])\](?:[ \t]|$)/;
 
-/** Task lines of the body, outside code and HTML comments, in document order. */
+/** Task lines of the body, outside code and comments (HTML and `%%`), in document order. */
 export function taskLines(lines: readonly BodyLine[]): TaskLine[] {
 	const out: TaskLine[] = [];
 	for (const body of lines) {
-		if (body.code || body.inComment) continue;
+		if (body.code || body.inComment || body.inObsidianComment) continue;
 		const m = TASK.exec(unquote(body.text));
 		if (m) out.push({ line: body.line, task: m[1] ?? ' ' });
 	}

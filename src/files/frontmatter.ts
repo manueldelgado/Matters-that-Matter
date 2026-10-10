@@ -27,12 +27,20 @@ export interface FrontmatterInfo {
 }
 
 const FENCE = /^---[ \t]*$/;
+const BOM = '\uFEFF';
+
+/** The text without a leading byte-order mark, as Obsidian reads notes: lines, columns and offsets count from after it. */
+export function stripBom(content: string): string {
+	return content.startsWith(BOM) ? content.slice(1) : content;
+}
 
 /**
  * The properties block: the note's very first line is `---` and a later line is `---`. A blank line
- * before the first `---`, or no closing line, means there is no block.
+ * before the first `---`, or no closing line, means there is no block. A byte-order mark before the first line
+ * is skipped; `endOffset` counts from after it.
  */
-export function splitFrontmatter(content: string): FrontmatterBlock | null {
+export function splitFrontmatter(text: string): FrontmatterBlock | null {
+	const content = stripBom(text);
 	if (!content.startsWith('---')) return null;
 	let start = 0;
 	let line = 0;
@@ -54,7 +62,7 @@ export function splitFrontmatter(content: string): FrontmatterBlock | null {
 	return null;
 }
 
-/** The note's properties as the cache gives them: YAML 1.2 core schema, so dates stay strings. */
+/** The note's properties as the cache gives them: YAML 1.2 core schema, so dates stay strings. A byte-order mark is skipped. */
 export function readFrontmatter(content: string): FrontmatterInfo {
 	const block = splitFrontmatter(content);
 	if (!block) return { frontmatter: null, end: null, bodyLine: 0 };

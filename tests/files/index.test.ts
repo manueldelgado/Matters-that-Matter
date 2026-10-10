@@ -97,6 +97,20 @@ describe('notes that break', () => {
 		expect(result.value.map((a) => a.path)).toEqual(['Good.md']);
 	});
 
+	it('reads past a byte-order mark but keeps it in the content, for writing back', () => {
+		const files: Record<string, string> = {
+			'Marked.md': '\uFEFF---\nmtm-kind: action\nmtm-matter: "[[Plain]]"\n---\n[[Plain]]\n',
+			'Bare.md': '\uFEFF[[Plain]] first',
+			'Plain.md': '',
+		};
+		const index = new VaultIndex({ list: () => Object.keys(files), read: (path) => files[path] ?? null }, { configDir: '.obsidian' });
+		expect(index.note('Marked.md')?.frontmatter).toEqual({ 'mtm-kind': 'action', 'mtm-matter': '[[Plain]]' });
+		expect(index.note('Marked.md')?.frontmatterLinks.map((l) => l.key)).toEqual(['mtm-matter']);
+		expect(index.body('Marked.md')?.links.map((l) => [l.line, l.col])).toEqual([[4, 0]]);
+		expect(index.body('Bare.md')?.links.map((l) => [l.line, l.col])).toEqual([[0, 0]]);
+		expect(index.content('Marked.md')?.startsWith('\uFEFF---')).toBe(true);
+	});
+
 	it('lists a note it can\'t read, empty, with a warning', () => {
 		const index = new VaultIndex(
 			{

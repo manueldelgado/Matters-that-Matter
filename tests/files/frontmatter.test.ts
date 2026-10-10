@@ -76,6 +76,11 @@ describe('readFrontmatter', () => {
 		expect(readFrontmatter('---\n---\nBody')).toEqual({ frontmatter: null, end: null, bodyLine: 2 });
 	});
 
+	it('skips a byte-order mark, counting the offset from after it', () => {
+		expect(readFrontmatter('\uFEFF---\nmtm-kind: action\n---\n')).toEqual({ frontmatter: { 'mtm-kind': 'action' }, end: { line: 2, offset: 24 }, bodyLine: 3 });
+		expect(splitFrontmatter('\uFEFF---\na: 1\n---')).toEqual({ yaml: 'a: 1', endLine: 2, endOffset: 12, bodyLine: 3 });
+	});
+
 	it('reads the whole note as body when there is no block', () => {
 		expect(readFrontmatter('Just text')).toEqual({ frontmatter: null, end: null, bodyLine: 0 });
 	});

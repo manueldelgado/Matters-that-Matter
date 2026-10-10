@@ -12,6 +12,8 @@ export interface BodyLine {
 	code: boolean;
 	/** The line starts inside an HTML comment. */
 	inComment: boolean;
+	/** The line starts inside an Obsidian `%%` comment: its links count, its tasks don't (as Obsidian's cache has it). */
+	inObsidianComment: boolean;
 }
 
 const LINE_BREAK = /\r\n|\r|\n/;
@@ -45,6 +47,7 @@ export function scanBody(lines: readonly string[], fromLine: number): BodyLine[]
 	const out: BodyLine[] = [];
 	let fence: { char: string; size: number } | null = null;
 	let inComment = false;
+	let inObsidianComment = false;
 	let inList = false;
 	let prevBlank = true;
 	let prevIndentedCode = false;
@@ -87,13 +90,22 @@ export function scanBody(lines: readonly string[], fromLine: number): BodyLine[]
 		}
 		const { masked, open } = maskInline(text, inComment);
 		inComment = open;
-		out.push({ line, text, masked, code: false, inComment: startsInComment });
+		const startsInObsidianComment = inObsidianComment;
+		if (countMarks(masked) % 2 === 1) inObsidianComment = !inObsidianComment;
+		out.push({ line, text, masked, code: false, inComment: startsInComment, inObsidianComment: startsInObsidianComment });
 	}
 	return out;
 }
 
 function codeLine(line: number, text: string): BodyLine {
-	return { line, text, masked: ' '.repeat(text.length), code: true, inComment: false };
+	return { line, text, masked: ' '.repeat(text.length), code: true, inComment: false, inObsidianComment: false };
+}
+
+/** How many `%%` marks a (masked) line holds, each pair of characters counted once. */
+function countMarks(masked: string): number {
+	let n = 0;
+	for (let i = masked.indexOf('%%'); i >= 0; i = masked.indexOf('%%', i + 2)) n++;
+	return n;
 }
 
 /** Blanks code spans and HTML comments in one line; `inComment` carries a comment over from the line before. */

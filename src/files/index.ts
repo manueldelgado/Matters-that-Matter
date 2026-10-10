@@ -2,7 +2,7 @@
 // properties, links, embeds and tasks, how links resolve and the link text Obsidian writes. Pure: the caller
 // passes in how to list and read files.
 
-import { readFrontmatter, type Frontmatter } from './frontmatter';
+import { readFrontmatter, stripBom, type Frontmatter } from './frontmatter';
 import { bodyLinks, frontmatterLinks, linkpath, type FrontmatterLinkRef, type LinkRef } from './links';
 import { fileToLinktext, linkFormat, type LinkFormat } from './linkText';
 import { basenameOf, byCodeUnit, extensionOf, parentOf } from './paths';
@@ -123,7 +123,7 @@ export class VaultIndex {
 		return this.notes.get(path) ?? null;
 	}
 
-	/** A note's whole text, or null when there is no such note. */
+	/** A note's whole text as read (a byte-order mark kept, for writing back), or null when there is no such note. */
 	content(path: string): string | null {
 		return this.contents.get(path) ?? null;
 	}
@@ -135,7 +135,7 @@ export class VaultIndex {
 		const content = this.contents.get(path);
 		const note = this.notes.get(path);
 		if (content === undefined || !note) return null;
-		const scanned = scanBody(splitLines(content), note.bodyLine);
+		const scanned = scanBody(splitLines(stripBom(content)), note.bodyLine);
 		const body = { ...bodyLinks(scanned), tasks: taskLines(scanned) };
 		this.bodies.set(path, body);
 		return body;
