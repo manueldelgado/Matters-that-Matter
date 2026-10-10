@@ -52,6 +52,18 @@ describe('parseYaml', () => {
 		expect(parseYaml('plain text')).toBeNull();
 		expect(parseYaml('a: 1\na: 2')).toBeNull();
 	});
+
+	it('gives nothing, without throwing, for aliases to no anchor and for alias bombs', () => {
+		expect(parseYaml('note: *important*')).toBeNull();
+		expect(parseYaml('rating: ***')).toBeNull();
+		const bomb = ['a: &a [1, 1, 1, 1, 1, 1, 1, 1, 1]', ...['b', 'c', 'd', 'e'].map((k, i) => `${k}: &${k} [${Array<string>(9).fill(`*${'abcd'[i]}`).join(', ')}]`)].join('\n');
+		expect(() => parseYaml(bomb)).not.toThrow();
+		expect(parseYaml(bomb)).toBeNull();
+	});
+
+	it('reads a value with an unknown tag as its plain value', () => {
+		expect(parseYaml('a: !foo bar')).toEqual({ a: 'bar' });
+	});
 });
 
 describe('readFrontmatter', () => {

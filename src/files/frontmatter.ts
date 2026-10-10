@@ -66,14 +66,21 @@ export function readFrontmatter(content: string): FrontmatterInfo {
 	};
 }
 
-/** Parses a properties block; null when it has errors or isn't a mapping. */
+/**
+ * Parses a properties block; null when it has errors, can't be built (an alias to no anchor, too many aliases) or
+ * isn't a mapping: no properties, as Obsidian treats YAML it can't read. Warnings (an unknown tag) stay quiet.
+ */
 export function parseYaml(yaml: string): Frontmatter | null {
 	if (yaml.trim() === '') return null;
-	const doc = parseDocument(yaml, { schema: 'core', prettyErrors: false });
-	if (doc.errors.length > 0) return null;
-	const value: unknown = doc.toJS({ maxAliasCount: 100 });
-	if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
-	return value as Frontmatter;
+	try {
+		const doc = parseDocument(yaml, { schema: 'core', prettyErrors: false, logLevel: 'error' });
+		if (doc.errors.length > 0) return null;
+		const value: unknown = doc.toJS({ maxAliasCount: 100 });
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+		return value as Frontmatter;
+	} catch {
+		return null;
+	}
 }
 
 /** The end of the line starting at `start` (before its break) and the start of the next line, or -1 at the end. */

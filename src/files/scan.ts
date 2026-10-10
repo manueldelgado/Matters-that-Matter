@@ -98,6 +98,7 @@ function codeLine(line: number, text: string): BodyLine {
 
 /** Blanks code spans and HTML comments in one line; `inComment` carries a comment over from the line before. */
 export function maskInline(text: string, inComment: boolean): { masked: string; open: boolean } {
+	if (!inComment && !text.includes('`') && !text.includes('<!--')) return { masked: text, open: false };
 	const chars = text.split('');
 	const blank = (from: number, to: number) => {
 		for (let k = from; k < to; k++) chars[k] = ' ';

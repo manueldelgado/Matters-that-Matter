@@ -12,6 +12,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const FIXTURE = join(root, 'tests/fixtures/mtm-fixture');
 const EDGE = 'MTM/Sample/Edge cases';
 const LINKS = `${EDGE}/Links`;
+const MORE = `${EDGE}/More links`;
 
 /** Every file under `dir`, relative, sorted; folders and Finder's .DS_Store left out (git keeps neither). */
 function filesUnder(dir: string, prefix = ''): string[] {
@@ -93,6 +94,19 @@ describe('fixture vault', () => {
 		['links inside fenced code', `${LINKS}/Links that do not count.md`, '```\n[[Link target]]\n```'],
 		['links inside HTML comments', `${LINKS}/Links that do not count.md`, '<!-- [[Link target]]'],
 		['links inside Obsidian comments', `${LINKS}/Links that do not count.md`, '%% [[Link target]]'],
+		['twins: the shorter path has more folders and sorts later', `${MORE}/Z/Y/More - deep twin.md`, 'The shorter path'],
+		['twins: the longer path', `${MORE}/Alpha/More - deep twin.md`, 'The longer path'],
+		['twins of equal path length (lower case)', `${MORE}/left/More - even twin.md`, 'Same path length'],
+		['twins of equal path length (capitalised)', `${MORE}/Rite/More - even twin.md`, 'Same path length'],
+		['the exact vault path', `${MORE}/Sub/More - exact or near.md`, 'exact vault path'],
+		["the same path under the linking note's folder", `${MORE}/Inner/MTM/Sample/Edge cases/More links/Sub/More - exact or near.md`, "linking note's folder"],
+		['links to each pair of twins', `${MORE}/Inner/More - which twin.md`, '[[MTM/Sample/Edge cases/More links/Sub/More - exact or near]]'],
+		['a byte-order mark before the properties', `${MORE}/More - byte-order mark.md`, '\uFEFF---\nmtm-kind: action\n'],
+		['a key written twice', `${MORE}/More - repeated key.md`, 'mtm-status: next\nmtm-status: doing\n'],
+		['tasks inside HTML and Obsidian comments', `${MORE}/More - tasks in comments.md`, '<!--\n- [ ] In an HTML comment\n-->\n\n%%\n- [ ] In an Obsidian comment\n%%'],
+		['an escaped pipe outside a table', `${MORE}/More - odd forms.md`, '[[More - target\\|the target]]'],
+		['an embed in a property', `${MORE}/More - odd forms.md`, 'cover: "![[More - target]]"'],
+		['an unknown YAML tag', `${MORE}/More - odd forms.md`, 'odd: !foo bar'],
 	];
 
 	it.each(cases)('has the edge case: %s', (_name, file, text) => {

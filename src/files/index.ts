@@ -46,6 +46,14 @@ export interface IndexedNote {
 	/** The closing `---` line and the offset after it; null when there are no properties. */
 	frontmatterEnd: { line: number; offset: number } | null;
 	frontmatterLinks: FrontmatterLinkRef[];
+	/** The first body line: after the properties block when there is one. */
+	bodyLine: number;
+}
+
+/** A note the index couldn't read: it stays listed, with no properties and an empty body. */
+export interface IndexWarning {
+	path: string;
+	message: string;
 }
 
 /** Whether Obsidian lists a file: not in the configuration folder, `.trash` or any folder or file starting with a dot. */
@@ -77,10 +85,13 @@ export class VaultIndex {
 	/** Every Markdown note, in code-unit order. */
 	readonly notePaths: readonly string[];
 	readonly config: LinkConfig;
+	/** Notes that couldn't be read, in code-unit order. */
+	readonly warnings: IndexWarning[] = [];
 	private readonly resolver: LinkResolver;
 	private readonly notes = new Map<string, IndexedNote>();
 	private readonly contents = new Map<string, string>();
 	private readonly bodies = new Map<string, NoteBody>();
+	private readonly counts = new Map<string, { resolved: Record<string, number>; unresolved: Record<string, number> }>();
 	private readonly lowerPaths = new Set<string>();
 
 	constructor(reader: VaultReader, options: IndexOptions) {
@@ -93,7 +104,7 @@ export class VaultIndex {
 			for (let folder = path; folder !== ''; folder = parentOf(folder)) this.lowerPaths.add(folder.toLowerCase());
 		}
 		for (const path of this.notePaths) {
-			const content = readText(reader, path);
+			const content = this.readText(reader, path);
 			this.contents.set(path, content);
 			const info = readFrontmatter(content);
 			this.notes.set(path, {
@@ -102,6 +113,7 @@ export class VaultIndex {
 				frontmatter: info.frontmatter,
 				frontmatterEnd: info.end,
 				frontmatterLinks: frontmatterLinks(info.frontmatter),
+				bodyLine: info.bodyLine,
 			});
 		}
 	}
@@ -121,9 +133,9 @@ export class VaultIndex {
 		const cached = this.bodies.get(path);
 		if (cached) return cached;
 		const content = this.contents.get(path);
-		if (content === undefined) return null;
-		const lines = splitLines(content);
-		const scanned = scanBody(lines, readFrontmatter(content).bodyLine);
+		const note = this.notes.get(path);
+		if (content === undefined || !note) return null;
+		const scanned = scanBody(splitLines(content), note.bodyLine);
 		const body = { ...bodyLinks(scanned), tasks: taskLines(scanned) };
 		this.bodies.set(path, body);
 		return body;
@@ -160,6 +172,8 @@ export class VaultIndex {
 	}
 
 	private countLinks(path: string): { resolved: Record<string, number>; unresolved: Record<string, number> } {
+		const known = this.counts.get(path);
+		if (known) return { resolved: { ...known.resolved }, unresolved: { ...known.unresolved } };
 		const resolved: Record<string, number> = {};
 		const unresolved: Record<string, number> = {};
 		const note = this.notes.get(path);
@@ -174,14 +188,19 @@ export class VaultIndex {
 				unresolved[key] = (unresolved[key] ?? 0) + 1;
 			}
 		}
-		return { resolved, unresolved };
+		this.counts.set(path, { resolved, unresolved });
+		return { resolved: { ...resolved }, unresolved: { ...unresolved } };
 	}
-}
 
-function readText(reader: VaultReader, path: string): string {
-	try {
-		return reader.read(path) ?? '';
-	} catch {
+	/** A note's text; when it can't be read, an empty text and a warning. */
+	private readText(reader: VaultReader, path: string): string {
+		try {
+			const text = reader.read(path);
+			if (text !== null) return text;
+			this.warnings.push({ path, message: 'The file could not be read.' });
+		} catch (error) {
+			this.warnings.push({ path, message: error instanceof Error ? error.message : String(error) });
+		}
 		return '';
 	}
 }

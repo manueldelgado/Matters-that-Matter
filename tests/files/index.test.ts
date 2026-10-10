@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cacheJson, cacheShape, sortKeys } from '../../src/files/cacheShape';
 import { isVaultFile, readLinkConfig, VaultIndex } from '../../src/files/index';
 import { filesSnapshot } from '../../src/files/snapshot';
+import { listActions } from '../../src/ops/index';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 
 const VAULT: Record<string, string> = {
@@ -79,6 +80,40 @@ describe('VaultIndex', () => {
 		expect(index.existsIgnoringCase('NOTES')).toBe(true);
 		expect(index.existsIgnoringCase('Notes/Other.md')).toBe(false);
 		expect(index.has('notes/ideas.md')).toBe(false);
+	});
+});
+
+describe('notes that break', () => {
+	it('keeps indexing beside a note whose YAML can\'t be built, and lists the valid Action', () => {
+		const files: Record<string, string> = {
+			'Bad.md': '---\nnote: *important*\nrating: ***\n---\nText [[Good]]\n',
+			'Good.md': '---\nmtm-kind: action\nmtm-status: next\n---\n',
+		};
+		const index = new VaultIndex({ list: () => Object.keys(files), read: (path) => files[path] ?? null }, { configDir: '.obsidian' });
+		expect(index.note('Bad.md')?.frontmatter).toBeNull();
+		expect(index.resolvedLinks('Bad.md')).toEqual({ 'Good.md': 1 });
+		const result = listActions({}, filesSnapshot(index, { ...DEFAULT_SETTINGS, setupDone: true }, new Date(2026, 9, 9, 12)));
+		if (!result.ok) throw new Error(result.error.message);
+		expect(result.value.map((a) => a.path)).toEqual(['Good.md']);
+	});
+
+	it('lists a note it can\'t read, empty, with a warning', () => {
+		const index = new VaultIndex(
+			{
+				list: () => ['A.md', 'B.md', 'C.md'],
+				read: (path) => {
+					if (path === 'A.md') throw new Error('Permission denied');
+					return path === 'B.md' ? null : 'Text';
+				},
+			},
+			{ configDir: '.obsidian' },
+		);
+		expect(index.notePaths).toEqual(['A.md', 'B.md', 'C.md']);
+		expect(index.content('A.md')).toBe('');
+		expect(index.warnings).toEqual([
+			{ path: 'A.md', message: 'Permission denied' },
+			{ path: 'B.md', message: 'The file could not be read.' },
+		]);
 	});
 });
 

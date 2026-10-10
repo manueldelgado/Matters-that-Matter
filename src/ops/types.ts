@@ -29,7 +29,7 @@ export interface Snapshot {
 	links(path: string): readonly string[];
 	/** Resolves link text from a note as a wikilink would: the target file's path, or null. */
 	resolve(link: string, fromPath: string): string | null;
-	/** The shortest link text that reaches `path` from `fromPath`, as Obsidian writes links. */
+	/** The link text that reaches `path` from `fromPath`, as Obsidian writes links, in the vault's link format. */
 	linkText(path: string, fromPath: string): string;
 	/** Whether a file or folder uses this path, ignoring case (as macOS and Windows do). */
 	exists(path: string): boolean;

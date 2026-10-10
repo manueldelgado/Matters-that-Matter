@@ -15,7 +15,9 @@ import { byCodeUnit, joinPath, nameOf, parentOf } from './paths';
 export class LinkResolver {
 	private readonly exact: Set<string>;
 	private readonly lower = new Map<string, string>();
-	private readonly byName = new Map<string, string[]>();
+	private readonly byName = new Map<string, { path: string; lower: string }[]>();
+	/** Answers by the linking note's folder and the link path: the same link from the same folder resolves the same way. */
+	private readonly answers = new Map<string, string | null>();
 
 	constructor(paths: Iterable<string>) {
 		this.exact = new Set(paths);
@@ -24,10 +26,10 @@ export class LinkResolver {
 			if (!this.lower.has(key)) this.lower.set(key, path);
 			const name = nameOf(key);
 			const list = this.byName.get(name);
-			if (list) list.push(path);
-			else this.byName.set(name, [path]);
+			if (list) list.push({ path, lower: key });
+			else this.byName.set(name, [{ path, lower: key }]);
 		}
-		for (const list of this.byName.values()) list.sort(byLength);
+		for (const list of this.byName.values()) list.sort((a, b) => byLength(a.path, b.path));
 	}
 
 	/** Whether the vault has a file at exactly this path. */
@@ -43,10 +45,20 @@ export class LinkResolver {
 	/** The file a link path reaches from `sourcePath`, or null. */
 	resolve(linkpath: string, sourcePath: string): string | null {
 		if (linkpath === '') return this.exact.has(sourcePath) ? sourcePath : null;
+		const folder = parentOf(sourcePath);
+		const key = `${folder}\n${linkpath}`;
+		const known = this.answers.get(key);
+		if (known !== undefined) return known;
+		const answer = this.lookup(linkpath, folder);
+		this.answers.set(key, answer);
+		return answer;
+	}
+
+	private lookup(linkpath: string, folder: string): string | null {
 		const path = linkpath.startsWith('/') ? linkpath.slice(1) : linkpath;
 		if (this.exact.has(path)) return path;
 		if (this.exact.has(`${path}.md`)) return `${path}.md`;
-		const joined = joinPath(parentOf(sourcePath), path);
+		const joined = joinPath(folder, path);
 		if (joined !== null && joined !== '') {
 			const near = this.lower.get(joined.toLowerCase()) ?? this.lower.get(`${joined.toLowerCase()}.md`);
 			if (near) return near;
@@ -58,12 +70,14 @@ export class LinkResolver {
 	private bySuffix(path: string): string | null {
 		const suffix = path.toLowerCase();
 		const name = nameOf(suffix);
-		const candidates = [...(this.byName.get(name) ?? []), ...(this.byName.get(`${name}.md`) ?? [])];
+		const withMd = `${suffix}.md`;
+		const tail = `/${suffix}`;
+		const tailMd = `/${withMd}`;
 		let best: string | null = null;
-		for (const candidate of candidates) {
-			const lower = candidate.toLowerCase();
-			const matches = [suffix, `${suffix}.md`].some((s) => lower === s || lower.endsWith(`/${s}`));
-			if (matches && (best === null || byLength(candidate, best) < 0)) best = candidate;
+		// Each list is sorted shortest first, so the first match in a list is that list's best.
+		for (const list of [this.byName.get(name), this.byName.get(`${name}.md`)]) {
+			const found = list?.find(({ lower }) => lower === suffix || lower === withMd || lower.endsWith(tail) || lower.endsWith(tailMd));
+			if (found && (best === null || byLength(found.path, best) < 0)) best = found.path;
 		}
 		return best;
 	}
