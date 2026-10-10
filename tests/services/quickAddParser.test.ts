@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextDayOfMonth, parseQuickAdd, type QuickAddContext } from '../../src/services/quickAddParser';
+import { nextDayOfMonth, parseDateText, parseQuickAdd, type QuickAddContext } from '../../src/services/quickAddParser';
 
 // Friday 9 October 2026, 12:00 local time.
 const now = new Date(2026, 9, 9, 12, 0);
@@ -304,5 +304,28 @@ describe('QA 8 October 2026', () => {
 
 	it('keeps punctuation after a token out of the name', () => {
 		expect(parse('Talk about #Kitchen, tomorrow')).toMatchObject({ title: 'Talk about', matterPath: 'M/Kitchen renovation.md', due: '2026-10-10' });
+	});
+});
+
+describe('parseDateText: a date on its own', () => {
+	it.each([
+		['tomorrow', null, '2026-10-10'],
+		['fri 10:00', null, '2026-10-16T10:00'],
+		['by Friday', null, '2026-10-16'],
+		['on the 21st', null, '2026-10-21'],
+		['el viernes a las 10', null, '2026-10-16T10:00'],
+		['del 20 al 22 de octubre', '2026-10-20', '2026-10-22'],
+		['  next   monday. ', null, '2026-10-12'],
+	])('%j', (text, start, due) => {
+		expect(parseDateText(text, now, ['en', 'es'])).toEqual({ start, due });
+	});
+
+	it.each(['', 'whenever', 'call Marco tomorrow', 'tomorrow at the office', 'march'])('%j is not a date on its own', (text) => {
+		expect(parseDateText(text, now, ['en', 'es'])).toBeNull();
+	});
+
+	it('reads only the languages given', () => {
+		expect(parseDateText('mañana', now, ['en'])).toBeNull();
+		expect(parseDateText('mañana', now, ['es'])).toEqual({ start: null, due: '2026-10-10' });
 	});
 });

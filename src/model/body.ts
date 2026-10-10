@@ -311,3 +311,16 @@ export function toggleTask(content: string, line: number, text: string, checked:
 	const target = matches(line) ? line : taskLines(content).find(matches);
 	return target === undefined ? content : repairDetailsMarkers(setTaskChecked(content, target, checked));
 }
+
+/**
+ * Adds a line at the end of the body as a paragraph of its own (a blank line before it unless the body is empty),
+ * keeping the frontmatter and the note's line ending.
+ */
+export function appendLine(content: string, line: string): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return appendLine(content.replace(/\r\n/g, '\n'), line).replace(/\n/g, eol);
+	const { frontmatter, body } = splitFrontmatter(content);
+	const text = line.replace(/\s+/g, ' ').trim();
+	const trimmed = body.replace(/\s+$/, '');
+	return trimmed ? `${frontmatter}${trimmed}\n\n${text}\n` : `${frontmatter}${text}\n`;
+}
