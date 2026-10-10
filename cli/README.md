@@ -2,7 +2,7 @@
 
 `mtm` reads and changes the Actions and Matters of [Matters that Matter](https://matters-that-matter.app/), the Obsidian plugin, straight from the notes in your vault. Obsidian doesn't need to be running; if it is, it picks the changes up like any other edit.
 
-It works only with Matters data (Actions, Matters, the workflow), never deletes anything, and never changes settings. Every write says what it changed, property by property.
+It works only with Matters data (Actions, Matters, the workflow), never deletes anything, and never changes settings. Every write says what it changed, property by property. It can also run as an [MCP server](#mcp-server) for AI assistants.
 
 ## Install
 
@@ -171,9 +171,91 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 - Writes stay inside the vault: nothing is written through a link (symlink) to a folder elsewhere. Linked files and folders are skipped when reading.
 - Nothing is deleted and settings are never written.
 
-## AI assistants (MCP)
+## MCP server
 
-`mtm mcp` will run Matters as an MCP server over stdio, for AI assistants. It isn't in this version yet; this section will describe how to add it to Claude Code, Claude Desktop, Codex and others, and its `--read-only` and `--tools` options.
+`mtm mcp` runs Matters as an MCP server for AI assistants such as Claude, Codex and others. The assistant's app starts it and talks to it over standard input and output; it opens no network port. Each tool reads the vault afresh, so the assistant sees the notes as they are now, and writes go through the same all-or-nothing writer as the commands above.
+
+### Setup
+
+**Claude Code**
+
+```bash
+claude mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
+```
+
+**Claude Desktop**: in Settings → Developer → Edit Config, add the server to `claude_desktop_config.json` and restart Claude:
+
+```json
+{
+  "mcpServers": {
+    "matters": {
+      "command": "npx",
+      "args": ["-y", "matters-that-matter", "mcp", "--vault", "/Users/you/Notes"]
+    }
+  }
+}
+```
+
+**Codex**
+
+```bash
+codex mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
+```
+
+or in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.matters]
+command = "npx"
+args = ["-y", "matters-that-matter", "mcp", "--vault", "~/Notes"]
+```
+
+**Grok Build** (untested): add a local (stdio) MCP server named `matters` with the command `npx` and the arguments `-y matters-that-matter mcp --vault ~/Notes`, as its documentation describes for MCP servers.
+
+Other assistants that run local MCP servers take the same command and arguments.
+
+### Tools
+
+| Tool | What it does | Hints |
+|---|---|---|
+| `add_action` | Adds an Action; `text` works as in quick add | writes, not destructive |
+| `update_action` | Changes an Action; strict, as `mtm update` | writes, not destructive |
+| `mark_as_done` | Marks an Action as done | writes, not destructive, idempotent |
+| `reopen_action` | Reopens a done Action | writes, not destructive, idempotent |
+| `get_action` | Everything about one Action | read only |
+| `list_actions` | Actions, with the filters of `mtm list` | read only |
+| `get_today` | What matters today? | read only |
+| `add_matter` | Adds a Matter | writes, not destructive |
+| `list_matters` | Matters in board order | read only |
+| `get_workflow` | Statuses, types and Spheres | read only |
+
+Fields have the names of the command line's flags without the dashes in front (`waiting-on`, `due-from`, `review-every`), plus `text` for quick add text, `action` for the Action a tool works on and `name` for a new Matter. On `update_action`, `null` removes a value. Each result is the command's output as text, plus the `--json` value as structured content. A name that matches several things, or a value that matches nothing, is a tool error that lists what would work, and nothing is written.
+
+The tools carry MCP's hints, so an assistant's app can let reads run freely and ask before each write (Claude does by default).
+
+### Options
+
+| Option | |
+|---|---|
+| `--vault <path>` | The vault (or `MTM_VAULT`). Required: the server serves one vault, and only one with Matters set up |
+| `--read-only` | Offer only the tools that read: `get_action`, `list_actions`, `get_today`, `list_matters`, `get_workflow` |
+| `--tools <a,b>` | Offer only these tools, such as `--tools get_today,list_actions`. A name that isn't a tool stops the server before it starts (exit code 2) |
+| `--dry-run` | Tools that write say what they would change, and write nothing |
+| `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` |
+
+```bash
+npx -y matters-that-matter mcp --vault ~/Notes --read-only --tools get_today,list_actions
+```
+
+### What an assistant can and can't do
+
+An assistant can be misled by something it reads, such as a web page or an email, so the server keeps what it can do small, visible and reversible:
+
+- It reads and writes only Matters data: Actions, Matters and the workflow. `get_action` gives an Action's details, checklist and the names of the notes it links to, never their content, and no tool reads other notes.
+- Nothing is deleted and settings are never written. Every write can be undone (`reopen_action` after `mark_as_done`; an Action moved or renamed can be moved or renamed back), and every write says what it changed, property by property.
+- No Matters or people are created as a side effect: `add_action` falls back to the Inbox for a Matter it can't find, and says so.
+
+Anything that can write your vault can change your Actions; `--read-only` and `--tools` let you offer less.
 
 ## Licence
 

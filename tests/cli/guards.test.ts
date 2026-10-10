@@ -149,8 +149,8 @@ describe('nothing matched, several did, or the input can’t be read: exit 1', (
 		expect((await mtm(['help', 'list'])).stdout).toBe((await mtm(['list', '--help'])).stdout);
 	});
 
-	it('the MCP server isn’t in this version yet', async () => {
-		expect(await mtm(['mcp'])).toEqual({ code: 1, stdout: '', stderr: 'The MCP server isn’t in this version of mtm yet.\n' });
+	it('mtm mcp needs a vault, like every command', async () => {
+		expect(await mtm(['mcp'])).toEqual({ code: 2, stdout: '', stderr: 'Name the vault with --vault <path>, or set MTM_VAULT.\n' });
 	});
 });
 
