@@ -9,3 +9,10 @@ indent_style = tab
 indent_size = 4
 quote_type = single
 tab_width = 4
+
+# The fixture vault is generated test data: editors must leave its bytes alone.
+[tests/fixtures/**]
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset

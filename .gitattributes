@@ -1,0 +1,2 @@
+# The fixture vault is test data: its bytes, CRLF included, stay exactly as generated.
+tests/fixtures/** -text
