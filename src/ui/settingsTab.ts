@@ -12,6 +12,7 @@ import { StatusEditor } from './components/statusEditor';
 import { TypeEditor } from './components/typeEditor';
 import { SphereEditor } from './components/sphereEditor';
 import { DeleteModal } from './modals/deleteModal';
+import { companionThemeActive, renderThemeRow } from './components/themeOffer';
 
 type FolderKey = keyof MattersSettings['folders'];
 const FOLDER_PREFIX = 'folders.';
@@ -31,12 +32,30 @@ export class MattersSettingTab extends PluginSettingTab {
 				if (external === true && this.containerEl.isConnected) this.update();
 			}),
 		);
+		// The theme row follows the theme.
+		let themeActive = companionThemeActive(app);
+		plugin.registerEvent(
+			app.workspace.on('css-change', () => {
+				const now = companionThemeActive(app);
+				if (now === themeActive) return;
+				themeActive = now;
+				if (this.containerEl.isConnected) this.update();
+			}),
+		);
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		const s = STRINGS.settings;
 		return [
 			{ name: STRINGS.pluginName, searchable: false, render: (setting) => this.renderHero(setting) },
+			{
+				name: STRINGS.companionTheme.settingsName,
+				aliases: [...STRINGS.companionTheme.settingsAliases],
+				render: (setting) => {
+					setting.settingEl.empty();
+					renderThemeRow(setting.settingEl, this.app);
+				},
+			},
 			{
 				type: 'group',
 				heading: s.folders,

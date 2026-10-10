@@ -567,6 +567,23 @@ export const STRINGS = {
 		sphereMatters: (n: number) => (n === 0 ? 'No Matters yet' : plural(n, 'Matter', 'Matters')),
 	},
 
+	companionTheme: {
+		offerTitle: 'Make it look like the pictures',
+		offerLine: 'The Calm Matters theme adds a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault.',
+		get: 'Get the Calm Matters theme',
+		note: 'Opens Obsidian’s theme browser. Optional: Matters works with any theme.',
+		shotLabel: 'The board with the Calm Matters theme',
+		/** "You’re using the **Calm Matters** theme." */
+		activeBefore: 'You’re using the ',
+		activeName: 'Calm Matters',
+		activeAfter: ' theme.',
+		settingsName: 'Calm Matters theme',
+		settingsAliases: ['theme', 'appearance', 'look'],
+		settingsOffer: 'Looks best with the Calm Matters theme.',
+		settingsGet: 'Get the theme',
+		settingsActive: 'Using the Calm Matters theme.',
+	},
+
 	settings: {
 		heroSub: 'Matters, Actions and notes, side by side.',
 		runSetupAgain: 'Run setup again',

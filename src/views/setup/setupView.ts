@@ -9,6 +9,7 @@ import { matchPreset, workflowLosses, type WorkflowLosses } from '../../services
 import { planSetup, type SetupPlan } from '../../services/setupPlan';
 import { SAMPLE_SPHERES, withSampleSpheres } from '../../services/samplePackage';
 import { appendIcon } from '../../ui/components/dom';
+import { companionThemeActive, renderThemeOffer } from '../../ui/components/themeOffer';
 import { alwaysUpdateLinks, ensureDateTimeTypes, openSettingsTab } from '../../vault/internal';
 import { exists, frontmatterOf, maxLaneOrder, notesOfKind } from '../../vault/notes';
 import { executePlan } from '../../vault/setupRunner';
@@ -42,6 +43,16 @@ export class SetupView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		this.render();
+		// The theme card follows the theme: installing Calm Matters from its button turns it into a confirmation.
+		let themeActive = companionThemeActive(this.app);
+		this.registerEvent(
+			this.app.workspace.on('css-change', () => {
+				const now = companionThemeActive(this.app);
+				if (now === themeActive) return;
+				themeActive = now;
+				if (this.step === STEP_COUNT) this.render();
+			}),
+		);
 	}
 
 	async onClose(): Promise<void> {
@@ -181,6 +192,8 @@ export class SetupView extends ItemView {
 				},
 				() => this.render(),
 			);
+		// Last on the Summary step, right above Create.
+		if (this.step === STEP_COUNT) renderThemeOffer(body, this.app);
 
 		const footer = card.createDiv({ cls: 'mtm-setup-footer' });
 		if (this.step > 1) footer.createEl('button', { text: s.back }).addEventListener('click', () => this.go(this.step - 1));

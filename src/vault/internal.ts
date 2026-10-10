@@ -136,3 +136,30 @@ export function runCommand(app: App, id: string): boolean {
 	}
 }
 
+/** The active community theme's name ('' for Obsidian's default), or null if it cannot be read. */
+export function currentThemeName(app: App): string | null {
+	try {
+		const customCss = (app as unknown as Record<string, unknown>).customCss;
+		const theme = typeof customCss === 'object' && customCss !== null ? (customCss as Record<string, unknown>).theme : undefined;
+		return typeof theme === 'string' ? theme : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Opens Obsidian's community theme browser at a theme, through the app's own `show-theme` URI handler,
+ * so nothing leaves the app. False when the handler can't be found.
+ */
+export function showThemeInBrowser(app: App, name: string): boolean {
+	try {
+		const get = method((app.workspace as unknown as Record<string, unknown>).protocolHandlers, 'get');
+		const handler = get?.('show-theme');
+		if (typeof handler !== 'function') return false;
+		(handler as Fn)({ action: 'show-theme', name });
+		return true;
+	} catch (e) {
+		console.warn('Matters that Matter: could not open the theme browser', e);
+		return false;
+	}
+}

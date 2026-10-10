@@ -4,7 +4,13 @@ Plan your work in Obsidian on a kanban board with swimlanes, a list, a calendar 
 
 A **Matter** is anything worth keeping an eye on: a kitchen renovation, the household bills, a thesis. An **Action** is one step that moves a Matter forward. Each Matter is a lane on the board and each Action a card in it. Both are ordinary notes in your vault, so they take part in links, backlinks, search and Bases like anything else.
 
-![The board: one lane per Matter, grouped by Sphere, with a column per status](docs/images/board.webp)
+![The board: one lane per Matter, grouped by Sphere, with a column per status (shown with the Calm Matters theme)](docs/images/board.webp)
+
+## Looks best with the Calm Matters theme
+
+Matters that Matter works with any theme. Its companion theme, [Calm Matters](https://github.com/manueldelgado/calm-matters), gives it the look in these pictures: a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault. It changes how things look, not what they do.
+
+To add it: **Settings → Appearance → Themes → Manage**, search for *Calm Matters*, then **Install and use**. Setup offers the same in one click, and so does the top of the plugin's settings.
 
 ## Features
 
@@ -25,18 +31,18 @@ A **Matter** is anything worth keeping an eye on: a kitchen renovation, the hous
 | ![The list, grouped by Matter](docs/images/list.webp) | ![The calendar, a month at a time](docs/images/calendar.webp) |
 | ![The timeline, by Matter](docs/images/timeline.webp) | ![A person note, with the Actions that involve them](docs/images/person-note.webp) |
 
+All pictures show the Calm Matters theme, with the sample content setup offers.
+
 ## Requirements
 
 - **Obsidian 1.13 or later**, on desktop or mobile.
 - The **Bases** core plugin turned on (Settings → Core plugins → Bases). Without it, quick add, the inspector and the commands still work, but the board, list, calendar and timeline don't.
+- Recommended: the **Calm Matters** theme (see above).
 
 ## Installation
 
-The plugin isn't in Obsidian's community plugins yet. During the beta, install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat):
-
-1. Install and enable **BRAT** from Settings → Community plugins.
-2. Run the command **BRAT: Add a beta plugin for testing** and enter `manueldelgado/Matters-that-Matter`.
-3. Enable **Matters that Matter** in Settings → Community plugins.
+1. Open **Settings → Community plugins** and turn off Restricted mode if it's on.
+2. Select **Browse**, search for **Matters that Matter**, then select **Install** and **Enable**.
 
 ## Getting started
 
@@ -112,6 +118,7 @@ A few features reach into parts of Obsidian that have no public API. Each one is
 | Matters open as their overview | Rewrites what a tab is asked to show before it renders, so Back and Forward work with no flash. Can be turned off in settings | Matter notes open as notes |
 | What matters today? | Adds a panel to Obsidian's empty new tab. Can be turned off in settings | New tabs look as usual |
 | File explorer | Adds classes to Action entries (a dot in the type's colour) | Entries look as usual |
+| The Calm Matters card | Reads the name of the active theme, so setup and settings can say when Calm Matters is in use; its button opens Obsidian's theme browser at the theme through Obsidian's own link handler. It never installs or switches a theme | The card always offers the theme; the button opens the `obsidian://` link instead |
 
 Because Matters and Actions are recognised by `mtm-kind` rather than by folder, the plugin goes through the vault's list of Markdown notes and reads each note's cached properties to find them. It makes no network requests, collects nothing, and reads and writes only inside your vault.
 
