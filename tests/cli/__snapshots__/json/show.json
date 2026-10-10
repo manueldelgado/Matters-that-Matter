@@ -1,0 +1,58 @@
+{
+  "path": "MTM/Actions/Confirm the worktop measurements.md",
+  "title": "Confirm the worktop measurements",
+  "matter": {
+    "path": "MTM/Matters/Kitchen renovation.md",
+    "name": "Kitchen renovation",
+    "isInbox": false
+  },
+  "status": {
+    "id": "next",
+    "label": "Next",
+    "category": "open"
+  },
+  "type": {
+    "id": "call",
+    "label": "Call"
+  },
+  "priority": 1,
+  "start": null,
+  "due": "2026-10-09T10:00",
+  "today": true,
+  "overdue": true,
+  "waitingOn": null,
+  "waitingSince": null,
+  "completed": null,
+  "orphans": [],
+  "raw": {
+    "mtm-kind": "action",
+    "mtm-type": "call",
+    "mtm-status": "next",
+    "mtm-matter": "[[Kitchen renovation]]",
+    "mtm-due": "2026-10-09T10:00",
+    "mtm-priority": 1
+  },
+  "details": "Confirm the worktop measurements before ordering.",
+  "checklist": [
+    {
+      "text": "Ask for the revised quote",
+      "checked": false
+    },
+    {
+      "text": "Measure the wall",
+      "checked": true
+    }
+  ],
+  "linkedNotes": [
+    {
+      "path": "Notes/Some note.md",
+      "name": "Some note"
+    },
+    {
+      "path": "MTM/People/Marco Rossi.md",
+      "name": "Marco Rossi"
+    }
+  ],
+  "people": [],
+  "startsAfterDue": false
+}

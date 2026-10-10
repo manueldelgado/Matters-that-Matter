@@ -12,7 +12,7 @@ import { findAction } from './findAction';
 import { applyBodyEdit, PlanBuilder } from './plan';
 import type { ActionFields, ActionWrite, BodyEdit, OpResult, Snapshot, UpdateActionInput, Warning } from './types';
 import { publicField } from './fieldNames';
-import { folderOfPath, joinPath, vaultView } from './vaultView';
+import { folderOfPath, joinPath, noteNamed, vaultView } from './vaultView';
 
 const T = STRINGS.ops;
 
@@ -119,6 +119,10 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 				return candidate.toLowerCase() !== path.toLowerCase() && s.exists(candidate);
 			});
 			newPath = joinPath(folder, `${title}.md`);
+			// A name another note has elsewhere: when renames leave links as they are, links to that note could reach
+			// this Action instead. When they update links, both keep their links, as Obsidian does.
+			const clash = s.updatesLinks ? null : noteNamed(s, title, path);
+			if (clash) return fail({ code: 'invalid', field: 'title', value: r.value, message: T.titleTaken(title, clash), candidates: [clash] });
 		}
 	}
 

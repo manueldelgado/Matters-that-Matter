@@ -67,6 +67,11 @@ describe('addMatter', () => {
 		expect(created({ name: 'kitchen renovation' }).create.path).toBe('MTM/Matters/kitchen renovation 2.md');
 	});
 
+	it('a name a note has elsewhere is taken too, so its links keep reaching it', () => {
+		expect(created({ name: 'Some note' }).create.path).toBe('MTM/Matters/Some note 2.md');
+		expect(created({ name: 'confirm the worktop measurements' }).create.path).toBe('MTM/Matters/confirm the worktop measurements 2.md');
+	});
+
 	it('the first Matter gets lane order 1, whatever the Inbox’s', () => {
 		const bare = vault({ 'MTM/Matters/Kitchen renovation.md': {}, 'MTM/Matters/Advisory work.md': {}, 'MTM/Matters/Garden.md': {} });
 		expect(Object.fromEntries(created({ name: 'First' }, bare).create.frontmatter)['mtm-lane-order']).toBe(1);

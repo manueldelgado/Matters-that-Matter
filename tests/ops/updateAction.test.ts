@@ -161,6 +161,28 @@ describe('updateAction: renames', () => {
 		expect(r.plan.renames).toEqual([{ from: WORKTOP, to: 'MTM/Actions/pay the council tax 2.md' }]);
 	});
 
+	it('a name a note has elsewhere is refused when renames leave links as they are, naming that note', () => {
+		const r = updateAction({ action: WORKTOP, title: 'some note' }, s);
+		expect(r).toEqual({
+			ok: false,
+			error: {
+				code: 'invalid',
+				field: 'title',
+				value: 'some note',
+				message:
+					'Another note is called “some note” (Notes/Some note.md). Links in this vault aren’t updated on renames, so links to that note could lead to this Action instead. Choose another title.',
+				candidates: ['Notes/Some note.md'],
+			},
+		});
+		// The Matter's name too.
+		expect(updateAction({ action: WORKTOP, title: 'Kitchen renovation' }, s)).toMatchObject({ ok: false, error: { candidates: ['MTM/Matters/Kitchen renovation.md'] } });
+	});
+
+	it('when renames update links, a name a note has elsewhere is allowed: both keep their links, as in Obsidian', () => {
+		const linked: typeof s = { ...s, updatesLinks: true };
+		expect(update({ action: WORKTOP, title: 'Some note' }, linked).plan.renames).toEqual([{ from: WORKTOP, to: 'MTM/Actions/Some note.md' }]);
+	});
+
 	it('a change of case renames the note to itself', () => {
 		const r = update({ action: WORKTOP, title: 'Confirm the Worktop measurements' });
 		expect(r.plan.renames).toEqual([{ from: WORKTOP, to: 'MTM/Actions/Confirm the Worktop measurements.md' }]);

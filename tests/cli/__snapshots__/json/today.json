@@ -1,0 +1,669 @@
+{
+  "date": "2026-10-09",
+  "due": [
+    {
+      "path": "MTM/Sample/Actions/Pay the council tax.md",
+      "title": "Pay the council tax",
+      "matter": {
+        "path": "MTM/Sample/Matters/Household admin.md",
+        "name": "Household admin",
+        "isInbox": false
+      },
+      "status": {
+        "id": "next",
+        "label": "Next",
+        "category": "open"
+      },
+      "type": {
+        "id": "buy",
+        "label": "Buy"
+      },
+      "priority": 1,
+      "start": null,
+      "due": "2026-10-08",
+      "today": true,
+      "overdue": true,
+      "waitingOn": null,
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "buy",
+        "mtm-status": "next",
+        "mtm-matter": "[[Household admin]]",
+        "mtm-due": "2026-10-08",
+        "mtm-priority": 1,
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+      "title": "Confirm the worktop measurements",
+      "matter": {
+        "path": "MTM/Sample/Matters/Kitchen renovation.md",
+        "name": "Kitchen renovation",
+        "isInbox": false
+      },
+      "status": {
+        "id": "next",
+        "label": "Next",
+        "category": "open"
+      },
+      "type": {
+        "id": "call",
+        "label": "Call"
+      },
+      "priority": 1,
+      "start": null,
+      "due": "2026-10-09T10:00",
+      "today": true,
+      "overdue": true,
+      "waitingOn": null,
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "call",
+        "mtm-status": "next",
+        "mtm-matter": "[[Kitchen renovation]]",
+        "mtm-due": "2026-10-09T10:00",
+        "mtm-priority": 1,
+        "mtm-people": [
+          "[[Charlie Carter]]"
+        ],
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Answer Eve's question about the essay.md",
+      "title": "Answer Eve's question about the essay",
+      "matter": {
+        "path": "MTM/Sample/Matters/Research methods course.md",
+        "name": "Research methods course",
+        "isInbox": false
+      },
+      "status": {
+        "id": "next",
+        "label": "Next",
+        "category": "open"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": 2,
+      "start": null,
+      "due": "2026-10-08",
+      "today": true,
+      "overdue": true,
+      "waitingOn": null,
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "next",
+        "mtm-matter": "[[Research methods course]]",
+        "mtm-due": "2026-10-08",
+        "mtm-priority": 2,
+        "mtm-people": [
+          "[[Eve Ellis]]"
+        ],
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Reply to the new enquiry.md",
+      "title": "Reply to the new enquiry",
+      "matter": {
+        "path": "MTM/Sample/Matters/Advisory practice.md",
+        "name": "Advisory practice",
+        "isInbox": false
+      },
+      "status": {
+        "id": "next",
+        "label": "Next",
+        "category": "open"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": 2,
+      "start": null,
+      "due": "2026-10-09",
+      "today": true,
+      "overdue": false,
+      "waitingOn": null,
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "next",
+        "mtm-matter": "[[Advisory practice]]",
+        "mtm-due": "2026-10-09",
+        "mtm-priority": 2,
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Data export from Bob.md",
+      "title": "Data export from Bob",
+      "matter": {
+        "path": "MTM/Sample/Matters/Lakeside strategy review.md",
+        "name": "Lakeside strategy review",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-06",
+      "today": true,
+      "overdue": true,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Bob Baker.md",
+        "name": "Bob Baker"
+      },
+      "waitingSince": "2026-09-23",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Lakeside strategy review]]",
+        "mtm-due": "2026-10-06",
+        "mtm-waiting-on": "[[Bob Baker]]",
+        "mtm-people": [
+          "[[Bob Baker]]"
+        ],
+        "mtm-waiting-since": "2026-09-23",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Visit the tile showroom.md",
+      "title": "Visit the tile showroom",
+      "matter": {
+        "path": "MTM/Sample/Matters/Kitchen renovation.md",
+        "name": "Kitchen renovation",
+        "isInbox": false
+      },
+      "status": {
+        "id": "next",
+        "label": "Next",
+        "category": "open"
+      },
+      "type": {
+        "id": "visit",
+        "label": "Visit"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-07",
+      "today": true,
+      "overdue": true,
+      "waitingOn": null,
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "visit",
+        "mtm-status": "next",
+        "mtm-matter": "[[Kitchen renovation]]",
+        "mtm-due": "2026-10-07",
+        "mtm-sample": true
+      }
+    }
+  ],
+  "dueToday": 1,
+  "late": 5,
+  "nextStatus": {
+    "id": "next",
+    "label": "Next"
+  },
+  "next": [],
+  "inbox": 7,
+  "reviews": [
+    {
+      "path": "MTM/Sample/Matters/Advisory practice.md",
+      "name": "Advisory practice",
+      "icon": "lightbulb",
+      "isInbox": false,
+      "state": "active",
+      "sphere": {
+        "id": "advisory",
+        "label": "Advisory"
+      },
+      "sphereOrphan": null,
+      "outcome": "Every enquiry answered within a week.",
+      "laneOrder": 5,
+      "review": {
+        "every": "2w",
+        "lastReviewed": null,
+        "nextDue": null,
+        "due": true,
+        "daysSince": null
+      },
+      "counts": {
+        "open": 3,
+        "today": 1,
+        "waiting": 0,
+        "closed": 1,
+        "total": 4
+      },
+      "noNextAction": false
+    },
+    {
+      "path": "MTM/Sample/Matters/Household admin.md",
+      "name": "Household admin",
+      "icon": "wallet",
+      "isInbox": false,
+      "state": "active",
+      "sphere": {
+        "id": "home",
+        "label": "Home"
+      },
+      "sphereOrphan": null,
+      "outcome": "Bills paid on time and papers filed by the end of each month.",
+      "laneOrder": 2,
+      "review": {
+        "every": "1m",
+        "lastReviewed": "2026-08-30",
+        "nextDue": "2026-09-30",
+        "due": true,
+        "daysSince": 40
+      },
+      "counts": {
+        "open": 4,
+        "today": 1,
+        "waiting": 1,
+        "closed": 1,
+        "total": 5
+      },
+      "noNextAction": false
+    },
+    {
+      "path": "MTM/Sample/Matters/Half marathon.md",
+      "name": "Half marathon",
+      "icon": "footprints",
+      "isInbox": false,
+      "state": "active",
+      "sphere": null,
+      "sphereOrphan": null,
+      "outcome": "Finish in under two hours.",
+      "laneOrder": 10,
+      "review": {
+        "every": "1w",
+        "lastReviewed": "2026-09-30",
+        "nextDue": "2026-10-07",
+        "due": true,
+        "daysSince": 9
+      },
+      "counts": {
+        "open": 2,
+        "today": 0,
+        "waiting": 0,
+        "closed": 1,
+        "total": 3
+      },
+      "noNextAction": false
+    }
+  ],
+  "waiting": [
+    {
+      "path": "MTM/Sample/Actions/Feedback on chapter 2.md",
+      "title": "Feedback on chapter 2",
+      "matter": {
+        "path": "MTM/Sample/Matters/Doctoral thesis.md",
+        "name": "Doctoral thesis",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": null,
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Alice Archer.md",
+        "name": "Alice Archer"
+      },
+      "waitingSince": "2026-09-19",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Doctoral thesis]]",
+        "mtm-waiting-on": "[[Alice Archer]]",
+        "mtm-people": [
+          "[[Alice Archer]]"
+        ],
+        "mtm-waiting-since": "2026-09-19",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Data export from Bob.md",
+      "title": "Data export from Bob",
+      "matter": {
+        "path": "MTM/Sample/Matters/Lakeside strategy review.md",
+        "name": "Lakeside strategy review",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-06",
+      "today": true,
+      "overdue": true,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Bob Baker.md",
+        "name": "Bob Baker"
+      },
+      "waitingSince": "2026-09-23",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Lakeside strategy review]]",
+        "mtm-due": "2026-10-06",
+        "mtm-waiting-on": "[[Bob Baker]]",
+        "mtm-people": [
+          "[[Bob Baker]]"
+        ],
+        "mtm-waiting-since": "2026-09-23",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Tax return draft from Frank.md",
+      "title": "Tax return draft from Frank",
+      "matter": {
+        "path": "MTM/Sample/Matters/Household admin.md",
+        "name": "Household admin",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-19",
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Frank Foster.md",
+        "name": "Frank Foster"
+      },
+      "waitingSince": "2026-09-30",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Household admin]]",
+        "mtm-due": "2026-10-19",
+        "mtm-waiting-on": "[[Frank Foster]]",
+        "mtm-people": [
+          "[[Frank Foster]]"
+        ],
+        "mtm-waiting-since": "2026-09-30",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Signed progress report.md",
+      "title": "Signed progress report",
+      "matter": {
+        "path": "MTM/Sample/Matters/Doctoral thesis.md",
+        "name": "Doctoral thesis",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-17",
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Alice Archer.md",
+        "name": "Alice Archer"
+      },
+      "waitingSince": "2026-10-03",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Doctoral thesis]]",
+        "mtm-due": "2026-10-17",
+        "mtm-waiting-on": "[[Alice Archer]]",
+        "mtm-people": [
+          "[[Alice Archer]]"
+        ],
+        "mtm-waiting-since": "2026-10-03",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Revised quote from Charlie.md",
+      "title": "Revised quote from Charlie",
+      "matter": {
+        "path": "MTM/Sample/Matters/Kitchen renovation.md",
+        "name": "Kitchen renovation",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": "2026-10-11",
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Charlie Carter.md",
+        "name": "Charlie Carter"
+      },
+      "waitingSince": "2026-10-05",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Kitchen renovation]]",
+        "mtm-due": "2026-10-11",
+        "mtm-waiting-on": "[[Charlie Carter]]",
+        "mtm-people": [
+          "[[Charlie Carter]]"
+        ],
+        "mtm-waiting-since": "2026-10-05",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Room change from Dave.md",
+      "title": "Room change from Dave",
+      "matter": {
+        "path": "MTM/Sample/Matters/Research methods course.md",
+        "name": "Research methods course",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "message",
+        "label": "Message"
+      },
+      "priority": null,
+      "start": null,
+      "due": null,
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Dave Dawson.md",
+        "name": "Dave Dawson"
+      },
+      "waitingSince": "2026-10-06",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "message",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Research methods course]]",
+        "mtm-waiting-on": "[[Dave Dawson]]",
+        "mtm-people": [
+          "[[Dave Dawson]]"
+        ],
+        "mtm-waiting-since": "2026-10-06",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Actions/Approval of the ethics amendment.md",
+      "title": "Approval of the ethics amendment",
+      "matter": {
+        "path": "MTM/Sample/Matters/Doctoral thesis.md",
+        "name": "Doctoral thesis",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "write",
+        "label": "Write"
+      },
+      "priority": null,
+      "start": null,
+      "due": null,
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Alice Archer.md",
+        "name": "Alice Archer"
+      },
+      "waitingSince": "2026-10-07",
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "write",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Doctoral thesis]]",
+        "mtm-waiting-on": "[[Alice Archer]]",
+        "mtm-people": [
+          "[[Alice Archer]]"
+        ],
+        "mtm-waiting-since": "2026-10-07",
+        "mtm-sample": true
+      }
+    },
+    {
+      "path": "MTM/Sample/Edge cases/Edge - waiting without a date.md",
+      "title": "Edge - waiting without a date",
+      "matter": {
+        "path": "MTM/Sample/Matters/Kitchen renovation.md",
+        "name": "Kitchen renovation",
+        "isInbox": false
+      },
+      "status": {
+        "id": "waiting",
+        "label": "Waiting",
+        "category": "active"
+      },
+      "type": {
+        "id": "write",
+        "label": "Write"
+      },
+      "priority": null,
+      "start": null,
+      "due": null,
+      "today": false,
+      "overdue": false,
+      "waitingOn": {
+        "path": "MTM/Sample/People/Bob Baker.md",
+        "name": "Bob Baker"
+      },
+      "waitingSince": null,
+      "completed": null,
+      "orphans": [],
+      "raw": {
+        "mtm-kind": "action",
+        "mtm-type": "write",
+        "mtm-status": "waiting",
+        "mtm-matter": "[[Kitchen renovation]]",
+        "mtm-waiting-on": "[[Bob Baker]]",
+        "mtm-people": [
+          "[[Bob Baker]]"
+        ],
+        "mtm-sample": true
+      }
+    }
+  ],
+  "longWaits": 2
+}

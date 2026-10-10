@@ -1,0 +1,87 @@
+{
+  "action": {
+    "path": "MTM/Actions/Send the October invoice.md",
+    "title": "Send the October invoice",
+    "matter": {
+      "path": "MTM/Matters/Advisory work.md",
+      "name": "Advisory work",
+      "isInbox": false
+    },
+    "status": {
+      "id": "waiting",
+      "label": "Waiting",
+      "category": "active"
+    },
+    "type": {
+      "id": "write",
+      "label": "Write"
+    },
+    "priority": null,
+    "start": null,
+    "due": "2026-10-20",
+    "today": false,
+    "overdue": false,
+    "waitingOn": {
+      "path": "MTM/People/Lucía Pérez.md",
+      "name": "Lucía Pérez"
+    },
+    "waitingSince": "2026-10-09",
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "write",
+      "mtm-status": "waiting",
+      "mtm-matter": "[[Advisory work]]",
+      "mtm-due": "2026-10-20",
+      "mtm-waiting-since": "2026-10-09",
+      "mtm-waiting-on": "[[Lucía Pérez]]",
+      "mtm-people": [
+        "[[Lucía Pérez]]"
+      ]
+    }
+  },
+  "changed": true,
+  "dryRun": false,
+  "written": true,
+  "changes": [
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-status",
+      "from": "doing",
+      "to": "waiting"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-waiting-since",
+      "from": null,
+      "to": "2026-10-09"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-waiting-on",
+      "from": null,
+      "to": "[[Lucía Pérez]]"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-people",
+      "from": null,
+      "to": [
+        "[[Lucía Pérez]]"
+      ]
+    },
+    {
+      "kind": "rename",
+      "from": "MTM/Actions/Send the invoice.md",
+      "to": "MTM/Actions/Send the October invoice.md"
+    }
+  ],
+  "warnings": [],
+  "links": [],
+  "danglingLinks": 0
+}

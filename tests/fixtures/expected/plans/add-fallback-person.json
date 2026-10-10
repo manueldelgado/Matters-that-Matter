@@ -1,0 +1,41 @@
+{
+	"case": "add-fallback-person",
+	"description": "A person that matches nothing is left out, with a warning; the others are kept.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Dinner with friends.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"meet"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Inbox]]"
+					],
+					[
+						"mtm-people",
+						[
+							"[[Bob Baker]]"
+						]
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

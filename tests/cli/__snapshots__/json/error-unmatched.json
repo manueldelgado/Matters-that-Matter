@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "unmatched",
+    "field": "status",
+    "value": "Someday",
+    "message": "No status matches “Someday”. Statuses here: Later, Next, Doing, Waiting, Done.",
+    "candidates": [
+      "Later",
+      "Next",
+      "Doing",
+      "Waiting",
+      "Done"
+    ]
+  }
+}

@@ -1,0 +1,150 @@
+[
+  {
+    "path": "MTM/Actions/Confirm the worktop measurements.md",
+    "title": "Confirm the worktop measurements",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "next",
+      "label": "Next",
+      "category": "open"
+    },
+    "type": {
+      "id": "call",
+      "label": "Call"
+    },
+    "priority": 1,
+    "start": null,
+    "due": "2026-10-09T10:00",
+    "today": true,
+    "overdue": true,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "call",
+      "mtm-status": "next",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-due": "2026-10-09T10:00",
+      "mtm-priority": 1
+    }
+  },
+  {
+    "path": "MTM/Actions/Call Marco about the quote.md",
+    "title": "Call Marco about the quote",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "next",
+      "label": "Next",
+      "category": "open"
+    },
+    "type": {
+      "id": "call",
+      "label": "Call"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "call",
+      "mtm-status": "next",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-order": 20,
+      "mtm-people": [
+        "[[Marco Rossi]]",
+        "[[Lucía Pérez]]"
+      ]
+    }
+  },
+  {
+    "path": "MTM/Actions/Revised quote from Marco.md",
+    "title": "Revised quote from Marco",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "waiting",
+      "label": "Waiting",
+      "category": "active"
+    },
+    "type": {
+      "id": "message",
+      "label": "Message"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": {
+      "path": "MTM/People/Marco Rossi.md",
+      "name": "Marco Rossi"
+    },
+    "waitingSince": "2026-09-23",
+    "completed": null,
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "message",
+      "mtm-status": "waiting",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-waiting-on": "[[Marco Rossi]]",
+      "mtm-people": [
+        "[[Marco Rossi]]"
+      ],
+      "mtm-waiting-since": "2026-09-23"
+    }
+  },
+  {
+    "path": "MTM/Actions/Order the tiles.md",
+    "title": "Order the tiles",
+    "matter": {
+      "path": "MTM/Matters/Kitchen renovation.md",
+      "name": "Kitchen renovation",
+      "isInbox": false
+    },
+    "status": {
+      "id": "done",
+      "label": "Done",
+      "category": "closed"
+    },
+    "type": {
+      "id": "buy",
+      "label": "Buy"
+    },
+    "priority": null,
+    "start": null,
+    "due": null,
+    "today": false,
+    "overdue": false,
+    "waitingOn": null,
+    "waitingSince": null,
+    "completed": "2026-10-01",
+    "orphans": [],
+    "raw": {
+      "mtm-kind": "action",
+      "mtm-type": "buy",
+      "mtm-status": "done",
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-completed": "2026-10-01"
+    }
+  }
+]

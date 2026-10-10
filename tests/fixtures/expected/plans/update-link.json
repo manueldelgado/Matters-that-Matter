@@ -1,0 +1,20 @@
+{
+	"case": "update-link",
+	"description": null,
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [
+			{
+				"path": "MTM/Sample/Actions/Draft the market analysis.md",
+				"edit": {
+					"kind": "link",
+					"line": "[[Lakeside interview notes]]"
+				}
+			}
+		],
+		"renames": []
+	}
+}

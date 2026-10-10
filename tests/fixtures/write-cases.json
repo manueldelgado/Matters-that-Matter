@@ -1,0 +1,512 @@
+[
+	{
+		"name": "add-fields",
+		"description": "Add an Action from fields only: Matter, type, status, dates and priority by label and by word.",
+		"op": "addAction",
+		"input": {
+			"title": "Call Charlie about the tiles",
+			"matter": "Kitchen renovation",
+			"type": "Call",
+			"status": "Next",
+			"start": "2026-10-14",
+			"due": "2026-10-16T10:00",
+			"priority": "high"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-quick-add-text",
+		"description": "Add an Action from quick add text alone: Matter, type, person, priority and a date with a time.",
+		"op": "addAction",
+		"input": {
+			"text": "Ask Charlie about the corner unit #Kitchen /call @Charlie !2 fri 10:00"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-text-and-fields",
+		"description": "Quick add text and fields together: the fields win over the text.",
+		"op": "addAction",
+		"input": {
+			"text": "Buy paint samples #Kitchen /buy tomorrow",
+			"type": "visit",
+			"status": "doing",
+			"priority": 3
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-with-details-checklist-link",
+		"description": "Details, a checklist and a link to a note, in the body of a new Action.",
+		"op": "addAction",
+		"input": {
+			"title": "Plan the tiling",
+			"matter": "Kitchen renovation",
+			"details": "Behind the hob first.\nThen the window wall.",
+			"checklist": [
+				"Measure the wall",
+				"Pick the grout"
+			],
+			"link": "Kitchen ideas"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-details-with-markers",
+		"description": "Details with a list in them get the details markers.",
+		"op": "addAction",
+		"input": {
+			"title": "Pack for the conference",
+			"details": "Bring:\n- the poster\n- the adapter",
+			"checklist": [
+				"Print the boarding pass"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-with-web-link",
+		"description": "A link to a web address at the end of the body.",
+		"op": "addAction",
+		"input": {
+			"title": "Read the tiling guide",
+			"link": "https://example.com/guides/tiling?step=1"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-waiting-on",
+		"description": "Waiting on someone: the person is added to the people and the waiting date is today.",
+		"op": "addAction",
+		"input": {
+			"title": "Quote for the extractor fan",
+			"matter": "Kitchen renovation",
+			"status": "waiting",
+			"waiting-on": "Charlie Carter",
+			"people": [
+				"Alice Archer"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-done",
+		"description": "Added straight into the done status: the completion date is today.",
+		"op": "addAction",
+		"input": {
+			"title": "Called the bank",
+			"type": "call",
+			"status": "Done"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-fallback-type",
+		"description": "A type that matches nothing: the default type, with a warning.",
+		"op": "addAction",
+		"input": {
+			"title": "Fly to Lisbon",
+			"type": "fly"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-fallback-matter",
+		"description": "A Matter that matches nothing: the Inbox, with a warning.",
+		"op": "addAction",
+		"input": {
+			"title": "Water the plants",
+			"matter": "Garden shed"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-fallback-status",
+		"description": "A status that matches nothing: the backlog status, with a warning.",
+		"op": "addAction",
+		"input": {
+			"title": "Learn knots",
+			"status": "eventually"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-fallback-person",
+		"description": "A person that matches nothing is left out, with a warning; the others are kept.",
+		"op": "addAction",
+		"input": {
+			"title": "Dinner with friends",
+			"type": "meet",
+			"people": [
+				"Nobody Here",
+				"Bob Baker"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-status",
+		"description": "A new status; type and Matter are written as they are.",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"status": "Doing"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-type",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"type": "meet"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-matter",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"matter": "Household admin"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-priority-set",
+		"description": "A priority on an Action that had none: a new key after the last mtm- key.",
+		"op": "updateAction",
+		"input": {
+			"action": "Book a dentist appointment",
+			"priority": "medium"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-priority-remove",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"priority": null
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-dates",
+		"description": "A start date and a timed due date.",
+		"op": "updateAction",
+		"input": {
+			"action": "Book a dentist appointment",
+			"start": "2026-10-12",
+			"due": "2026-10-20T09:30"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-due-remove",
+		"op": "updateAction",
+		"input": {
+			"action": "Draft the market analysis",
+			"due": null
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-people",
+		"description": "The people replaced by a new list.",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"people": [
+				"Charlie Carter",
+				"Alice Archer"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-details",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"details": "Before the worktop is ordered, with Charlie on site."
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-checklist",
+		"description": "Checklist items go after the last one.",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"checklist": [
+				"Photograph the wall"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-link",
+		"op": "updateAction",
+		"input": {
+			"action": "Draft the market analysis",
+			"link": "Lakeside interview notes"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "done",
+		"description": "Mark as done: the done status and today's completion date.",
+		"op": "markAsDone",
+		"input": {
+			"action": "Confirm the worktop measurements"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "reopen",
+		"description": "Reopen: the backlog status, and the completion date removed.",
+		"op": "reopen",
+		"input": {
+			"action": "Buy running shoes"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "waiting-set",
+		"description": "Waiting on someone: the person joins the people, the waiting date is today.",
+		"op": "updateAction",
+		"input": {
+			"action": "Draft the market analysis",
+			"waiting-on": "Bob Baker"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "waiting-changed",
+		"description": "Waiting on someone else: the waiting date starts again.",
+		"op": "updateAction",
+		"input": {
+			"action": "Revised quote from Charlie",
+			"waiting-on": "Dave Dawson"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "waiting-removed",
+		"description": "No longer waiting: the waiting date goes with it.",
+		"op": "updateAction",
+		"input": {
+			"action": "Data export from Bob",
+			"waiting-on": null
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-matter",
+		"description": "A new Matter with every field, last in lane order.",
+		"op": "addMatter",
+		"input": {
+			"name": "Garden shed",
+			"icon": "fence",
+			"sphere": "Home",
+			"review-every": "2w",
+			"outcome": "A dry shed for the bikes."
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "add-matter-fallback-sphere",
+		"description": "A Sphere that matches nothing: no Sphere, with a warning.",
+		"op": "addMatter",
+		"input": {
+			"name": "Choir",
+			"sphere": "Hobbies",
+			"state": "dormant"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-crlf",
+		"description": "A note with Windows line endings: status and a checklist item, CRLF kept.",
+		"op": "updateAction",
+		"input": {
+			"action": "Edge - Windows line endings",
+			"status": "doing",
+			"checklist": [
+				"Third step"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-unusual-yaml",
+		"description": "Comments, quoting, block text and odd values in other keys: only the mtm- keys change.",
+		"op": "updateAction",
+		"input": {
+			"action": "Edge - unusual YAML",
+			"status": "doing",
+			"priority": 2
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-byte-order-mark",
+		"description": "A note that starts with a byte-order mark: properties and checklist changed, the mark kept.",
+		"op": "updateAction",
+		"input": {
+			"action": "More - byte-order mark",
+			"status": "doing",
+			"checklist": [
+				"Check the mark is still there"
+			]
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-only-a-kind",
+		"description": "A note with only mtm-kind: status, type and Matter are written explicitly.",
+		"op": "updateAction",
+		"input": {
+			"action": "Edge - only a kind",
+			"type": "call"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "rename-links-on",
+		"description": "A new title renames the note; links of every kind to it are rewritten (links updated automatically).",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"title": "Measure the worktop"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true,
+		"setup": {
+			"MTM/Sample/Notes/Worktop links.md": "---\nrelated: \"[[Confirm the worktop measurements]]\"\nsee:\n  - \"[[Confirm the worktop measurements#^corner|the corner]]\"\n  - \"[[Kitchen ideas]]\"\nsource: \"[confirm](Confirm%20the%20worktop%20measurements.md)\"\n---\nLinks to an Action, in every form.\n\n- Plain: [[Confirm the worktop measurements]]\n- With an alias: [[Confirm the worktop measurements|measure first]]\n- To a heading: [[Confirm the worktop measurements#Checklist]]\n- To a block: [[Confirm the worktop measurements#^corner]]\n- By path: [[MTM/Sample/Actions/Confirm the worktop measurements|Confirm the worktop measurements]]\n- Relative: [[../Actions/Confirm the worktop measurements]]\n- Markdown: [confirm](../Actions/Confirm%20the%20worktop%20measurements.md)\n- Markdown with the name: [Confirm the worktop measurements](Confirm%20the%20worktop%20measurements.md)\n- In angle brackets: [brackets](<../Actions/Confirm the worktop measurements.md>)\n- In code, not a link: `[[Confirm the worktop measurements]]`\n\n![[Confirm the worktop measurements]]\n",
+			"MTM/Sample/Notes/Worktop links in CRLF.md": "Seen from a note with Windows line endings:\r\n\r\n- [[Confirm the worktop measurements]]\r\n- [md](Confirm%20the%20worktop%20measurements.md)\r\n"
+		}
+	},
+	{
+		"name": "rename-links-off",
+		"description": "The same rename with links not updated: only the note moves; the links point nowhere.",
+		"op": "updateAction",
+		"input": {
+			"action": "Confirm the worktop measurements",
+			"title": "Measure the worktop"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": false,
+		"setup": {
+			"MTM/Sample/Notes/Worktop links.md": "---\nrelated: \"[[Confirm the worktop measurements]]\"\nsee:\n  - \"[[Confirm the worktop measurements#^corner|the corner]]\"\n  - \"[[Kitchen ideas]]\"\nsource: \"[confirm](Confirm%20the%20worktop%20measurements.md)\"\n---\nLinks to an Action, in every form.\n\n- Plain: [[Confirm the worktop measurements]]\n- With an alias: [[Confirm the worktop measurements|measure first]]\n- To a heading: [[Confirm the worktop measurements#Checklist]]\n- To a block: [[Confirm the worktop measurements#^corner]]\n- By path: [[MTM/Sample/Actions/Confirm the worktop measurements|Confirm the worktop measurements]]\n- Relative: [[../Actions/Confirm the worktop measurements]]\n- Markdown: [confirm](../Actions/Confirm%20the%20worktop%20measurements.md)\n- Markdown with the name: [Confirm the worktop measurements](Confirm%20the%20worktop%20measurements.md)\n- In angle brackets: [brackets](<../Actions/Confirm the worktop measurements.md>)\n- In code, not a link: `[[Confirm the worktop measurements]]`\n\n![[Confirm the worktop measurements]]\n",
+			"MTM/Sample/Notes/Worktop links in CRLF.md": "Seen from a note with Windows line endings:\r\n\r\n- [[Confirm the worktop measurements]]\r\n- [md](Confirm%20the%20worktop%20measurements.md)\r\n"
+		}
+	},
+	{
+		"name": "rename-to-a-taken-name",
+		"description": "A new title another note already has elsewhere: links to both get the path form where the name is no longer unique.",
+		"op": "updateAction",
+		"input": {
+			"action": "Book the hotel",
+			"title": "Link target"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true
+	},
+	{
+		"name": "rename-markdown-backlink",
+		"description": "A relative Markdown link to the renamed note is rewritten, encoded.",
+		"op": "updateAction",
+		"input": {
+			"action": "Edge - unknown status",
+			"title": "Edge - renamed status",
+			"status": "later"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true
+	},
+	{
+		"name": "rename-case-only",
+		"description": "A title that differs only in case renames the note.",
+		"op": "updateAction",
+		"input": {
+			"action": "Book the hotel",
+			"title": "Book the Hotel"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true
+	},
+	{
+		"name": "update-start-remove",
+		"description": "The start date removed.",
+		"op": "updateAction",
+		"input": {
+			"action": "Draft the market analysis",
+			"start": null
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "done-while-waiting",
+		"description": "Mark as done while waiting on someone: the waiting stays as written.",
+		"op": "markAsDone",
+		"input": {
+			"action": "Feedback on chapter 2"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-byte-order-mark-properties",
+		"description": "A note that starts with a byte-order mark, properties only (no body edit).",
+		"op": "updateAction",
+		"input": {
+			"action": "More - byte-order mark",
+			"status": "doing"
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
+		"name": "update-fence-whitespace",
+		"description": "Fence lines with spaces and a tab after the dashes: the block is edited where it is, never a second one added.",
+		"op": "updateAction",
+		"input": {
+			"action": "Edge - fence with spaces",
+			"status": "doing"
+		},
+		"now": "2026-10-09T12:00",
+		"setup": {
+			"MTM/Sample/Edge cases/Edge - fence with spaces.md": "---  \nmtm-kind: action\nmtm-type: write\nmtm-status: next\nmtm-matter: \"[[Kitchen renovation]]\"\n--- \t\nFence lines with spaces after the dashes.\n"
+		}
+	},
+	{
+		"name": "rename-to-a-title-with-symbols",
+		"description": "A new title with a percent sign, parentheses and accented letters; Markdown links to it are encoded.",
+		"op": "updateAction",
+		"input": {
+			"action": "Book the hotel",
+			"title": "Hotel 50% (depósito) für Zoë"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true,
+		"setup": {
+			"MTM/Sample/Notes/Hotel links.md": "- Wikilink: [[Book the hotel]]\n- Markdown: [hotel](../Actions/Book%20the%20hotel.md)\n- Markdown with the name: [Book the hotel](Book%20the%20hotel.md)\n- In angle brackets: [brackets](<Book the hotel.md>)\n"
+		}
+	},
+	{
+		"name": "rename-name-becomes-unique",
+		"description": "Two notes share a name; renaming one makes the other's name unique. Links to the other keep reaching it.",
+		"op": "updateAction",
+		"input": {
+			"action": "MTM/Sample/Edge cases/Twins/Other/call the plumber.md",
+			"title": "call the plumber later"
+		},
+		"now": "2026-10-09T12:00",
+		"alwaysUpdateLinks": true,
+		"setup": {
+			"MTM/Sample/Edge cases/Twins/Call the plumber.md": "A plain note with the same name as an Action in another folder.\n",
+			"MTM/Sample/Edge cases/Twins/Other/call the plumber.md": "---\nmtm-kind: action\nmtm-type: call\nmtm-status: next\nmtm-matter: \"[[Household admin]]\"\n---\nThe Action that shares its name.\n",
+			"MTM/Sample/Notes/Plumber links.md": "- Lower case: [[call the plumber]]\n- By path, to the plain note: [[MTM/Sample/Edge cases/Twins/Call the plumber]]\n- By path, to the Action: [[MTM/Sample/Edge cases/Twins/Other/call the plumber]]\n"
+		}
+	}
+]

@@ -1,0 +1,85 @@
+{
+  "matter": {
+    "path": "MTM/Matters/Garden shed.md",
+    "name": "Garden shed",
+    "icon": "circle-dot",
+    "isInbox": false,
+    "state": "active",
+    "sphere": {
+      "id": "home",
+      "label": "Home"
+    },
+    "sphereOrphan": null,
+    "outcome": null,
+    "laneOrder": 4,
+    "review": {
+      "every": "1m",
+      "lastReviewed": null,
+      "nextDue": null,
+      "due": true,
+      "daysSince": null
+    },
+    "counts": {
+      "open": 0,
+      "today": 0,
+      "waiting": 0,
+      "closed": 0,
+      "total": 0
+    },
+    "noNextAction": true
+  },
+  "changed": true,
+  "dryRun": false,
+  "written": true,
+  "changes": [
+    {
+      "kind": "create",
+      "path": "MTM/Matters/Garden shed.md"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-kind",
+      "from": null,
+      "to": "matter"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-icon",
+      "from": null,
+      "to": "circle-dot"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-state",
+      "from": null,
+      "to": "active"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-lane-order",
+      "from": null,
+      "to": 4
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-review-every",
+      "from": null,
+      "to": "1m"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-sphere",
+      "from": null,
+      "to": "home"
+    }
+  ],
+  "warnings": [],
+  "links": [],
+  "danglingLinks": 0
+}

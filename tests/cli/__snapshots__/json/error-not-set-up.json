@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "not-ready",
+    "message": "Matters isn’t set up in this vault yet. Run setup in Obsidian first."
+  }
+}

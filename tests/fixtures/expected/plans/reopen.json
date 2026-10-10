@@ -1,0 +1,24 @@
+{
+	"case": "reopen",
+	"description": "Reopen: the backlog status, and the completion date removed.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Buy running shoes.md",
+				"set": {
+					"mtm-type": "buy",
+					"mtm-status": "later",
+					"mtm-matter": "[[Half marathon]]"
+				},
+				"remove": [
+					"mtm-completed"
+				]
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

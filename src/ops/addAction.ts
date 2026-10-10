@@ -3,7 +3,7 @@
 
 import type { Priority } from '../model/actions';
 import { parseMtmDate, startsAfterDue } from '../model/dates';
-import { sanitiseTitle, uniqueTitle } from '../model/titles';
+import { sanitiseTitle } from '../model/titles';
 import type { MatterInfo } from '../services/boardModel';
 import { matchDefined, matchNote } from '../services/match';
 import { matterLink, newActionFrontmatter } from '../services/notesModel';
@@ -14,7 +14,7 @@ import { PlanBuilder } from './plan';
 import { parseText, tokenWarnings } from './quickAddText';
 import { summaryAfter } from './actionWrite';
 import type { ActionWrite, AddActionInput, BodyEdit, OpError, OpResult, Snapshot, Warning } from './types';
-import { joinPath, vaultView } from './vaultView';
+import { freeName, joinPath, vaultView } from './vaultView';
 
 const T = STRINGS.ops;
 
@@ -45,7 +45,8 @@ export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWr
 	if (!rawTitle.trim()) return fail({ code: 'invalid', field: 'title', message: T.noTitle });
 	const base = sanitiseTitle(rawTitle) || STRINGS.untitledAction;
 	const folder = settings.folders.actions;
-	const title = uniqueTitle(base, (t) => s.exists(joinPath(folder, `${t}.md`)));
+	// A name any note has is taken, so links to that note never reach the new one.
+	const title = freeName(s, folder, base);
 	const path = joinPath(folder, `${title}.md`);
 
 	// Status, type and Matter: fields first, then the text, then the fallbacks.

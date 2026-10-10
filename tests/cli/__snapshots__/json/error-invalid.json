@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "invalid",
+    "field": "priority",
+    "value": "urgent",
+    "message": "“urgent” isn’t a priority. Use 1, 2 or 3, or high, medium or low."
+  }
+}

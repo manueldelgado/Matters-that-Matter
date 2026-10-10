@@ -1,0 +1,50 @@
+{
+	"case": "add-waiting-on",
+	"description": "Waiting on someone: the person is added to the people and the waiting date is today.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Quote for the extractor fan.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"write"
+					],
+					[
+						"mtm-status",
+						"waiting"
+					],
+					[
+						"mtm-matter",
+						"[[Kitchen renovation]]"
+					],
+					[
+						"mtm-waiting-on",
+						"[[Charlie Carter]]"
+					],
+					[
+						"mtm-people",
+						[
+							"[[Alice Archer]]",
+							"[[Charlie Carter]]"
+						]
+					],
+					[
+						"mtm-waiting-since",
+						"2026-10-09"
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

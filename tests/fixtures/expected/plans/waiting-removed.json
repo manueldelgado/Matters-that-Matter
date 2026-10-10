@@ -1,0 +1,25 @@
+{
+	"case": "waiting-removed",
+	"description": "No longer waiting: the waiting date goes with it.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Data export from Bob.md",
+				"set": {
+					"mtm-type": "message",
+					"mtm-status": "waiting",
+					"mtm-matter": "[[Lakeside strategy review]]"
+				},
+				"remove": [
+					"mtm-waiting-on",
+					"mtm-waiting-since"
+				]
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"case": "update-people",
+	"description": "The people replaced by a new list.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+				"set": {
+					"mtm-type": "call",
+					"mtm-status": "next",
+					"mtm-matter": "[[Kitchen renovation]]",
+					"mtm-people": [
+						"[[Charlie Carter]]",
+						"[[Alice Archer]]"
+					]
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

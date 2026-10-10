@@ -1,0 +1,21 @@
+{
+	"case": "rename-name-becomes-unique",
+	"description": "Two notes share a name; renaming one makes the other's name unique. Links to the other keep reaching it.",
+	"alwaysUpdateLinks": true,
+	"setup": {
+		"MTM/Sample/Edge cases/Twins/Call the plumber.md": "A plain note with the same name as an Action in another folder.\n",
+		"MTM/Sample/Edge cases/Twins/Other/call the plumber.md": "---\nmtm-kind: action\nmtm-type: call\nmtm-status: next\nmtm-matter: \"[[Household admin]]\"\n---\nThe Action that shares its name.\n",
+		"MTM/Sample/Notes/Plumber links.md": "- Lower case: [[call the plumber]]\n- By path, to the plain note: [[MTM/Sample/Edge cases/Twins/Call the plumber]]\n- By path, to the Action: [[MTM/Sample/Edge cases/Twins/Other/call the plumber]]\n"
+	},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Edge cases/Twins/Other/call the plumber.md",
+				"to": "MTM/Sample/Edge cases/Twins/Other/call the plumber later.md"
+			}
+		]
+	}
+}

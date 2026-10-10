@@ -1,0 +1,62 @@
+{
+  "title": "Call Marco about the tiles",
+  "status": {
+    "id": "later",
+    "label": "Later"
+  },
+  "type": {
+    "id": "write",
+    "label": "Write",
+    "isDefault": true
+  },
+  "matter": {
+    "path": "MTM/Matters/Kitchen renovation.md",
+    "name": "Kitchen renovation",
+    "isDefault": false
+  },
+  "people": [],
+  "priority": 1,
+  "start": null,
+  "due": "2026-10-16T10:00",
+  "chips": [
+    {
+      "kind": "type",
+      "text": "/fax",
+      "valid": false
+    },
+    {
+      "kind": "matter",
+      "text": "#Kitchen",
+      "valid": true
+    },
+    {
+      "kind": "person",
+      "text": "@Zed",
+      "valid": false
+    },
+    {
+      "kind": "date",
+      "text": "fri 10:00",
+      "valid": true
+    },
+    {
+      "kind": "priority",
+      "text": "!1",
+      "valid": true
+    }
+  ],
+  "warnings": [
+    {
+      "code": "unmatched-type",
+      "field": "text",
+      "value": "fax",
+      "message": "No type matches “fax”, so it uses the default type, Write."
+    },
+    {
+      "code": "unmatched-person",
+      "field": "text",
+      "value": "Zed",
+      "message": "No note matches “Zed”, so it is left out."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+	"case": "rename-to-a-title-with-symbols",
+	"description": "A new title with a percent sign, parentheses and accented letters; Markdown links to it are encoded.",
+	"alwaysUpdateLinks": true,
+	"setup": {
+		"MTM/Sample/Notes/Hotel links.md": "- Wikilink: [[Book the hotel]]\n- Markdown: [hotel](../Actions/Book%20the%20hotel.md)\n- Markdown with the name: [Book the hotel](Book%20the%20hotel.md)\n- In angle brackets: [brackets](<Book the hotel.md>)\n"
+	},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Actions/Book the hotel.md",
+				"to": "MTM/Sample/Actions/Hotel 50% (depósito) für Zoë.md"
+			}
+		]
+	}
+}

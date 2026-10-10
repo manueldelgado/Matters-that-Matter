@@ -1,0 +1,35 @@
+{
+	"case": "add-details-with-markers",
+	"description": "Details with a list in them get the details markers.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Pack for the conference.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"write"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Inbox]]"
+					]
+				],
+				"body": "<!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->\nBring:\n- the poster\n- the adapter\n<!-- /mtm-details: end of the details. Write details above this line. -->\n\n- [ ] Print the boarding pass\n"
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

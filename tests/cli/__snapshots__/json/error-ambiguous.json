@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "ambiguous",
+    "field": "action",
+    "value": "Call Marco",
+    "message": "Several Actions match “Call Marco”.",
+    "candidates": [
+      "MTM/Actions/Call Marco about the quote.md",
+      "MTM/Actions/Call Marco back.md"
+    ]
+  }
+}

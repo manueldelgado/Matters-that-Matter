@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "not-found",
+    "field": "action",
+    "value": "Nothing like it",
+    "message": "No Action matches “Nothing like it”."
+  }
+}

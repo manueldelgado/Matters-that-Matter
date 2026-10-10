@@ -1,0 +1,32 @@
+{
+	"case": "update-crlf",
+	"description": "A note with Windows line endings: status and a checklist item, CRLF kept.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Edge cases/Edge - Windows line endings.md",
+				"set": {
+					"mtm-type": "write",
+					"mtm-status": "doing",
+					"mtm-matter": "[[Kitchen renovation]]"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [
+			{
+				"path": "MTM/Sample/Edge cases/Edge - Windows line endings.md",
+				"edit": {
+					"kind": "checklist",
+					"items": [
+						"Third step"
+					]
+				}
+			}
+		],
+		"renames": []
+	}
+}

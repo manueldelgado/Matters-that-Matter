@@ -1,0 +1,28 @@
+{
+	"case": "waiting-changed",
+	"description": "Waiting on someone else: the waiting date starts again.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Revised quote from Charlie.md",
+				"set": {
+					"mtm-type": "message",
+					"mtm-status": "waiting",
+					"mtm-matter": "[[Kitchen renovation]]",
+					"mtm-waiting-on": "[[Dave Dawson]]",
+					"mtm-people": [
+						"[[Charlie Carter]]",
+						"[[Dave Dawson]]"
+					],
+					"mtm-waiting-since": "2026-10-09"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

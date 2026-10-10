@@ -1,0 +1,35 @@
+{
+	"case": "add-matter-fallback-sphere",
+	"description": "A Sphere that matches nothing: no Sphere, with a warning.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Matters/Choir.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"matter"
+					],
+					[
+						"mtm-icon",
+						"circle-dot"
+					],
+					[
+						"mtm-state",
+						"dormant"
+					],
+					[
+						"mtm-lane-order",
+						100
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

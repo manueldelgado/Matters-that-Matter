@@ -1,0 +1,17 @@
+{
+	"case": "rename-case-only",
+	"description": "A title that differs only in case renames the note.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [],
+		"renames": [
+			{
+				"from": "MTM/Sample/Actions/Book the hotel.md",
+				"to": "MTM/Sample/Actions/Book the Hotel.md"
+			}
+		]
+	}
+}

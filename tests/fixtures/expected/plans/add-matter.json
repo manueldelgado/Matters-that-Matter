@@ -1,0 +1,47 @@
+{
+	"case": "add-matter",
+	"description": "A new Matter with every field, last in lane order.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Matters/Garden shed.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"matter"
+					],
+					[
+						"mtm-icon",
+						"fence"
+					],
+					[
+						"mtm-state",
+						"active"
+					],
+					[
+						"mtm-lane-order",
+						100
+					],
+					[
+						"mtm-review-every",
+						"2w"
+					],
+					[
+						"mtm-sphere",
+						"home"
+					],
+					[
+						"mtm-outcome",
+						"A dry shed for the bikes."
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}
