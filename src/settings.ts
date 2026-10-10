@@ -51,12 +51,14 @@ export interface MattersSettings {
 	openMattersAsOverview: boolean;
 	/** "What matters today?" in new tabs: every new tab, only when no other tab is open, or never. */
 	todayInNewTabs: TodayInNewTabs;
+	/** Links to Action notes render as chips in reading view and Live Preview. */
+	inlineChips: boolean;
 }
 
 export type TodayInNewTabs = 'every' | 'alone' | 'off';
 
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 5,
+	schemaVersion: 6,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',
@@ -88,4 +90,5 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 	dateLanguages: ['en', 'es'],
 	openMattersAsOverview: true,
 	todayInNewTabs: 'every',
+	inlineChips: true,
 };

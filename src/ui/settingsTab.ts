@@ -87,6 +87,7 @@ export class MattersSettingTab extends PluginSettingTab {
 						control: { type: 'dropdown', key: 'weekStart', options: { monday: s.monday, sunday: s.sunday } },
 					},
 					{ name: s.openMattersAsOverview, desc: s.openMattersAsOverviewDesc, control: { type: 'toggle', key: 'openMattersAsOverview' } },
+					{ name: s.inlineChips, desc: s.inlineChipsDesc, control: { type: 'toggle', key: 'inlineChips' } },
 					{
 						name: s.todayInNewTabs,
 						desc: s.todayInNewTabsDesc,

@@ -90,3 +90,16 @@ describe('schema 5', () => {
 	});
 });
 
+
+describe('schema 6', () => {
+	it('turns chips for links to Actions on for settings from schema 5', () => {
+		const s = migrateSettings({ schemaVersion: 5, setupDone: true });
+		expect(s.inlineChips).toBe(true);
+		expect(s.schemaVersion).toBe(6);
+	});
+
+	it('keeps a choice and repairs a value that is not true or false', () => {
+		expect(migrateSettings({ schemaVersion: 6, inlineChips: false }).inlineChips).toBe(false);
+		expect(migrateSettings({ schemaVersion: 6, inlineChips: 'yes' }).inlineChips).toBe(true);
+	});
+});

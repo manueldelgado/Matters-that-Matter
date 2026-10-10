@@ -19,6 +19,9 @@
 	"author": "Manuel Delgado Tenorio",
 	"license": "MIT",
 	"devDependencies": {
+		"@codemirror/language": "6.11.3",
+		"@codemirror/state": "6.5.0",
+		"@codemirror/view": "6.38.6",
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",
 		"esbuild": "0.28.2",

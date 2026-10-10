@@ -46,6 +46,7 @@ export class NoteDecorations {
 			}),
 		);
 		this.plugin.registerEvent(app.workspace.on('file-open', () => this.refreshNotesSoon()));
+		this.plugin.registerMarkdownPostProcessor((el, ctx) => this.bannerInHoverPreview(el, ctx.sourcePath));
 		this.plugin.registerEvent(this.plugin.selection.on('changed', () => this.markSelection()));
 		this.plugin.registerEvent(
 			app.metadataCache.on('changed', (file) => {
@@ -177,7 +178,8 @@ export class NoteDecorations {
 		}
 	}
 
-	private decorateAction(view: MarkdownView, file: TFile, now: Date, force: boolean): void {
+	/** What the Action banner shows for this note now, with a signature to skip unchanged redraws. */
+	private actionBannerInput(file: TFile, now: Date) {
 		const { app, settings } = this.plugin;
 		const today = toYmd(now);
 		const item = actionItem(app, file, settings);
@@ -189,27 +191,61 @@ export class NoteDecorations {
 		const waitingOn = item.waitingOn ? (waitingFile?.basename ?? item.waitingOn.split('/').pop() ?? item.waitingOn) : null;
 		const date = bannerDate(item, now, today);
 		const classes = actionNoteClasses(item, now);
-
 		const waitAgeNow = item.waitingSince ? waitAge(item.waitingSince, today) : null;
 		const signature = JSON.stringify([file.path, classes, item.effective, item.priority, date, waitingOn, waitAgeNow, matter.name, matter.icon]);
-		if (this.unchanged(view, signature, force)) return;
-		this.signatures.set(view, signature);
+		return { item, matter, date, waitingOn, waitAgeNow, classes, signature };
+	}
 
-		this.place(view, classes, () =>
-			renderActionBanner(
-				{ item, matter: { name: matter.name, icon: matter.icon }, date, waitingOn, waitAge: waitAgeNow },
-				{
-					typeMenu: (anchor) => showTypeMenu(anchor, settings.types, item.effective.type.id, (typeId) => this.write(file, { typeId })),
-					statusMenu: (anchor) =>
-						showStatusMenu(anchor, settings.statuses, { statusId: item.effective.status.id, category: item.category }, (statusId) =>
-							this.write(file, { statusId }),
-						),
-					openMatter: (e) => this.openMatter(file, item, e),
-					toggleDone: () => this.toggleDone(file, item),
-					dismiss: () => void this.run(() => dismissOrphan(app, file, settings)),
-				},
-			),
+	private actionBanner(file: TFile, input: ReturnType<NoteDecorations['actionBannerInput']>): HTMLElement[] {
+		const { app, settings } = this.plugin;
+		const { item, matter, date, waitingOn, waitAgeNow } = input;
+		return renderActionBanner(
+			{ item, matter: { name: matter.name, icon: matter.icon }, date, waitingOn, waitAge: waitAgeNow },
+			{
+				typeMenu: (anchor) => showTypeMenu(anchor, settings.types, item.effective.type.id, (typeId) => this.write(file, { typeId })),
+				statusMenu: (anchor) =>
+					showStatusMenu(anchor, settings.statuses, { statusId: item.effective.status.id, category: item.category }, (statusId) =>
+						this.write(file, { statusId }),
+					),
+				openMatter: (e) => this.openMatter(file, item, e),
+				toggleDone: () => this.toggleDone(file, item),
+				dismiss: () => void this.run(() => dismissOrphan(app, file, settings)),
+			},
 		);
+	}
+
+	private decorateAction(view: MarkdownView, file: TFile, now: Date, force: boolean): void {
+		const input = this.actionBannerInput(file, now);
+		if (this.unchanged(view, input.signature, force)) return;
+		this.signatures.set(view, input.signature);
+		this.place(view, input.classes, () => this.actionBanner(file, input));
+	}
+
+	/**
+	 * Hover previews of an Action note get its banner at the top, as the note does in a tab. The preview is rendered
+	 * Markdown: the post-processor sees its sections before they are in the popover, so it waits a few frames for them.
+	 */
+	private bannerInHoverPreview(el: HTMLElement, sourcePath: string): void {
+		const { app } = this.plugin;
+		const file = app.vault.getFileByPath(sourcePath);
+		if (!file || frontmatterOf(app, file)?.['mtm-kind'] !== 'action') return;
+		let frames = 0;
+		const place = () => {
+			const popover = el.closest('.hover-popover');
+			if (!popover) {
+				if (!el.isConnected && ++frames < 20) window.requestAnimationFrame(place);
+				return;
+			}
+			if (popover.querySelector(`[${BANNER_ATTR}]`)) return;
+			const input = this.actionBannerInput(file, new Date());
+			popover.querySelector<HTMLElement>('.markdown-preview-sizer')?.addClasses(input.classes);
+			// After the inline title, as in a tab: Obsidian's renderer keeps the sizer's own children to itself.
+			for (const anchor of anchors(popover as HTMLElement)) {
+				if (anchor.after) anchor.el.after(...this.actionBanner(file, input));
+				else anchor.el.prepend(...this.actionBanner(file, input));
+			}
+		};
+		window.requestAnimationFrame(place);
 	}
 
 	private decorateMatter(view: MarkdownView, file: TFile, now: Date, force: boolean): void {

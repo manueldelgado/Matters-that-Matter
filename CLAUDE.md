@@ -65,6 +65,8 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - `workspace.iterateRootLeaves` stops at the first callback that returns a truthy value: collect leaves with `(leaf) => void list.push(leaf)`.
 - Phones: the board checks `is-phone` on `body` when it renders and shows the swipe board (`views/bases/board/swipeRender.ts`): one Matter at a time, pills, no drag. To try it on desktop, run `app.emulateMobile(true)` in the console, add `is-phone` to `body`, then reopen the board. Swipes and long-press need a real touch screen.
 - Long-press goes through `attachLongPress` (`views/bases/board/longPress.ts`): 450 ms within 8 px, so a press that moves stays a scroll; it swallows the click that ends it, so the card isn't also selected.
+- CodeMirror packages (`@codemirror/state`, `view`, `language`) are provided by Obsidian at runtime and stay external in the build; they are dev dependencies only for types, pinned to the versions Obsidian's own package uses.
+- Chips for links to Actions: reading view wraps the existing `a.internal-link` (so Obsidian's click and hover stay), Live Preview replaces the link with a widget only when the cursor and selections are outside it. Links are found in the text (`services/inlineChip.ts`); the editor's syntax tree, whose node names are Obsidian's and undocumented, only keeps code, math, comments and front matter out.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies
