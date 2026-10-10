@@ -113,7 +113,7 @@ A few features reach into parts of Obsidian that have no public API. Each one is
 | What matters today? | Adds a panel to Obsidian's empty new tab. Can be turned off in settings | New tabs look as usual |
 | File explorer | Adds classes to Action entries (a dot in the type's colour) | Entries look as usual |
 
-The plugin makes no network requests, collects nothing, and reads and writes only inside your vault.
+Because Matters and Actions are recognised by `mtm-kind` rather than by folder, the plugin goes through the vault's list of Markdown notes and reads each note's cached properties to find them. It makes no network requests, collects nothing, and reads and writes only inside your vault.
 
 ## Development
 
