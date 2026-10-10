@@ -1,6 +1,6 @@
 {
 	"name": "matters-that-matter",
-	"version": "0.1.2",
+	"version": "1.0.0",
 	"description": "Matters that Matter: an Obsidian plugin for personal work management",
 	"main": "main.js",
 	"type": "module",
