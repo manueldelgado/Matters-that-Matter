@@ -1271,3 +1271,33 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .is-phone .mtm-review .mtm-review-section>.mtm-stack,.is-phone .mtm-review .mtm-review-question>.mtm-stack{grid-template-columns:1fr}
 .is-phone .mtm-review .mtm-review-title{font-size:18px}
 .is-phone .mtm-review .mtm-process-hints{display:none}
+/* ——— Phone swipe board: one Matter at a time. The contract's pills, columns and "+", plus Sphere labels, pill signals,
+   dimmed pills, the Matter's header and room at the edges for Obsidian's swipes. ——— */
+/* Pills: a Sphere label before each group; one signal per pill; dormant and closed dimmed. */
+.mtm-matter-pills{align-items:center;padding:8px 16px 4px}
+.mtm-matter-pills-label{display:inline-flex;flex:none;align-items:center;gap:4px;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--text-faint)}
+.mtm-matter-pills-label:first-child{margin-left:0}
+.mtm-matter-pills-label .svg-icon{width:12px;height:12px}
+.mtm-matter-pill-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:2px;padding:0 5px;border-radius:999px;background:var(--mtm-due-today-bg);color:var(--mtm-due-today);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.mtm-matter-pill-dot{width:7px;height:7px;margin-left:2px;border-radius:999px;background:var(--mtm-review-late)}
+.mtm-matter-pill.is-active .mtm-matter-pill-count{background:var(--background-primary);color:var(--mtm-due-today)}
+.mtm-matter-pill.is-dim:not(.is-active){opacity:.55}
+/* The Matter's header: what the lane header carries on the board, on one compact row. */
+.mtm-swipe-head{display:flex;align-items:flex-start;gap:10px;padding:8px 16px 2px}
+.mtm-swipe-head>.mtm-tile{flex:none}
+.mtm-swipe-head-main{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.mtm-swipe-title{font-family:var(--mtm-font-display);font-size:19px;line-height:1.2;color:var(--text-normal)}
+.mtm-swipe-head .mtm-lane-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:0;font-size:12px}
+.mtm-swipe-head .mtm-process-button{margin-left:0}
+.mtm-swipe-head>.clickable-icon{flex:none}
+/* Columns: 16px at each edge stay unscrollable, so Obsidian's edge swipes still open its sidebars. */
+.mtm-swipe-board{margin:0 16px;padding-left:0;padding-right:0;scroll-padding-left:0}
+.mtm-swipe-col .mtm-next-ghost{min-height:44px}
+/* Phone view: the view fills the leaf; the "+" sits over it. */
+.is-phone .mtm-view.mod-swipe{position:relative;display:flex;flex-direction:column;height:100%}
+.mtm-matter-pill .mtm-matter-icon{display:inline-flex}
+/* Holding a card opens the move menu, not the system's text callout. */
+.mtm-swipe-board .mtm-card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* The Matter picker ("Move to Matter…"): icon, then name. */
+.mtm-suggest-matter{display:flex;align-items:center;gap:8px}
+.mtm-suggest-matter .mtm-matter-icon .svg-icon{width:16px;height:16px;color:var(--text-muted)}

@@ -63,6 +63,8 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Matter notes open as their overview through a guarded `setViewState` wrapper (`vault/internal.ts`). To open a Matter as a note on purpose, call `plugin.openMatterNote(file, leaf)`; a plain `openFile` shows the overview.
 - The new tab panel lives in Obsidian's empty view, which has no API: it is added and removed in `views/today/` like the note banners, guarded, and Obsidian's own commands run through `runCommand` (`vault/internal.ts`).
 - `workspace.iterateRootLeaves` stops at the first callback that returns a truthy value: collect leaves with `(leaf) => void list.push(leaf)`.
+- Phones: the board checks `is-phone` on `body` when it renders and shows the swipe board (`views/bases/board/swipeRender.ts`): one Matter at a time, pills, no drag. To try it on desktop, run `app.emulateMobile(true)` in the console, add `is-phone` to `body`, then reopen the board. Swipes and long-press need a real touch screen.
+- Long-press goes through `attachLongPress` (`views/bases/board/longPress.ts`): 450 ms within 8 px, so a press that moves stays a scroll; it swallows the click that ends it, so the card isn't also selected.
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
 
 ## Privacy and policies

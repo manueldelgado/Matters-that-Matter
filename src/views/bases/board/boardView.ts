@@ -7,7 +7,7 @@ import { toHm, toYmd } from '../../../model/dates';
 import { moveLane } from '../../../model/matters';
 import { buildBoard, orderMatters, type BoardBand, type BoardLane, type BoardModel, type BoardOptions, type MatterInfo } from '../../../services/boardModel';
 import { focusedSphere, NO_SPHERE } from '../../../services/spheres';
-import { showNoNextActionMenu, showSphereMenu } from '../../../ui/components/menus';
+import { showNoNextActionMenu, showSphereMenu, showStatusMenu } from '../../../ui/components/menus';
 import { nextStepStatus } from '../../../services/nextAction';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { allActionItems, allMatters } from '../../../vault/index';
@@ -17,9 +17,15 @@ import { CollectionView, OPTION_KEYS, SPHERES_OFF_KEY } from '../collectionView'
 import { attachDrag } from './boardDrag';
 import { renderToolbar, type SphereChip } from '../toolbar';
 import { renderBoard, renderEmpty, type BoardHandlers } from './boardRender';
+import { attachLongPress } from './longPress';
+import { renderSwipe, type SwipeHandlers } from './swipeRender';
+import { chosenPill, openingColumn, swipePills } from '../../../services/swipeModel';
+import { MatterPicker } from '../../../ui/modals/matterPicker';
 
 /** Per-board lane toggles kept in the .base view config besides the declared options. */
 const LANES_KEY = 'mtmLanes';
+/** The Matter the phone swipe board shows, kept the same way. */
+const PHONE_MATTER_KEY = 'mtmPhoneMatter';
 
 type LaneToggles = Record<string, 'collapsed' | 'expanded'>;
 
@@ -28,6 +34,11 @@ export class BoardView extends CollectionView {
 	private model: BoardModel | null = null;
 	private matters: MatterInfo[] = [];
 	private chips: SphereChip[] = [];
+	/** The swipe board's Matter: undefined until read from the view config. */
+	private phoneMatter: string | null | undefined = undefined;
+	/** Where the swipe board was scrolled, for the Matter it showed. */
+	private swipeScroll: { path: string; left: number } | null = null;
+	private visibleWaiter: ResizeObserver | null = null;
 
 	constructor(controller: QueryController, containerEl: HTMLElement, plugin: MattersPlugin) {
 		super(controller, containerEl, plugin);
@@ -36,6 +47,7 @@ export class BoardView extends CollectionView {
 
 	onunload(): void {
 		this.plugin.boards.delete(this);
+		this.visibleWaiter?.disconnect();
 		super.onunload();
 	}
 
@@ -108,6 +120,10 @@ export class BoardView extends CollectionView {
 			renderEmpty(view, this.handlers);
 			return;
 		}
+		if (this.isPhone()) {
+			this.renderSwipe(view, model, now);
+			return;
+		}
 		const scrollEl = renderBoard(view, input, this.handlers);
 		attachDrag(scrollEl, {
 			moveCard: (path, matterPath, statusId) => void this.write(path, (file) => moveAction(this.plugin.app, file, { matterPath, statusId }, this.plugin.settings)),
@@ -115,6 +131,122 @@ export class BoardView extends CollectionView {
 		});
 		this.restoreScroll(scrollEl, scroll);
 	}
+
+	// ——— Phone swipe board ———
+
+	/** Phones get the swipe board; tablets and desktops the board. */
+	private isPhone(): boolean {
+		return this.containerEl.ownerDocument.body.hasClass('is-phone');
+	}
+
+	private renderSwipe(view: HTMLElement, model: BoardModel, now: Date): void {
+		const settings = this.plugin.settings;
+		const pills = swipePills(model, now);
+		if (this.phoneMatter === undefined) {
+			const stored = this.configValue(PHONE_MATTER_KEY);
+			this.phoneMatter = typeof stored === 'string' ? stored : null;
+		}
+		const chosen = chosenPill(pills, this.phoneMatter);
+		if (!chosen) {
+			view.createDiv({ cls: 'mtm-empty', text: STRINGS.swipe.nothingHere });
+			return;
+		}
+		const lane = chosen.lane;
+		const path = lane.matter.path;
+		const nextStepId = nextStepStatus(settings.statuses)?.id ?? null;
+		const els = renderSwipe(
+			view,
+			{ pills, lane, columns: model.columns, nextStepId, selected: this.plugin.selection.path, now },
+			this.swipeHandlers,
+		);
+		// No drag on the swipe board: holding a card opens the move menu instead.
+		els.board.querySelectorAll('.mtm-card').forEach((card) => card.setAttr('draggable', 'false'));
+		attachLongPress(els.board, (p, at) => this.moveMenu(p, at));
+		els.fab.addEventListener('click', () =>
+			this.plugin.quickAdd({ matterPath: path, statusId: columnInView(els.board) ?? undefined, sphereId: this.sphereFocus() }),
+		);
+
+		// Same Matter: where the user was. Another Matter: its opening column. The active pill comes into view.
+		const kept = this.swipeScroll?.path === path ? this.swipeScroll.left : null;
+		const opening = openingColumn(lane, model.columns, nextStepId);
+		this.whenVisible(els.board, () => {
+			const col = opening ? els.board.querySelector<HTMLElement>(`[data-status="${CSS.escape(opening)}"]`) : null;
+			els.board.scrollLeft = kept ?? (col ? els.board.scrollLeft + col.getBoundingClientRect().left - els.board.getBoundingClientRect().left : 0);
+			const active = els.pills.querySelector<HTMLElement>('.mtm-matter-pill.is-active');
+			if (active) els.pills.scrollLeft += active.getBoundingClientRect().left - els.pills.getBoundingClientRect().left - 48;
+		});
+		els.board.addEventListener(
+			'scroll',
+			() => {
+				if (els.board.clientWidth > 0) this.swipeScroll = { path, left: els.board.scrollLeft };
+			},
+			{ passive: true },
+		);
+	}
+
+	/** Runs `fn` now, or once a hidden tab is shown (a hidden element can't scroll). */
+	private whenVisible(el: HTMLElement, fn: () => void): void {
+		this.visibleWaiter?.disconnect();
+		this.visibleWaiter = null;
+		if (el.clientWidth > 0) {
+			fn();
+			return;
+		}
+		const waiter = new ResizeObserver(() => {
+			if (el.clientWidth === 0) return;
+			waiter.disconnect();
+			this.visibleWaiter = null;
+			fn();
+		});
+		this.visibleWaiter = waiter;
+		waiter.observe(el);
+	}
+
+	private chooseMatter(path: string): void {
+		this.phoneMatter = path;
+		this.swipeScroll = null;
+		this.setConfigSoon(PHONE_MATTER_KEY, path);
+		this.refresh(true);
+	}
+
+	/** Long-press: every status, Mark as done or Reopen, then Move to Matter…. */
+	private moveMenu(path: string, at: { x: number; y: number }): void {
+		const item = this.model?.lanes.flatMap((l) => [...l.cells.values()].flat()).find((i) => i.path === path);
+		if (!item) return;
+		const { app } = this.plugin;
+		const settings = this.plugin.settings;
+		showStatusMenu(
+			at,
+			settings.statuses,
+			{ statusId: item.effective.status.id, category: item.category },
+			(statusId) => void this.write(path, (file) => moveAction(app, file, { statusId }, settings)),
+			(menu) =>
+				menu.addItem((i) =>
+					i
+						.setTitle(STRINGS.swipe.moveTo)
+						.setIcon('folder-input')
+						.onClick(() => {
+							const targets = this.matters.filter((m) => m.state !== 'closed' && m.path !== item.effective.matterPath);
+							new MatterPicker(app, orderMatters(targets, settings.spheres, settings.defaultInboxPosition), (m) =>
+								void this.write(path, (file) => moveAction(app, file, { matterPath: m.path }, settings)),
+							).open();
+						}),
+				),
+		);
+	}
+
+	private swipeHandlers: SwipeHandlers = {
+		choose: (path) => this.chooseMatter(path),
+		openMatter: (path) => void this.plugin.openMatter(path),
+		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),
+		noNextActionMenu: (lane, anchor) => this.handlers.noNextActionMenu(lane, anchor),
+		dismissSphere: (path) => this.handlers.dismissSphere(path),
+		processInbox: () => this.handlers.processInbox(),
+		newAction: (statusId, matterPath) => this.handlers.newAction(statusId, matterPath),
+		select: (path) => this.select(path),
+		open: (path, e) => this.open(path, e),
+		dismiss: (item) => this.dismiss(item),
+	};
 
 	// ——— Actions ———
 
@@ -320,3 +452,16 @@ export class BoardView extends CollectionView {
 		dismiss: (item) => this.dismiss(item),
 	};
 }
+
+/** The status of the column most in view on the swipe board. */
+function columnInView(board: HTMLElement): string | null {
+	const left = board.getBoundingClientRect().left;
+	let best: { id: string; d: number } | null = null;
+	board.querySelectorAll<HTMLElement>('.mtm-swipe-col[data-status]').forEach((col) => {
+		const d = Math.abs(col.getBoundingClientRect().left - left);
+		const id = col.dataset.status;
+		if (id && (!best || d < best.d)) best = { id, d };
+	});
+	return (best as { id: string; d: number } | null)?.id ?? null;
+}
+

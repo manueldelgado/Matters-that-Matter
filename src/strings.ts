@@ -633,6 +633,16 @@ export const STRINGS = {
 		openBoard: 'Open board',
 	},
 
+	swipe: {
+		moveTo: 'Move to Matter…',
+		moveToPlaceholder: 'Move to which Matter?',
+		nothingHere: 'Nothing here.',
+		newAction: 'New Action',
+		matters: 'Matters',
+		reviewDue: 'Review due',
+		dueToday: (n: number) => `${n} due today or late`,
+	},
+
 	companionTheme: {
 		offerTitle: 'Make it look like the pictures',
 		offerLine: 'The Calm Matters theme adds a warm paper page, Dusk for the evening, a friendly serif for titles and calm, frosted panels, across your whole vault.',

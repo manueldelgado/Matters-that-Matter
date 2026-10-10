@@ -94,7 +94,32 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 		menu.addEventListener('click', (e) => h.laneMenu(lane, e, menu));
 	}
 
-	const meta = header.createDiv({ cls: 'mtm-lane-meta' });
+	renderLaneMeta(header, lane, h);
+	// Always shown while the Inbox has open Actions (unlike "Mark as reviewed", which shows on hover).
+	if (m.isInbox && lane.openCount > 0) processButton(header, h);
+	if (m.review && m.state === 'active' && !lane.collapsed) {
+		const button = header.createEl('button', { cls: 'mtm-review-button' });
+		appendIcon(button, 'check');
+		button.appendText(b.markReviewed);
+		button.addEventListener('click', () => h.markReviewed(m.path));
+	}
+	return header;
+}
+
+/** The Inbox's Process button. */
+export function processButton(parent: HTMLElement, h: Pick<BoardHandlers, 'processInbox'>): HTMLElement {
+	const button = parent.createEl('button', { cls: 'mtm-process-button' });
+	appendIcon(button, 'list-checks');
+	button.appendText(STRINGS.process.laneButton);
+	button.addEventListener('click', () => h.processInbox());
+	return button;
+}
+
+/** What a lane header says under its title: counts, state, No next Action, a Sphere orphan, the review. Shared with the swipe board. */
+export function renderLaneMeta(parent: HTMLElement, lane: BoardLane, h: Pick<BoardHandlers, 'noNextActionMenu' | 'dismissSphere'>): HTMLElement {
+	const m = lane.matter;
+	const b = STRINGS.board;
+	const meta = parent.createDiv({ cls: 'mtm-lane-meta' });
 	if (m.isInbox) {
 		meta.createSpan({ text: lane.openCount ? STRINGS.process.laneMeta(lane.openCount) : b.notFiled });
 	} else {
@@ -116,20 +141,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 			setTooltip(el, r.daysSince === null ? b.neverReviewed : b.reviewedAgo(r.daysSince));
 		}
 	}
-	// Always shown while the Inbox has open Actions (unlike "Mark as reviewed", which shows on hover).
-	if (m.isInbox && lane.openCount > 0) {
-		const button = header.createEl('button', { cls: 'mtm-process-button' });
-		appendIcon(button, 'list-checks');
-		button.appendText(STRINGS.process.laneButton);
-		button.addEventListener('click', () => h.processInbox());
-	}
-	if (m.review && m.state === 'active' && !lane.collapsed) {
-		const button = header.createEl('button', { cls: 'mtm-review-button' });
-		appendIcon(button, 'check');
-		button.appendText(b.markReviewed);
-		button.addEventListener('click', () => h.markReviewed(m.path));
-	}
-	return header;
+	return meta;
 }
 
 function renderCell(board: HTMLElement, lane: BoardLane, column: StatusDef, input: RenderInput, h: BoardHandlers): void {

@@ -17,10 +17,12 @@ function showUnder(menu: Menu, anchor: HTMLElement | { x: number; y: number }): 
 
 /** Every status, then Mark as done or Reopen. */
 export function showStatusMenu(
-	anchor: HTMLElement,
+	anchor: HTMLElement | { x: number; y: number },
 	statuses: readonly StatusDef[],
 	current: { statusId: string; category: StatusCategory },
 	onPick: (statusId: string) => void,
+	/** Items added after Mark as done / Reopen (the swipe board's "Move to Matter…"). */
+	extra?: (menu: Menu) => void,
 ): void {
 	// The status dots carry each status's tone; a native menu would show plain text.
 	const menu = new Menu().setUseNativeMenu(false);
@@ -44,6 +46,10 @@ export function showStatusMenu(
 			.setDisabled(!target)
 			.onClick(() => target && onPick(target.id)),
 	);
+	if (extra) {
+		menu.addSeparator();
+		extra(menu);
+	}
 	showUnder(menu, anchor);
 }
 
