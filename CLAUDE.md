@@ -10,6 +10,9 @@ npm run dev      # watch build
 npm run build    # type-check and production build
 npm run lint     # eslint with eslint-plugin-obsidianmd
 npm test         # Vitest unit tests
+npm run build:cli  # the command line and MCP server into cli/dist/mtm.mjs
+npm run perf     # indexing speed of the files layer on a generated 5,000-note vault (not in npm test)
+npm run fixture  # regenerate tests/fixtures/mtm-fixture from scripts/fixture-vault.mjs
 ```
 
 Set `OBSIDIAN_VAULT=<path to a test vault>` to copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/matters-that-matter/` after every build; then reload Obsidian.
@@ -20,12 +23,17 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 
 - `src/main.ts`: plugin lifecycle and registration only. Feature logic lives in other modules.
 - `src/settings.ts`: settings types and defaults. `src/strings.ts`: all UI strings.
-- `src/commands.ts`: command palette entries. `src/selection.ts`: the selected Action.
+- `src/commands.ts`: command palette entries. `src/selection.ts`: the selected Action. `src/links.ts`: the `obsidian://mtm-add`, `mtm-quick-add` and `mtm-open` handlers.
 - `src/model/`: pure rules (workflow flags, Matters, Actions, dates, titles, note body).
-- `src/services/`: pure services (effective values, completion dates, Inbox rules, path settings after renames, settings migrations, IDs, fuzzy matching, quick-add parsing, setup planning and reconnecting to existing notes, the sample package, the models behind the views, card order, the new tab panel, the review session, the phone board, chips for links to Actions and the `matters` block).
-- `src/vault/`: reads and writes through the Obsidian API. Undocumented internals live only in `vault/internal.ts`, guarded.
+- `src/services/`: pure services (effective values, completion dates, Inbox rules, path settings after renames, settings migrations, IDs, fuzzy matching, quick-add parsing, setup planning and reconnecting to existing notes, the sample package, the models behind the views, card order, the new tab panel, the review session, the phone board, chips for links to Actions and the `matters` block, settings controls, Show on board, link input made inert, rate limits, name matching for the operations).
+- `src/ops/`: the operations other tools use (add, update, mark as done, reopen, get and list Actions, today, add Matter, list Matters, workflow, parse quick add). Each takes a `Snapshot` of the vault and returns a result, warnings, a plan of writes and the changes; it never touches files. Public field names are in `ops/fieldNames.ts`.
+- `src/files/`: the vault as plain text, as Obsidian reads and writes it: properties, links, tasks, link resolution and link text, the index (`VaultIndex`), a `Snapshot` over it, applying a plan to file contents (`write.ts`) and renames with link rewriting (`rename.ts`). Checked against Obsidian's own cache and writes (`tests/fixtures/expected/`).
+- `src/vault/`: reads and writes through the Obsidian API (including a `Snapshot` over the metadata cache and `planWrites.ts`, which applies a plan). Undocumented internals live only in `vault/internal.ts`, guarded.
 - `src/views/`: Bases views, `ItemView`s, the note banners, chips and the `matters` block in notes, and the new tab panel. `src/ui/`: settings tab, modals and shared components.
-- `tests/`: Vitest unit tests mirroring `src/`. `model/` and `services/` must not import `obsidian` (it has no runtime outside the app), so they stay testable.
+- `tests/`: Vitest unit tests mirroring `src/`, plus `tests/cli`, `tests/schema`, `tests/skills` and `tests/scripts`. `model/`, `services/`, `ops/` and `files/` must not import `obsidian` (it has no runtime outside the app) or `node:*`, so they stay testable and portable. The Vitest config sets `LC_ALL=en_GB.UTF-8`.
+- `tests/fixtures/`: the fixture vault (`mtm-fixture/`, written by `scripts/fixture-vault.mjs`, never edited by hand) and what Obsidian says about it (`expected/cache.json`, `expected/writes/`, `expected/plans/`); differences the files layer keeps on purpose are listed in `expected/ACCEPTED.md`. Changing the fixture means asking Obsidian again (the golden test checks each note's hash first).
+- `cli/`: the command line `mtm` and the MCP server (`mtm mcp`), Node only, bundled by `cli/build.mjs` into one file with the bundled packages' licences; published to npm as `matters-that-matter` (tags `cli-x.y.z`). Writes go through `cli/src/apply.ts`: all or nothing, plain renames only, never outside the vault.
+- `schema/`: JSON Schemas for Action and Matter properties and for the settings, published at `https://matters-that-matter.app/schema/v1/`. `skills/matters-that-matter/`: the skill for AI assistants.
 - `styles.css`: generated outside this repository. Never edit it by hand; style changes are made at the source and the file is regenerated.
 - Keep files focused; split modules that grow beyond a few hundred lines.
 
@@ -69,7 +77,10 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - CodeMirror packages (`@codemirror/state`, `view`, `language`) are provided by Obsidian at runtime and stay external in the build; they are dev dependencies only for types, pinned to the versions Obsidian's own package uses.
 - Chips for links to Actions: reading view wraps the existing `a.internal-link` (so Obsidian's click and hover stay), Live Preview replaces the link with a widget only when the cursor and selections are outside it. Links are found in the text (`services/inlineChip.ts`); the editor's syntax tree, whose node names are Obsidian's and undocumented, only keeps code, math, comments and front matter out.
 - The `matters` code block (`views/notes/mattersEmbed.ts`) is a `MarkdownRenderChild`: its listeners live and die with the rendered block. Its query reuses quick add's parser (`services/embedQuery.ts`), so tokens mean the same in both.
-- Keep dependencies few and browser-compatible; everything is bundled into `main.js`.
+- Keep dependencies few and browser-compatible; everything is bundled into `main.js`. The plugin must never import `cli/` (Node only); `yaml` and the MCP SDK reach only the CLI bundle.
+- Obsidian links: Obsidian's URI handler overwrites an `action` parameter with the link's own name, so `mtm-open` names an Action with `file=`. Everything arriving through a link is made inert (`services/linkInput.ts`); calls wait until the layout and settings are ready.
+- Outside writers (the CLI, the MCP server) rename notes with plain renames: a link-then-unlink rename leaves Obsidian believing the old file still exists.
+- Obsidian's `processFrontMatter` adds a second properties block in front of a note that starts with a byte-order mark or whose `---` lines have trailing spaces; the files layer edits such notes in place.
 
 ## Privacy and policies
 
@@ -85,4 +96,5 @@ Follow Obsidian's [developer policies](https://docs.obsidian.md/Developer+polici
 - Keep `minAppVersion` accurate when using newer APIs.
 - The GitHub release tag equals the manifest version (no `v` prefix). Pushing the tag runs `.github/workflows/release.yml`, which creates a draft release with `main.js`, `manifest.json` and `styles.css`.
 - Never change the plugin `id`.
+- The CLI has its own version (`cli/package.json`) and its own tags, `cli-x.y.z`; it is published to npm from `cli/` (`npm publish --access public`), never by the plugin's release workflow, which should react only to `x.y.z` tags.
 - Run `npm run lint` before every release.
