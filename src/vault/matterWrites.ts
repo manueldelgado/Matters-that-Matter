@@ -4,9 +4,12 @@ import { normalizePath, type App, type TFile } from 'obsidian';
 import type { MattersSettings } from '../settings';
 import { toYmd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
-import { formatCadence, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
+import { formatCadence, nextLaneOrder, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
+import { laneOf, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
-import { createNote, ensureFolder, maxLaneOrder, pathTaken, type Frontmatter } from './notes';
+import { now } from './clock';
+import { noteData } from './index';
+import { createNote, ensureFolder, notesOfKind, pathTaken, type Frontmatter } from './notes';
 
 export async function writeLaneOrders(app: App, writes: readonly LaneOrderWrite[]): Promise<void> {
 	for (const w of writes) {
@@ -20,7 +23,7 @@ export async function writeLaneOrders(app: App, writes: readonly LaneOrderWrite[
 
 export async function markReviewed(app: App, file: TFile): Promise<void> {
 	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
-		fm['mtm-last-reviewed'] = toYmd(new Date());
+		fm['mtm-last-reviewed'] = toYmd(now());
 	});
 }
 
@@ -75,15 +78,7 @@ export async function createMatter(app: App, settings: MattersSettings, init: Ne
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.name) || STRINGS.untitledMatter;
 	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
-	const fm: Frontmatter = {
-		'mtm-kind': 'matter',
-		'mtm-icon': init.icon,
-		'mtm-state': 'active',
-		'mtm-lane-order': Math.floor(maxLaneOrder(app) ?? 0) + 1,
-	};
-	if (init.reviewEvery) fm['mtm-review-every'] = init.reviewEvery;
-	if (init.sphereId) fm['mtm-sphere'] = init.sphereId;
-	const outcome = parseOutcome(init.outcome);
-	if (outcome) fm['mtm-outcome'] = outcome;
-	return createNote(app, `${folder}/${title}.md`, fm);
+	// The Inbox's lane order doesn't count: it has its own place on the board.
+	const lanes = notesOfKind(app, 'matter').map((f) => laneOf(noteData(app, f), settings.inboxPath));
+	return createNote(app, `${folder}/${title}.md`, newMatterFrontmatter(init, nextLaneOrder(lanes)));
 }

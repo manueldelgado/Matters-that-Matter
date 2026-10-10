@@ -8,6 +8,7 @@ import { buildList, buildListLayout, buildTypeGroups } from '../../src/services/
 const settings = DEFAULT_SETTINGS;
 const typeIds = settings.types.map((t) => t.id);
 const today = '2026-10-09';
+const now = new Date(2026, 9, 9, 12);
 
 const matter = (name: string, extra: Partial<MatterInfo> = {}): MatterInfo => ({
 	path: `M/${name}.md`,
@@ -83,7 +84,7 @@ describe('toActionItem', () => {
 });
 
 describe('buildBoard', () => {
-	const board = buildBoard(actions, matters, settings.statuses, options(), today);
+	const board = buildBoard(actions, matters, settings.statuses, options(), today, now);
 
 	it('hides closed columns when Show done is off', () => {
 		expect(board.columns.map((c) => c.id)).toEqual(['later', 'next', 'doing', 'waiting']);
@@ -91,7 +92,7 @@ describe('buildBoard', () => {
 
 	it('orders lanes with the Inbox at its position', () => {
 		expect(board.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen', 'Garden', 'Shed']);
-		const bottom = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'bottom' }), today);
+		const bottom = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'bottom' }), today, now);
 		expect(bottom.lanes.at(-1)?.matter.name).toBe('Inbox');
 	});
 
@@ -110,25 +111,25 @@ describe('buildBoard', () => {
 	});
 
 	it('shows done Actions within the window when Show done is on', () => {
-		const all = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today);
+		const all = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today, now);
 		expect(titles(all.lanes[1]!.cells.get('done'))).toEqual(['Ancient task', 'Old task']);
-		const recent = buildBoard(actions, matters, settings.statuses, options({ showDone: true, doneDays: 7 }), today);
+		const recent = buildBoard(actions, matters, settings.statuses, options({ showDone: true, doneDays: 7 }), today, now);
 		expect(titles(recent.lanes[1]!.cells.get('done'))).toEqual(['Old task']);
 	});
 
 	it('hides the Inbox lane and its Actions', () => {
-		const b = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'hidden' }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ inboxPosition: 'hidden' }), today, now);
 		expect(b.lanes.map((l) => l.matter.name)).not.toContain('Inbox');
 		expect(b.openCount).toBe(3);
 	});
 
 	it('hides empty lanes on request', () => {
-		const b = buildBoard(actions, matters, settings.statuses, options({ hideEmptyLanes: true }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ hideEmptyLanes: true }), today, now);
 		expect(b.lanes.map((l) => l.matter.name)).toEqual(['Inbox', 'Kitchen']);
 	});
 
 	it('filters by type chips', () => {
-		const b = buildBoard(actions, matters, settings.statuses, options({ typesOff: new Set(['buy']) }), today);
+		const b = buildBoard(actions, matters, settings.statuses, options({ typesOff: new Set(['buy']) }), today, now);
 		expect(titles(b.lanes[1]!.cells.get('next'))).toEqual(['Call plumber']);
 	});
 
@@ -147,13 +148,13 @@ describe('buildBoard', () => {
 
 	it('reports an empty board only without any Actions', () => {
 		expect(board.empty).toBe(false);
-		expect(buildBoard([], matters, settings.statuses, options(), today).empty).toBe(true);
+		expect(buildBoard([], matters, settings.statuses, options(), today, now).empty).toBe(true);
 	});
 });
 
 describe('buildList', () => {
 	it('keeps lane order, drops empty groups and lists rows by status, then card order', () => {
-		const board = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today);
+		const board = buildBoard(actions, matters, settings.statuses, options({ showDone: true }), today, now);
 		const groups = buildList(board);
 		expect(groups.map((g) => g.lane.matter.name)).toEqual(['Inbox', 'Kitchen']);
 		expect(groups[1]?.rows.map((r) => r.title)).toEqual(['Call plumber', 'Buy tiles', 'Ask Ana', 'Ancient task', 'Old task']);
@@ -162,7 +163,7 @@ describe('buildList', () => {
 
 describe('buildTypeGroups', () => {
 	it('groups rows by type in settings order, by status then card order, across Matters', () => {
-		const board = buildBoard(actions, matters, settings.statuses, options(), today);
+		const board = buildBoard(actions, matters, settings.statuses, options(), today, now);
 		const groups = buildTypeGroups(board, settings.types);
 		expect(groups.map((g) => g.type.id)).toEqual(['call', 'write', 'buy']);
 		// Write (the default type): Loose end and Lost are in the backlog (Inbox), Ask Ana is waiting.
@@ -171,13 +172,13 @@ describe('buildTypeGroups', () => {
 	});
 
 	it('leaves the backlog out when it is hidden', () => {
-		const board = buildBoard(actions, matters, settings.statuses, options({ showBacklog: false }), today);
+		const board = buildBoard(actions, matters, settings.statuses, options({ showBacklog: false }), today, now);
 		expect(titles(buildTypeGroups(board, settings.types).flatMap((g) => g.rows))).toEqual(['Call plumber', 'Ask Ana', 'Buy tiles']);
 	});
 
 	it('flags no next Action on all Actions, even with the backlog hidden', () => {
 		const backlogOnly = [action('Someday idea', { 'mtm-matter': '[[Garden]]', 'mtm-status': 'later' }), action('Wait in backlog', { 'mtm-matter': '[[Kitchen]]', 'mtm-status': 'later', 'mtm-waiting-on': '[[Ana]]' })];
-		const board = buildBoard(backlogOnly, matters, settings.statuses, options({ showBacklog: false }), today);
+		const board = buildBoard(backlogOnly, matters, settings.statuses, options({ showBacklog: false }), today, now);
 		const flags = Object.fromEntries(board.lanes.map((l) => [l.matter.name, l.noNextAction]));
 		expect(flags).toEqual({ Inbox: false, Kitchen: false, Garden: true, Shed: false });
 	});
@@ -191,10 +192,10 @@ describe('Sphere bands', () => {
 	// Garden is in Home, Kitchen in Work (ahead of Garden by lane order), Shed in none.
 	const sphered = [{ ...kitchen, sphere: 'work' }, inbox, { ...garden, sphere: 'home' }, shed];
 	const build = (over: Partial<BoardOptions> = {}) =>
-		buildBoard(actions, sphered, settings.statuses, options({ spheres, ...over }), today, new Date(2026, 9, 9, 12));
+		buildBoard(actions, sphered, settings.statuses, options({ spheres, ...over }), today, now);
 
 	it('without Spheres there are no bands and no chips', () => {
-		const b = buildBoard(actions, sphered, settings.statuses, options(), today);
+		const b = buildBoard(actions, sphered, settings.statuses, options(), today, now);
 		expect(b.bands).toBeNull();
 		expect(b.sphereKeys).toEqual([]);
 	});

@@ -5,6 +5,7 @@ import type { StatusDef, TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
 import { matchRanges } from '../../../services/fuzzy';
 import { dateChipLabel, isNewPath, newName, type Draft } from '../../../services/quickAdd';
+import type { PersonCandidate } from '../../../services/notesModel';
 import type { Chip, NoteCandidate } from '../../../services/quickAddParser';
 import { avatarEl, priorityEl } from '../../components/card';
 import { appendIcon, statusClasses, tileEl, typeClasses } from '../../components/dom';
@@ -16,11 +17,7 @@ export interface MatterCandidate extends NoteCandidate {
 	meta: string;
 }
 
-export interface PersonCandidate extends NoteCandidate {
-	name: string;
-	folder: string;
-	inPeople: boolean;
-}
+export type { PersonCandidate };
 
 export type Suggestion =
 	| { kind: 'matter'; item: MatterCandidate }

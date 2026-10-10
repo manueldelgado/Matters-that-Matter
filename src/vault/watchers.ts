@@ -7,10 +7,12 @@ import { STRINGS } from '../strings';
 import { toYmd } from '../model/dates';
 import { hasCompletedValue, StatusCache } from '../services/completion';
 import { linkText } from '../services/effective';
+import { personKey } from '../services/notesModel';
 import { WaitingCache, type PersonRef } from '../services/waitingSince';
 import { effectiveAction } from '../services/effective';
 import { inboxRepairs, isInboxDuplicate, renamedInbox } from '../services/inboxGuard';
-import { linkedFile, resolverFor } from './index';
+import { now } from './clock';
+import { resolverFor, targetResolver } from './index';
 import { createNote, ensureFolder, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
 
 const INBOX_RESTORE_DELAY = 4000;
@@ -83,7 +85,7 @@ export class Watchers {
 	private personKey(file: TFile, raw: unknown): PersonRef | null {
 		const text = hasCompletedValue(raw) ? linkText(raw) : null;
 		if (!text) return null;
-		return { key: linkedFile(this.plugin.app, raw, file.path)?.path ?? text, text };
+		return { key: personKey(raw, targetResolver(this.plugin.app, file.path)) ?? text, text };
 	}
 
 	private async onChanged(file: TFile, cache: CachedMetadata): Promise<void> {
@@ -97,7 +99,7 @@ export class Watchers {
 			this.waiting.forget(file.path);
 		} else {
 			const effective = effectiveAction(fm, settings, resolverFor(app, file.path));
-			const today = toYmd(new Date());
+			const today = toYmd(now());
 			const change = this.statuses.observe(file.path, fm['mtm-status'], effective.category, hasCompletedValue(fm['mtm-completed']));
 			const since: unknown = fm['mtm-waiting-since'];
 			let sinceChange = this.waiting.observe(file.path, this.personKey(file, fm['mtm-waiting-on']), since, hasCompletedValue(since));

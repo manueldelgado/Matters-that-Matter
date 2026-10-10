@@ -95,7 +95,7 @@ export class TimelineView extends CollectionView {
 		const range = timelineRange(today, settings.weekStart);
 		this.range = range;
 		const groups = buildTimeline(items, matters, range);
-		const sections = settings.spheres.length ? timelineSections(groups, settings.spheres, options.spheresCollapsed) : null;
+		const sections = settings.spheres.length ? timelineSections(groups, settings.spheres, options.spheresCollapsed, now) : null;
 		const names = new Map(matters.map((m) => [m.path, m.name]));
 
 		this.resize.disconnect();

@@ -9,9 +9,11 @@ import { insertTask, setDetails, toggleTask } from '../model/body';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { applyFieldEdit, type FieldEdit } from '../services/actionEdit';
 import { applyStatus } from '../services/completion';
-import { effectiveAction, linkText } from '../services/effective';
+import { effectiveAction } from '../services/effective';
+import { matterLink as matterLinkFor, newActionFrontmatter, personKey } from '../services/notesModel';
 import { STRINGS } from '../strings';
-import { linkedFile, resolverFor } from './index';
+import { now } from './clock';
+import { resolverFor, targetResolver } from './index';
 import { createNote, ensureFolder, frontmatterOf, linkTo, pathTaken, type Frontmatter } from './notes';
 
 export interface ActionTarget {
@@ -23,8 +25,7 @@ export interface ActionTarget {
 /** Link text for a Matter path, falling back to the bare name when the note is missing. */
 function matterLink(app: App, matterPath: string, sourcePath: string): string {
 	const file = app.vault.getFileByPath(normalizePath(matterPath));
-	if (file) return linkTo(app, file, sourcePath);
-	return `[[${matterPath.split('/').pop()?.replace(/\.md$/i, '') ?? matterPath}]]`;
+	return matterLinkFor(matterPath, file ? app.metadataCache.fileToLinktext(file, sourcePath, true) : null);
 }
 
 /**
@@ -36,8 +37,9 @@ export async function editAction(app: App, file: TFile, settings: MattersSetting
 	const status = settings.statuses.find((s) => s.id === (target.statusId ?? current.status.id)) ?? current.status;
 	const typeId = target.typeId ?? current.type.id;
 	const matterPath = target.matterPath ?? current.matterPath;
-	const today = toYmd(new Date());
-	const keyOf = (raw: unknown) => linkedFile(app, raw, file.path)?.path ?? linkText(raw);
+	const today = toYmd(now());
+	const resolve = targetResolver(app, file.path);
+	const keyOf = (raw: unknown) => personKey(raw, resolve);
 	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
@@ -75,18 +77,19 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 	const base = sanitiseTitle(init.title) || STRINGS.untitledAction;
 	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
 	const path = `${folder}/${title}.md`;
-	const status = settings.statuses.find((s) => s.id === init.statusId);
-	const fm: Frontmatter = {
-		'mtm-kind': 'action',
-		'mtm-type': init.typeId,
-		'mtm-status': init.statusId,
-		'mtm-matter': matterLink(app, init.matterPath, path),
-	};
-	if (init.start) fm['mtm-start'] = init.start;
-	if (init.due) fm['mtm-due'] = init.due;
-	if (init.priority) fm['mtm-priority'] = init.priority;
-	if (init.people?.length) fm['mtm-people'] = init.people.map((p) => linkTo(app, p, path));
-	if (status?.category === 'closed') fm['mtm-completed'] = toYmd(new Date());
+	const fm = newActionFrontmatter(
+		{
+			statusId: init.statusId,
+			typeId: init.typeId,
+			matterLink: matterLink(app, init.matterPath, path),
+			priority: init.priority,
+			start: init.start,
+			due: init.due,
+			people: init.people?.map((p) => linkTo(app, p, path)),
+		},
+		settings.statuses,
+		toYmd(now()),
+	);
 	return createNote(app, path, fm);
 }
 

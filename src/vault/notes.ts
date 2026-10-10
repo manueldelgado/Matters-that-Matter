@@ -3,8 +3,9 @@
 import { normalizePath, TFile, type App, type TAbstractFile } from 'obsidian';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
+import type { Frontmatter } from '../services/notesModel';
 
-export type Frontmatter = Record<string, unknown>;
+export type { Frontmatter } from '../services/notesModel';
 
 export function frontmatterOf(app: App, file: TFile): Frontmatter | undefined {
 	return app.metadataCache.getFileCache(file)?.frontmatter;
@@ -15,6 +16,7 @@ export function notesOfKind(app: App, kind: 'matter' | 'action'): TFile[] {
 	return app.vault.getMarkdownFiles().filter((f) => frontmatterOf(app, f)?.['mtm-kind'] === kind);
 }
 
+/** The highest lane order among Matter notes, the Inbox included (setup numbers adopted Matters after it). */
 export function maxLaneOrder(app: App): number | null {
 	const orders = notesOfKind(app, 'matter')
 		.map((f) => parseLaneOrder(frontmatterOf(app, f)?.['mtm-lane-order']))

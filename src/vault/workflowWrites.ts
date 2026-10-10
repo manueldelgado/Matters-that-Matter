@@ -4,6 +4,7 @@ import type { App, TFile } from 'obsidian';
 import type { StatusDef } from '../settings';
 import { applyStatus } from '../services/completion';
 import { toYmd } from '../model/dates';
+import { now } from './clock';
 import { frontmatterOf, notesOfKind, type Frontmatter } from './notes';
 
 /** Actions whose raw value for the key is exactly the ID. */
@@ -12,7 +13,7 @@ export function actionsUsing(app: App, key: 'mtm-status' | 'mtm-type', id: strin
 }
 
 export async function moveStatus(app: App, files: readonly TFile[], from: StatusDef, to: StatusDef): Promise<number> {
-	const today = toYmd(new Date());
+	const today = toYmd(now());
 	for (const file of files) {
 		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => applyStatus(fm, to, from.category, today));
 	}

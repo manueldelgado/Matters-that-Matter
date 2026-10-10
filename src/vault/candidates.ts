@@ -5,9 +5,10 @@ import type { MattersSettings } from '../settings';
 import { STRINGS } from '../strings';
 import { toYmd } from '../model/dates';
 import type { TypeCandidate } from '../services/quickAddParser';
-import type { MatterCandidate, PersonCandidate } from '../ui/modals/quickAdd/quickAddRender';
-import { allActionItems, allMatters } from './index';
-import { frontmatterOf } from './notes';
+import { personCandidates, type PersonCandidate } from '../services/notesModel';
+import type { MatterCandidate } from '../ui/modals/quickAdd/quickAddRender';
+import { now } from './clock';
+import { allActionItems, allMatters, noteData } from './index';
 
 export interface Candidates {
 	types: TypeCandidate[];
@@ -16,7 +17,7 @@ export interface Candidates {
 }
 
 export function loadCandidates(app: App, s: MattersSettings): Candidates {
-	const today = toYmd(new Date());
+	const today = toYmd(now());
 	const types = s.types.map((t) => ({ id: t.id, names: [t.label, t.id] }));
 
 	const open = new Map<string, number>();
@@ -34,15 +35,10 @@ export function loadCandidates(app: App, s: MattersSettings): Candidates {
 		meta: m.state === 'closed' ? q.closed : m.state === 'dormant' ? q.dormant : open.get(m.path) ? q.open(open.get(m.path) ?? 0) : '',
 	}));
 
-	const folder = normalizePath(s.folders.people) + '/';
 	// People are ordinary notes; Actions and Matters are never people.
-	const people = app.vault
-		.getMarkdownFiles()
-		.filter((f) => frontmatterOf(app, f)?.['mtm-kind'] === undefined)
-		.map((f) => {
-			const inPeople = f.path.startsWith(folder);
-			const parent = f.parent?.path ?? '';
-			return { path: f.path, name: f.basename, names: [f.basename], rank: inPeople ? 0 : 1, inPeople, folder: parent === '/' ? '' : parent };
-		});
+	const people = personCandidates(
+		app.vault.getMarkdownFiles().map((f) => noteData(app, f)),
+		normalizePath(s.folders.people),
+	);
 	return { types, matters, people };
 }
