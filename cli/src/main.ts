@@ -3,16 +3,16 @@
 // isn't ready; 3 a file changed while writing.
 
 import { writeFileSync } from 'node:fs';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { resolve } from 'node:path';
 import type { VaultReader } from '../../src/files/index';
 import { toYmd } from '../../src/model/dates';
 import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, parseQuickAdd, reopen, today, updateAction } from '../../src/ops';
 import { findMatter } from '../../src/ops/fields';
-import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
-import { applyOutcome, type ApplyFs, type ApplyResult } from './apply';
+import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Snapshot, Warning } from '../../src/ops/types';
+import type { ApplyFs } from './apply';
 import { boolFlag, listFlag, parseArgs, textFlag, type Command, type FlagValue } from './args';
-import { contentsAfter as defaultContentsAfter, snapshotOf, WriteError, type ContentsAfter, type FileOutcome } from './filesLayer';
-import { cachingReader, fsVaultReader } from './fsVault';
+import type { ContentsAfter } from './filesLayer';
 import { errorJson, stringify, writeJson, type ErrorJson } from './json';
 import { obsidianSettingsDir, openUrl, systemOpener, vaultRef, type Opener, type OpenTarget } from './open';
 import {
@@ -33,7 +33,9 @@ import {
 } from './output';
 import { STRINGS } from '../../src/strings';
 import { CLI, COMMAND_HELP, HELP } from './strings';
+import { chooseTools, serveMcp } from './mcp';
 import { openVault, type Vault } from './vault';
+import { planAndWrite, takeSnapshot, type WriteFlow } from './writeFlow';
 
 export const EXIT = { done: 0, unmatched: 1, notReady: 2, changed: 3 } as const;
 
@@ -61,6 +63,8 @@ export interface CliIo {
 	fs?: ApplyFs;
 	/** Obsidian's own settings folder (where `obsidian.json` lists the vaults); the system's when absent, none when null. */
 	obsidianDir?: string | null;
+	/** Where `mtm mcp` serves; standard input and output when absent. */
+	mcpTransport?: Transport;
 }
 
 interface Context {
@@ -110,25 +114,47 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 		print(io.stdout, markup(command ? (COMMAND_HELP[command] ?? HELP) : HELP, out));
 		return EXIT.done;
 	}
-	if (command === 'mcp') {
-		// The MCP server comes with its own module; until then the command says so.
-		print(io.stderr, CLI.mcpLater);
-		return EXIT.unmatched;
-	}
-
-	let now = io.clock?.() ?? new Date();
+	let fixedNow: Date | null = null;
 	const nowFlag = textFlag(flags, 'now');
 	if (nowFlag) {
-		const fixed = parseNow(nowFlag);
-		if (!fixed) return usage(CLI.badNow(nowFlag));
-		now = fixed;
+		fixedNow = parseNow(nowFlag);
+		if (!fixedNow) return usage(CLI.badNow(nowFlag));
 	}
+	const now = fixedNow ?? io.clock?.() ?? new Date();
 
-	const opened = openVault(textFlag(flags, 'vault') ?? io.env.MTM_VAULT, textFlag(flags, 'config-dir') ?? undefined, io.cwd, io.home);
+	const vaultGiven = textFlag(flags, 'vault') ?? io.env.MTM_VAULT;
+	const configDir = textFlag(flags, 'config-dir') ?? undefined;
+	const opened = openVault(vaultGiven, configDir, io.cwd, io.home);
 	if (!opened.ok) {
-		if (json) print(io.stdout, stringify(errorJson({ code: 'not-ready', message: opened.message })));
+		if (json && command !== 'mcp') print(io.stdout, stringify(errorJson({ code: 'not-ready', message: opened.message })));
 		else print(io.stderr, err.r(opened.message));
 		return EXIT.notReady;
+	}
+
+	if (command === 'mcp') {
+		// Standard output is the protocol's: anything to say before serving goes to standard error.
+		const chosen = chooseTools(boolFlag(flags, 'read-only'), textFlag(flags, 'tools'));
+		if (!chosen.ok) {
+			print(io.stderr, err.r(chosen.message));
+			return EXIT.notReady;
+		}
+		if (!opened.vault.settings.setupDone) print(io.stderr, err.y(STRINGS.ops.notSetUp));
+		return serveMcp(
+			{
+				vault: vaultGiven ?? '',
+				configDir,
+				cwd: io.cwd,
+				home: io.home,
+				tools: chosen.tools,
+				dryRun: boolFlag(flags, 'dry-run'),
+				now: fixedNow,
+				clock: io.clock,
+				reader: io.reader,
+				contentsAfter: io.contentsAfter,
+				fs: io.fs,
+			},
+			io.mcpTransport,
+		);
 	}
 
 	const ctx: Context = { io, vault: opened.vault, flags, words, json, dryRun: boolFlag(flags, 'dry-run'), now, out, err };
@@ -219,10 +245,7 @@ function listInput(flags: Record<string, FlagValue>): ListActionsInput {
 // ——— Reading ———
 
 function snapshot(ctx: Context): { snap: Snapshot; reader: VaultReader } {
-	const { root, configDir, settings } = ctx.vault;
-	// One read per file per attempt, so a plan's `before` is exactly what the snapshot saw.
-	const reader = cachingReader((ctx.io.reader ?? fsVaultReader)(root, configDir));
-	return { snap: snapshotOf(reader, configDir, settings, ctx.now), reader };
+	return takeSnapshot(ctx.vault, ctx.now, ctx.io.reader);
 }
 
 const typeTones = (s: Snapshot) => new Map(s.settings.types.map((t) => [t.id, t.tone]));
@@ -276,72 +299,37 @@ function read<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>, human: (value: 
 
 // ——— Writing ———
 
-const planIsEmpty = (p: Plan) => !p.creates.length && !p.edits.length && !p.bodies.length && !p.renames.length;
+type Written<T> = Extract<WriteFlow<T>, { ok: true }>;
 
-type Written<T> = { r: Extract<OpResult<T>, { ok: true }>; snap: Snapshot; outcome: FileOutcome | null; written: boolean };
-
-/**
- * Plans on a fresh snapshot, then writes all or nothing. A file that changed after it was read stops the write
- * before anything is written; the whole write is planned again once, and a second change gives exit code 3. A write
- * that fails is put back and gives exit code 3 too.
- */
+/** Plans and writes all or nothing (see `planAndWrite`); a failure is printed and gives its exit code. */
 function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | number {
-	const writer = ctx.io.contentsAfter ?? defaultContentsAfter;
-	for (let attempt = 1; ; attempt++) {
-		const { snap, reader } = snapshot(ctx);
-		const r = op(snap);
-		if (!r.ok) return opError(ctx, r.error, true);
-		const planOut = textFlag(ctx.flags, 'plan-out');
-		if (planOut) {
-			try {
-				writeFileSync(resolve(ctx.io.cwd, planOut), `${stringify(r.plan)}\n`, 'utf8');
-			} catch {
-				return usageError(ctx, CLI.planOutFailed(planOut));
-			}
-		}
-		if (planIsEmpty(r.plan)) return { r, snap, outcome: null, written: false };
-		let outcome: FileOutcome;
-		try {
-			outcome = writer(r.plan, reader, { configDir: ctx.vault.configDir });
-		} catch (e) {
-			if (!(e instanceof WriteError)) throw e;
-			// A file the snapshot saw is gone, or one it didn't see is there: the vault changed; plan again once.
-			if (attempt === 1 && (e.code === 'exists' || e.code === 'missing')) continue;
-			return planFailure(ctx, e);
-		}
-		if (ctx.dryRun) return { r, snap, outcome, written: false };
-		const applied = applyOutcome(ctx.vault.root, outcome, ctx.io.fs);
-		if (applied.ok) return { r, snap, outcome, written: true };
-		if (attempt === 1 && applied.reason === 'changed') continue;
-		return writeFailure(ctx, applied);
-	}
-}
-
-/**
- * A plan the files layer can't apply; nothing is written. The vault changed (exit 3), or a note's properties can't
- * be edited (exit 1).
- */
-function planFailure(ctx: Context, e: WriteError): number {
-	const changed = e.code === 'exists' || e.code === 'missing';
-	const message = e.code === 'exists' ? CLI.exists(e.path) : e.code === 'missing' ? CLI.missing(e.path) : e.code === 'invalid-properties' ? CLI.unreadableProperties(e.path) : CLI.notMtm(e.path);
-	if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: e.code, message, path: e.path })));
-	else print(ctx.io.stderr, ctx.err.r(message));
-	return changed ? EXIT.changed : EXIT.unmatched;
-}
-
-/** Why a write stopped, and whether anything was left changed. Exit code 3. */
-function writeFailure(ctx: Context, failed: Exclude<ApplyResult, { ok: true }>): number {
-	let message: string;
-	let left: string[] = [];
-	if (failed.reason === 'changed') message = CLI.changedMeanwhile(failed.path);
-	else if (failed.reason === 'unsafe') message = CLI.outsideVault(failed.path);
-	else {
-		left = failed.left;
-		message = left.length ? CLI.writeFailedLeft(failed.path, failed.error, left) : CLI.writeFailed(failed.path, failed.error);
-	}
-	if (ctx.json) print(ctx.io.stdout, stringify(errorJson({ code: failed.reason, message, path: failed.path, left })));
-	else print(ctx.io.stderr, ctx.err.r(message));
-	return EXIT.changed;
+	const planOut = textFlag(ctx.flags, 'plan-out');
+	const w = planAndWrite(
+		{
+			vault: ctx.vault,
+			now: ctx.now,
+			dryRun: ctx.dryRun,
+			reader: ctx.io.reader,
+			contentsAfter: ctx.io.contentsAfter,
+			fs: ctx.io.fs,
+			onPlan: planOut
+				? (plan) => {
+						try {
+							writeFileSync(resolve(ctx.io.cwd, planOut), `${stringify(plan)}\n`, 'utf8');
+							return null;
+						} catch {
+							return { code: 'usage', message: CLI.planOutFailed(planOut) };
+						}
+					}
+				: undefined,
+		},
+		op,
+	);
+	if (w.ok) return w;
+	if (w.kind === 'op') return opError(ctx, w.error, true);
+	if (ctx.json) print(ctx.io.stdout, stringify(errorJson(w.error)));
+	else print(ctx.io.stderr, ctx.err.r(w.error.message));
+	return w.changed ? EXIT.changed : EXIT.unmatched;
 }
 
 /** Add, update, done, reopen: `verb` is null for add. */

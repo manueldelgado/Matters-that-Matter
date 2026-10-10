@@ -87,11 +87,13 @@ The statuses, Action types and Spheres, with the IDs notes store.`,
 What quick add would make of the text. Nothing is written.`,
 	open: `<b>mtm open</b> <action|matter>
 Opens an Action or a Matter in Obsidian, through a link Matters handles (a version of Matters with links).`,
-	mcp: `<b>mtm mcp</b>
-Runs as an MCP server over stdio, for AI assistants.
+	mcp: `<b>mtm mcp</b> --vault <path>
+Runs as an MCP server over stdio, for AI assistants. Each tool reads the vault afresh. Tools that write say what
+they changed, and carry hints so the assistant’s app can ask first. Nothing is deleted and settings are never written.
 
   --read-only           only the tools that read
-  --tools <a,b>         only these tools`,
+  --tools <a,b>         only these tools, such as get_today,list_actions
+  --dry-run             tools that write say what they would change, and write nothing`,
 };
 
 export const CLI = {
@@ -116,7 +118,6 @@ export const CLI = {
 	notAVault: (path: string, configDir: string) => `${path} isn’t an Obsidian vault: it has no ${configDir} folder.`,
 	noSettings: (path: string, file: string) => `Matters isn’t installed in ${path}: there’s no ${file}. Install Matters and run setup in Obsidian first.`,
 	badSettings: (file: string) => `Matters’ settings in ${file} can’t be read. Open the vault in Obsidian to repair them.`,
-	mcpLater: 'The MCP server isn’t in this version of mtm yet.',
 
 	// Writing.
 	nothingChanged: 'Nothing was changed.',
@@ -193,4 +194,127 @@ export const CLI = {
 	opening: (name: string) => `Opening “${name}” in Obsidian.`,
 	openFailed: (url: string) => `The system couldn’t open the link. Open it yourself: ${url}`,
 	nothingToOpen: (ref: string) => `No Action or Matter matches “${ref}”.`,
+} as const;
+
+const list = (items: readonly string[]) => items.join(', ');
+
+/** What the MCP server says: its instructions, each tool's description and fields, and its errors. */
+export const MCP = {
+	/** The server's instructions to the assistant: the vocabulary, and when to add and when to update. */
+	instructions: [
+		'Matters that Matter keeps someone’s work as notes in an Obsidian vault. A Matter is an open line of work (a lane on the board); an Action is one thing to do in one Matter (a card). The Inbox is the Matter where Actions land when no Matter is named.',
+		'Every Action has a status (a column), a type, and may have a priority, a start and a due date, people, and someone it is waiting on. get_workflow gives this vault’s statuses, types and Spheres (groups of Matters).',
+		'To record something new to do, use add_action. To change an Action that exists, find it first (get_today, list_actions, get_action) and use update_action, mark_as_done or reopen_action, naming it by the path or title those tools return. Never add an Action again to change it.',
+		'Write Action titles as short things to do (“Send Marco the revised quote”). Nothing is ever deleted, and every write says what it changed.',
+	].join('\n\n'),
+
+	tools: {
+		add_action: {
+			title: 'Add an Action',
+			description:
+				'Adds a new Action, one thing to do, as a note in the vault. Use it when the user wants to remember, plan or hand over something that isn’t recorded yet; to change an Action that exists, use update_action instead. `text` works like Matters’ quick add: /type, #Matter, @person, !1 to !3 and dates in words, in English or Spanish (“Call Marco about the quote /call #Kitchen fri 10:00 !1”); fields given separately win over the text. A name that matches nothing falls back (the default type, the Inbox, the backlog status) and the result says so. No Matters or people are created. Returns the new Action and what was written.',
+		},
+		update_action: {
+			title: 'Change an Action',
+			description:
+				'Changes an Action that exists, named by its path or its title: its title (which renames the note and updates links to it), Matter, status, type, priority, dates, who it is waiting on, people or details, or adds checklist items or a link. Only the fields given change; null removes a priority, a date or who it is waiting on, and `people` replaces the list. It is strict: a value that matches nothing is refused and nothing is written, with the values that would work. To record something new, use add_action; to finish an Action, use mark_as_done.',
+		},
+		mark_as_done: {
+			title: 'Mark as done',
+			description:
+				'Marks an Action as done, named by its path or its title: it moves to the workflow’s done status, and today becomes its completion date. Use it when the user says something is finished. An Action that is done already is left as it is. reopen_action undoes it.',
+		},
+		reopen_action: {
+			title: 'Reopen',
+			description:
+				'Reopens a done Action, named by its path or its title: it goes back to the backlog status and loses its completion date. Use it when something marked as done needs doing after all. An Action that isn’t done is left as it is.',
+		},
+		get_action: {
+			title: 'Show an Action',
+			description:
+				'Everything about one Action, named by its path or its title: its Matter, status, type, priority, dates, who it is waiting on and since when, people, details, checklist, and the names of the notes it links to (never their content). Read only.',
+		},
+		list_actions: {
+			title: 'List Actions',
+			description:
+				'Lists Actions grouped by Matter, in board order, each with its status, type, dates, priority and who it is waiting on. Done Actions are left out unless `done` is true or `status` names a done status. Filters combine: a Matter, a status, a type, a Sphere, a person, due dates from and to, and only Actions waiting on someone. Read only.',
+		},
+		get_today: {
+			title: 'What matters today?',
+			description:
+				'What matters today: Actions due today or late (or, when none are, the next ones), how many Actions wait in the Inbox to be sorted, the Matters whose review is due, and the Actions waiting on others, longest first. A good first call for an overview of the day. Read only.',
+		},
+		add_matter: {
+			title: 'New Matter',
+			description:
+				'Adds a Matter, an open line of work that holds Actions; it goes last on the board. Use it only when the user asks for a new Matter: add_action never creates one. Optional: a Lucide icon name, a Sphere, a state (active, dormant or closed), an outcome (one line: what done looks like) and a review rhythm.',
+		},
+		list_matters: {
+			title: 'List Matters',
+			description:
+				'Lists every Matter in board order, the Inbox included, with its Sphere, state, outcome, review, and how many of its Actions are open, due today or late, and waiting. Use it to find the Matter an Action belongs in. Read only.',
+		},
+		get_workflow: {
+			title: 'Workflow',
+			description:
+				'The workflow of this vault: its statuses in column order (which is the backlog and which is done), its Action types (which is the default) and its Spheres, with the IDs notes store. Labels and IDs both work wherever a tool takes a status, a type or a Sphere. Read only.',
+		},
+	},
+
+	/** What each field takes, by its public name. */
+	fields: {
+		text: 'Quick add text: the title with /type, #Matter, @person, !1 to !3 and dates in words.',
+		title: 'The title, which is also the note’s file name.',
+		titleUpdate: 'A new title; the note is renamed and links to it are updated.',
+		action: 'The Action: its path (such as MTM/Actions/Call Marco.md) or its title.',
+		matter: 'A Matter, by name, path or link text.',
+		status: 'A status, by label or ID (see get_workflow).',
+		type: 'An Action type, by label or ID (see get_workflow).',
+		priority: '1, 2 or 3, or high, medium or low.',
+		priorityUpdate: '1, 2 or 3, or high, medium or low; null removes it.',
+		date: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”.',
+		dateUpdate: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”; null removes it.',
+		waitingOn: 'A person (a note) the Action waits on; they are added to the people too.',
+		waitingOnUpdate: 'A person (a note) the Action waits on; they are added to the people too. null removes it.',
+		people: 'People (notes) involved.',
+		peopleUpdate: 'People (notes) involved; replaces the list. An empty list removes them all.',
+		details: 'The details: a few lines about the Action.',
+		checklist: 'Checklist items.',
+		checklistUpdate: 'Checklist items, added after the existing ones.',
+		link: 'A note in the vault (by name or path) or an http(s) address, added as a line at the end.',
+		listMatter: 'Only Actions in this Matter.',
+		listStatus: 'Only Actions in this status (a done status shows done Actions).',
+		listType: 'Only Actions of this type.',
+		sphere: 'Only Actions in Matters of this Sphere.',
+		person: 'Only Actions with this person, or waiting on them.',
+		dueFrom: 'Only Actions due on or after this day.',
+		dueTo: 'Only Actions due on or before this day.',
+		waiting: 'Only Actions waiting on someone.',
+		done: 'Include done Actions.',
+		name: 'The new Matter’s name.',
+		icon: 'A Lucide icon name, such as house; circle-dot when absent.',
+		matterSphere: 'A Sphere, by label or ID.',
+		state: 'active (the default), dormant or closed.',
+		outcome: 'One line: what done looks like, or the standard to keep.',
+		reviewEvery: 'A review rhythm: 7d, 2w or 1m.',
+	},
+
+	// Arguments a tool can't read.
+	needs: (tool: string, field: string) => `${tool} needs “${field}”.`,
+	unknownField: (tool: string, field: string, fields: readonly string[]) =>
+		fields.length ? `${tool} has no field “${field}”. Its fields: ${list(fields)}.` : `${tool} takes no fields, so “${field}” can’t be used.`,
+	takesText: (field: string) => `“${field}” takes text.`,
+	takesTextOrNull: (field: string) => `“${field}” takes text, or null to remove it.`,
+	takesList: (field: string) => `“${field}” takes a list of text.`,
+	takesBool: (field: string) => `“${field}” takes true or false.`,
+	takesPriority: (field: string, nullable: boolean) => `“${field}” takes 1, 2 or 3, or high, medium or low${nullable ? ', or null to remove it' : ''}.`,
+	notAnObject: 'The arguments must be an object of fields.',
+
+	// Which tools are offered.
+	unknownTools: (names: readonly string[], valid: readonly string[]) =>
+		`There’s no tool ${names.map((n) => `“${n}”`).join(', ')}. Tools: ${list(valid)}.`,
+	noTools: (valid: readonly string[]) => `--tools names no tool. Tools: ${list(valid)}.`,
+	writesWhenReadOnly: (names: readonly string[], reads: readonly string[]) =>
+		`--read-only offers only the tools that read, and ${list(names)} ${names.length === 1 ? 'writes' : 'write'}. Tools that read: ${list(reads)}.`,
+	unknownTool: (name: string) => `This server offers no tool “${name}”.`,
 } as const;
