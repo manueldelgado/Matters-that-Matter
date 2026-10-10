@@ -1,0 +1,23 @@
+{
+	"case": "update-checklist",
+	"description": "Checklist items go after the last one.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [
+			{
+				"path": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+				"edit": {
+					"kind": "checklist",
+					"items": [
+						"Photograph the wall"
+					]
+				},
+				"bodyAfter": "Before the worktop is ordered.\n\n- [x] Measure the window wall\n- [ ] Check the corner unit\n- [ ] Photograph the wall\n"
+			}
+		],
+		"renames": []
+	}
+}

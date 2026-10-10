@@ -52,6 +52,18 @@ describe('parseYaml', () => {
 		expect(parseYaml('plain text')).toBeNull();
 		expect(parseYaml('a: 1\na: 2')).toBeNull();
 	});
+
+	it('gives nothing, without throwing, for aliases to no anchor and for alias bombs', () => {
+		expect(parseYaml('note: *important*')).toBeNull();
+		expect(parseYaml('rating: ***')).toBeNull();
+		const bomb = ['a: &a [1, 1, 1, 1, 1, 1, 1, 1, 1]', ...['b', 'c', 'd', 'e'].map((k, i) => `${k}: &${k} [${Array<string>(9).fill(`*${'abcd'[i]}`).join(', ')}]`)].join('\n');
+		expect(() => parseYaml(bomb)).not.toThrow();
+		expect(parseYaml(bomb)).toBeNull();
+	});
+
+	it('reads a value with an unknown tag as its plain value', () => {
+		expect(parseYaml('a: !foo bar')).toEqual({ a: 'bar' });
+	});
 });
 
 describe('readFrontmatter', () => {
@@ -62,6 +74,11 @@ describe('readFrontmatter', () => {
 	it('drops properties and their end when the YAML does not parse, but the body still starts after the block', () => {
 		expect(readFrontmatter('---\na: [x\n---\nBody')).toEqual({ frontmatter: null, end: null, bodyLine: 3 });
 		expect(readFrontmatter('---\n---\nBody')).toEqual({ frontmatter: null, end: null, bodyLine: 2 });
+	});
+
+	it('skips a byte-order mark, counting the offset from after it', () => {
+		expect(readFrontmatter('\uFEFF---\nmtm-kind: action\n---\n')).toEqual({ frontmatter: { 'mtm-kind': 'action' }, end: { line: 2, offset: 24 }, bodyLine: 3 });
+		expect(splitFrontmatter('\uFEFF---\na: 1\n---')).toEqual({ yaml: 'a: 1', endLine: 2, endOffset: 12, bodyLine: 3 });
 	});
 
 	it('reads the whole note as body when there is no block', () => {

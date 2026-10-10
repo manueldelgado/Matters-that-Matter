@@ -1,36 +1,25 @@
 // The operations on the fixture vault through the file snapshot: they must answer as they do over Obsidian's own
 // cache (expected/cache.json), and the answers must match what the fixture holds.
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CacheShape } from '../../src/files/cacheShape';
-import { VaultIndex } from '../../src/files/index';
 import { filesSnapshot } from '../../src/files/snapshot';
 import { getAction, listActions, listMatters, today } from '../../src/ops/index';
 import type { Snapshot } from '../../src/ops/types';
 import { migrateSettings } from '../../src/services/migrations';
-
-const root = fileURLToPath(new URL('../..', import.meta.url));
-const FIXTURE = join(root, 'tests/fixtures/mtm-fixture');
-const EXPECTED = join(root, 'tests/fixtures/expected/cache.json');
+import { dumpChanges, dumpText, fixtureIndex, readFixture as read } from './fixtureDump';
 
 /** The fixture's day: Friday 9 October 2026 at noon, local time. */
 const NOW = new Date(2026, 9, 9, 12, 0);
 
-function walk(dir: string, prefix = ''): string[] {
-	return readdirSync(join(dir, prefix), { withFileTypes: true }).flatMap((entry) => {
-		const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-		return entry.isDirectory() ? walk(dir, rel) : [rel];
-	});
-}
-
-const read = (path: string) => readFileSync(join(FIXTURE, path), 'utf8');
-const files = walk(FIXTURE);
-const index = new VaultIndex({ list: () => files, read }, { configDir: '.obsidian' });
+const index = fixtureIndex();
 const settings = migrateSettings(JSON.parse(read('.obsidian/plugins/matters-that-matter/data.json')));
 const fromFiles = filesSnapshot(index, settings, NOW);
+const text = dumpText();
+const cache = text ? (JSON.parse(text) as CacheShape) : null;
+const { changed, added } = dumpChanges(cache, index);
+// Without a current dump there is nothing to compare with (the golden test says so).
+const current = cache !== null && changed.length === 0 && added.length === 0;
 
 /** The same snapshot answered from Obsidian's dump: its properties, its body links and how each link resolved. */
 function fromCache(cache: CacheShape): Snapshot {
@@ -89,8 +78,8 @@ describe('the operations on the fixture through the file snapshot', () => {
 		expect(result.value.linkedNotes.map((n) => n.path)).toEqual(['MTM/Sample/Notes/Kitchen ideas.md']);
 	});
 
-	it.skipIf(!existsSync(EXPECTED))('answers as it does over Obsidian\'s cache', () => {
-		const cache = JSON.parse(readFileSync(EXPECTED, 'utf8')) as CacheShape;
+	it.skipIf(!current)('answers as it does over Obsidian\'s cache (skipped while the dump is missing or out of date)', () => {
+		if (!cache) return;
 		const obsidian = fromCache(cache);
 		expect(listActions({ done: true }, fromFiles)).toEqual(listActions({ done: true }, obsidian));
 		expect(today(fromFiles)).toEqual(today(obsidian));

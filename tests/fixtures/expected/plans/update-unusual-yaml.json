@@ -1,0 +1,23 @@
+{
+	"case": "update-unusual-yaml",
+	"description": "Comments, quoting, block text and odd values in other keys: only the mtm- keys change.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Edge cases/Edge - unusual YAML.md",
+				"set": {
+					"mtm-type": "call",
+					"mtm-status": "doing",
+					"mtm-matter": "[[Kitchen renovation]]",
+					"mtm-priority": 2
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

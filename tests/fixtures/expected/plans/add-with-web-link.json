@@ -1,0 +1,35 @@
+{
+	"case": "add-with-web-link",
+	"description": "A link to a web address at the end of the body.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Read the tiling guide.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"write"
+					],
+					[
+						"mtm-status",
+						"later"
+					],
+					[
+						"mtm-matter",
+						"[[Inbox]]"
+					]
+				],
+				"body": "<https://example.com/guides/tiling?step=1>\n"
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

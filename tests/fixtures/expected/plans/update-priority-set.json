@@ -1,0 +1,23 @@
+{
+	"case": "update-priority-set",
+	"description": "A priority on an Action that had none: a new key after the last mtm- key.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Book a dentist appointment.md",
+				"set": {
+					"mtm-type": "call",
+					"mtm-status": "later",
+					"mtm-matter": "[[Inbox]]",
+					"mtm-priority": 2
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

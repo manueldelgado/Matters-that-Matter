@@ -1,0 +1,43 @@
+{
+	"case": "add-text-and-fields",
+	"description": "Quick add text and fields together: the fields win over the text.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [
+			{
+				"path": "MTM/Actions/Buy paint samples.md",
+				"frontmatter": [
+					[
+						"mtm-kind",
+						"action"
+					],
+					[
+						"mtm-type",
+						"visit"
+					],
+					[
+						"mtm-status",
+						"doing"
+					],
+					[
+						"mtm-matter",
+						"[[Kitchen renovation]]"
+					],
+					[
+						"mtm-due",
+						"2026-10-10"
+					],
+					[
+						"mtm-priority",
+						3
+					]
+				],
+				"body": ""
+			}
+		],
+		"edits": [],
+		"bodies": [],
+		"renames": []
+	}
+}

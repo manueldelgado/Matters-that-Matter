@@ -1,0 +1,27 @@
+{
+	"case": "waiting-set",
+	"description": "Waiting on someone: the person joins the people, the waiting date is today.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Draft the market analysis.md",
+				"set": {
+					"mtm-type": "write",
+					"mtm-status": "next",
+					"mtm-matter": "[[Lakeside strategy review]]",
+					"mtm-waiting-since": "2026-10-09",
+					"mtm-waiting-on": "[[Bob Baker]]",
+					"mtm-people": [
+						"[[Bob Baker]]"
+					]
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

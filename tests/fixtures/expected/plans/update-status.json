@@ -1,0 +1,22 @@
+{
+	"case": "update-status",
+	"description": "A new status; type and Matter are written as they are.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Actions/Confirm the worktop measurements.md",
+				"set": {
+					"mtm-type": "call",
+					"mtm-status": "doing",
+					"mtm-matter": "[[Kitchen renovation]]"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

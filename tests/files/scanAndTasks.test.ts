@@ -57,4 +57,15 @@ describe('taskLines', () => {
 	it('skips tasks inside HTML comments', () => {
 		expect(tasks('<!--\n- [ ] hidden\n-->\n- [ ] shown')).toEqual([{ line: 3, task: ' ' }]);
 	});
+
+	it('skips tasks inside %% comments, over several lines or on one, and counts those after them', () => {
+		expect(tasks('%%\n- [ ] hidden\n%%\n%% - [ ] one line %%\n- [ ] shown %% a note %%\n- [ ] also shown')).toEqual([
+			{ line: 4, task: ' ' },
+			{ line: 5, task: ' ' },
+		]);
+	});
+
+	it('ignores %% inside code when tracking comments', () => {
+		expect(tasks('`%%`\n- [ ] shown')).toEqual([{ line: 1, task: ' ' }]);
+	});
 });

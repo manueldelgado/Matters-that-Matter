@@ -24,6 +24,7 @@ export const FIXTURE_NOW = '2026-10-09T12:00';
 /** Where the edge cases live, inside the sample folder so removing the sample removes most of them. */
 export const EDGE_FOLDER = 'MTM/Sample/Edge cases';
 const LINKS = `${EDGE_FOLDER}/Links`;
+const MORE = `${EDGE_FOLDER}/More links`;
 
 // ——— The plugin's pure modules, bundled on the fly so they are always the current source ———
 
@@ -349,6 +350,80 @@ function edgeCases(mtm, notes, now) {
 			'```',
 		),
 	);
+	raw.push(...moreLinkCases());
+	return raw;
+}
+
+/**
+ * Cases that pin rules the first set leaves open: how twins are ordered, an exact path against a relative one, a
+ * byte-order mark, a repeated key, tasks in comments, an escaped pipe outside a table, an embed and an unknown tag in
+ * properties. In a folder of their own, with names no other note has, so the other notes' link text stays the same.
+ */
+function moreLinkCases() {
+	const raw = [];
+	const twin = (folder, name, what) => raw.push({ path: `${MORE}/${folder}/${name}.md`, content: lines(what) });
+	const fm = (...keys) => ['---', ...keys, 'mtm-sample: true', '---'];
+	const action = (...keys) => fm('mtm-kind: action', 'mtm-type: write', ...keys, 'mtm-matter: "[[Kitchen renovation]]"');
+
+	// Twins: the shorter path has more folders and sorts later; then two paths of the same length, whose order
+	// depends on whether case counts (code-unit order puts "Rite" before "left").
+	twin('Z/Y', 'More - deep twin', 'The shorter path, two folders deep, sorting last.');
+	twin('Alpha', 'More - deep twin', 'The longer path, one folder deep, sorting first.');
+	twin('left', 'More - even twin', 'Same path length as its twin; lower case.');
+	twin('Rite', 'More - even twin', 'Same path length as its twin; capitalised.');
+
+	// The same path from the vault root and from the linking note's folder.
+	twin('Inner/MTM/Sample/Edge cases/More links/Sub', 'More - exact or near', "Under the linking note's folder.");
+	twin('Sub', 'More - exact or near', 'At the exact vault path.');
+	raw.push({
+		path: `${MORE}/Inner/More - which twin.md`,
+		content: lines(
+			...fm(),
+			'Which twin each link reaches:',
+			'',
+			'- Shorter path, more folders: [[More - deep twin]]',
+			'- Same length: [[More - even twin]]',
+			'- Exact path or near: [[MTM/Sample/Edge cases/More links/Sub/More - exact or near]]',
+		),
+	});
+
+	raw.push({ path: `${MORE}/More - target.md`, content: lines(...fm(), 'A note the cases below link to.') });
+
+	// A byte-order mark before the properties.
+	raw.push({ path: `${MORE}/More - byte-order mark.md`, content: `\uFEFF${lines(...action('mtm-status: next'), 'Starts with a byte-order mark. See [[More - target]].')}` });
+
+	// A key written twice.
+	raw.push({ path: `${MORE}/More - repeated key.md`, content: lines(...action('mtm-status: next', 'mtm-status: doing'), 'mtm-status is written twice.') });
+
+	// Tasks inside comments.
+	raw.push({
+		path: `${MORE}/More - tasks in comments.md`,
+		content: lines(
+			...action('mtm-status: next'),
+			'Tasks inside comments:',
+			'',
+			'<!--',
+			'- [ ] In an HTML comment',
+			'-->',
+			'',
+			'%%',
+			'- [ ] In an Obsidian comment',
+			'%%',
+			'',
+			'%% - [ ] In an Obsidian comment on one line %%',
+			'',
+			'- [ ] Counted',
+		),
+	});
+
+	// An escaped pipe outside a table, an embed and an unknown tag in properties.
+	raw.push({
+		path: `${MORE}/More - odd forms.md`,
+		content: lines(
+			...fm('cover: "![[More - target]]"', 'odd: !foo bar'),
+			'An escaped pipe outside a table: [[More - target\\|the target]].',
+		),
+	});
 	return raw;
 }
 

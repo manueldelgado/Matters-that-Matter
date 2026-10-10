@@ -1,0 +1,22 @@
+{
+	"case": "update-only-a-kind",
+	"description": "A note with only mtm-kind: status, type and Matter are written explicitly.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [
+			{
+				"path": "MTM/Sample/Edge cases/Edge - only a kind.md",
+				"set": {
+					"mtm-status": "later",
+					"mtm-type": "call",
+					"mtm-matter": "[[Inbox]]"
+				},
+				"remove": []
+			}
+		],
+		"bodies": [],
+		"renames": []
+	}
+}

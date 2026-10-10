@@ -1,31 +1,15 @@
 // The file index of the fixture vault must equal what Obsidian's metadata cache holds for it (expected/cache.json,
 // dumped from Obsidian), apart from the differences listed in expected/ACCEPTED.md.
 
-import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { cacheShape, sortKeys, type CacheShape } from '../../src/files/cacheShape';
-import { VaultIndex } from '../../src/files/index';
+import { cacheJson, cacheShape, sortKeys, type CacheShape } from '../../src/files/cacheShape';
+import { dumpChanges, dumpText, EXPECTED, fixtureIndex, fixtureSha256 as sha256 } from './fixtureDump';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const FIXTURE = join(root, 'tests/fixtures/mtm-fixture');
-const EXPECTED = join(root, 'tests/fixtures/expected/cache.json');
 const ACCEPTED = join(root, 'tests/fixtures/expected/ACCEPTED.md');
-
-/** Every file under `dir`, as vault paths. */
-function walk(dir: string, prefix = ''): string[] {
-	const out: string[] = [];
-	for (const entry of readdirSync(join(dir, prefix), { withFileTypes: true })) {
-		const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-		if (entry.isDirectory()) out.push(...walk(dir, rel));
-		else out.push(rel);
-	}
-	return out;
-}
-
-const sha256 = (path: string) => createHash('sha256').update(readFileSync(join(FIXTURE, path))).digest('hex');
 
 /** Paths (as key lists) where two JSON values differ. */
 function differences(actual: unknown, expected: unknown, at: string[] = []): string[][] {
@@ -54,28 +38,30 @@ function accepted(): string[][] {
 const startsWith = (path: string[], prefix: string[]) => prefix.every((key, i) => path[i] === key);
 
 describe.skipIf(!existsSync(EXPECTED))('the file index equals Obsidian\'s cache (waiting for cache.json when skipped)', () => {
-	const expected = existsSync(EXPECTED) ? (JSON.parse(readFileSync(EXPECTED, 'utf8')) as CacheShape) : null;
-	const files = walk(FIXTURE);
-	const index = new VaultIndex({ list: () => files, read: (path) => readFileSync(join(FIXTURE, path), 'utf8') }, { configDir: '.obsidian' });
+	const text = dumpText();
+	const expected = text ? (JSON.parse(text) as CacheShape) : null;
+	const index = fixtureIndex();
+	const { changed, added } = dumpChanges(expected, index);
+	// A stale dump fails only the first test: comparing the index with it would report the fixture's changes as index differences.
+	const stale = changed.length > 0 || added.length > 0;
 
 	it('dumps the fixture as it is now (otherwise cache.json is out of date: re-run the Obsidian dump)', () => {
-		const stale = Object.entries(expected?.notes ?? {})
-			.filter(([path, note]) => !existsSync(join(FIXTURE, path)) || note.sha256 !== sha256(path))
-			.map(([path]) => path);
-		expect(stale, 'cache.json is out of date: re-run the Obsidian dump').toEqual([]);
-		expect(index.notePaths, 'cache.json is out of date: re-run the Obsidian dump').toEqual(Object.keys(expected?.notes ?? {}));
+		expect({ changed, added }, 'cache.json is out of date: re-run the Obsidian dump').toEqual({ changed: [], added: [] });
 	});
 
 	it('reproduces cache.json, apart from the accepted differences', () => {
-		const actual = sortKeys(cacheShape(index, sha256));
+		if (stale) return;
+		const shape = cacheShape(index, sha256);
 		const ignore = accepted();
-		const found = differences(actual, expected).filter((path) => !ignore.some((prefix) => startsWith(path, prefix)));
+		const found = differences(sortKeys(shape), expected).filter((path) => !ignore.some((prefix) => startsWith(path, prefix)));
 		expect(found).toEqual([]);
+		// With nothing accepted, the very bytes of the dump: key order and formatting included.
+		if (ignore.length === 0) expect(cacheJson(shape) === text, 'the index differs from cache.json in formatting or key order').toBe(true);
 	});
 
 	it('lists no accepted difference that has gone away', () => {
-		const actual = sortKeys(cacheShape(index, sha256));
-		const all = differences(actual, expected);
+		if (stale) return;
+		const all = differences(sortKeys(cacheShape(index, sha256)), expected);
 		const unused = accepted().filter((prefix) => !all.some((path) => startsWith(path, prefix)));
 		expect(unused).toEqual([]);
 	});
