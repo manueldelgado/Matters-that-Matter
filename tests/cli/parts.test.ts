@@ -74,7 +74,10 @@ describe('safe writes', () => {
 		walk(root);
 		return out;
 	};
-	/** Node's file operations, with the `nth` link or rename into place (not into a temporary file) failing. */
+	/**
+	 * Node's file operations, with the `nth` rename into place (not into a temporary file) failing. Committing three
+	 * files (edit A, rename B to Moved/B2, create C) renames into place four times: A, B to B2, B2's content, C.
+	 */
 	const failingAt = (nth: number, extra: Partial<ApplyFs> = {}): ApplyFs => {
 		let n = 0;
 		const maybeFail = (to: string) => {
@@ -83,7 +86,6 @@ describe('safe writes', () => {
 		return {
 			...nodeFs,
 			rename: (a, b) => (maybeFail(b), nodeFs.rename(a, b)),
-			link: (a, b) => (maybeFail(b), nodeFs.link(a, b)),
 			...extra,
 		};
 	};
@@ -115,6 +117,22 @@ describe('safe writes', () => {
 		expect(readFileSync(join(root, 'B/Deux.md'), 'utf8')).toBe('deux\n');
 		expect(readFileSync(join(root, 'C/Three.md'), 'utf8')).toBe('three\n');
 		expect(temps(root)).toEqual([]);
+	});
+
+	it('moves a renamed note with a rename, as Obsidian’s file watcher expects, never a link and an unlink', () => {
+		const root = dir();
+		writeFiles(root, { 'Old.md': 'x\n' });
+		const calls: string[] = [];
+		const rel = (p: string) => p.slice(root.length + 1).replace(/\.[^/]*\.mtm-[^/]*\.tmp$/, '<temp>');
+		const fs: ApplyFs = {
+			...nodeFs,
+			rename: (a, b) => (calls.push(`rename ${rel(a)} → ${rel(b)}`), nodeFs.rename(a, b)),
+			unlink: (p) => (calls.push(`unlink ${rel(p)}`), nodeFs.unlink(p)),
+		};
+		const r = applyOutcome(root, outcome([{ path: 'New/Name.md', from: 'Old.md', before: 'x\n', after: 'y\n' }, { path: 'Made.md', from: null, before: null, after: 'z\n' }]), fs);
+		expect(r.ok).toBe(true);
+		expect(calls).toEqual(['rename Old.md → New/Name.md', 'rename New/<temp> → New/Name.md', 'rename <temp> → Made.md']);
+		expect(readdirSync(root).sort()).toEqual(['Made.md', 'New']);
 	});
 
 	it('a rename that only changes case', () => {
@@ -171,32 +189,41 @@ describe('safe writes', () => {
 			expect(temps(root)).toEqual([]);
 		};
 
-		it('failing on the 2nd of 3 files', () => {
+		it('failing on the 2nd of 3 files, moving it', () => {
 			const root = dir();
 			const r = applyOutcome(root, three(root), failingAt(2));
 			expect(r).toEqual({ ok: false, reason: 'failed', path: 'Moved/B2.md', error: 'disk full', left: [] });
 			asBefore(root);
 		});
 
-		it('failing on the 3rd, after a rename', () => {
+		it('failing on the 2nd of 3 files, after moving it', () => {
 			const root = dir();
 			const r = applyOutcome(root, three(root), failingAt(3));
+			expect(r).toEqual({ ok: false, reason: 'failed', path: 'Moved/B2.md', error: 'disk full', left: [] });
+			asBefore(root);
+		});
+
+		it('failing on the 3rd, after a rename', () => {
+			const root = dir();
+			const r = applyOutcome(root, three(root), failingAt(4));
 			expect(r).toEqual({ ok: false, reason: 'failed', path: 'C.md', error: 'disk full', left: [] });
 			asBefore(root);
 		});
 
-		it('a new file whose path is taken just before it is linked', () => {
+		it('a new file whose path is taken while the others are committed is never replaced', () => {
 			const root = dir();
+			// Another program creates C.md while A is being written.
 			const fs: ApplyFs = {
 				...nodeFs,
-				link: (a, b) => {
-					if (b.endsWith('C.md') && !existsSync(b)) writeFileSync(b, 'someone else’s\n');
-					nodeFs.link(a, b);
+				rename: (a, b) => {
+					nodeFs.rename(a, b);
+					if (b.endsWith('A.md') && !existsSync(join(root, 'C.md'))) writeFileSync(join(root, 'C.md'), 'someone else’s\n');
 				},
 			};
 			const r = applyOutcome(root, three(root), fs);
-			expect(r).toMatchObject({ ok: false, reason: 'failed', path: 'C.md', left: [] });
+			expect(r).toEqual({ ok: false, reason: 'failed', path: 'C.md', error: 'C.md appeared meanwhile', left: [] });
 			expect(readFileSync(join(root, 'C.md'), 'utf8')).toBe('someone else’s\n');
+			expect(temps(root)).toEqual([]);
 			expect(readFileSync(join(root, 'A.md'), 'utf8')).toBe('a\n');
 			expect(readFileSync(join(root, 'B.md'), 'utf8')).toBe('b\n');
 		});
@@ -207,14 +234,11 @@ describe('safe writes', () => {
 			let failed = false;
 			const fs: ApplyFs = {
 				...nodeFs,
-				link: (a, b) => {
+				rename: (a, b) => {
 					if (b.endsWith('C.md')) {
 						failed = true;
 						throw new Error('disk full');
 					}
-					nodeFs.link(a, b);
-				},
-				rename: (a, b) => {
 					if (failed && b.endsWith('A.md')) throw new Error('locked');
 					nodeFs.rename(a, b);
 				},

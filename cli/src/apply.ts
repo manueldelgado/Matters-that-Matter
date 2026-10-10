@@ -3,15 +3,22 @@
 // 1. Check: every path stays inside the vault, every file is still what the plan saw (a hash of its content), and
 //    every new path is still free.
 // 2. Stage: each file's new content goes to a temporary file next to it (with the old file's mode).
-// 3. Check again, then commit with renames and links only: an edited file is renamed over, a new file is linked
-//    into place (which fails if something appeared there meanwhile), a renamed note is linked to its new name.
+// 3. Check again, then commit with renames only: an edited file's new content is renamed over it; a new file is
+//    renamed into place; a renamed note is moved to its new name, then its new content renamed over it. Obsidian's
+//    file watcher sees each of these as the move or change it is.
+//
+//    A rename replaces whatever is at its target, so before a new file or a renamed note takes a path, the path is
+//    checked again: free, or (a case-only rename) the same file. Between that check and the rename there is a window
+//    of microseconds in which another program could create a file there and lose it; it is accepted, as no portable
+//    "rename unless it exists" exists, and linking instead (which refuses to replace) leaves Obsidian believing the
+//    old name is still there.
 // 4. If anything fails while committing, what was committed is put back, in reverse order, from the content the plan
 //    saw.
 //
 // The bytes written are exactly what the files layer computed (line endings and all).
 
 import { createHash } from 'node:crypto';
-import { chmodSync, linkSync, mkdirSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, sep } from 'node:path';
 import type { FileWrite as LayerWrite } from './filesLayer';
 
@@ -32,8 +39,6 @@ export interface ApplyFs {
 	readFile(path: string): string | null;
 	writeFile(path: string, text: string): void;
 	rename(from: string, to: string): void;
-	/** Fails when `to` exists. */
-	link(from: string, to: string): void;
 	unlink(path: string): void;
 	stat(path: string): { dev: bigint; ino: bigint; mode: number } | null;
 	realpath(path: string): string;
@@ -52,7 +57,6 @@ export const nodeFs: ApplyFs = {
 	},
 	writeFile: (p, text) => writeFileSync(p, text, { encoding: 'utf8', flag: 'wx' }),
 	rename: (a, b) => renameSync(a, b),
-	link: (a, b) => linkSync(a, b),
 	unlink: (p) => rmSync(p),
 	stat: (p) => {
 		try {
@@ -201,17 +205,20 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 
 	// Commit; every step that changes the vault leaves a way back.
 	const undo: { path: string; run: () => void }[] = [];
-	/** Puts content back at a path, replacing what is there (`replace`) or only if the path is free. */
-	const restore = (target: string, content: string, mode: number | null, replace: boolean) => {
+	/** Throws unless `target` is free, or is `from` itself under another case (a case-insensitive file system). */
+	const claim = (target: string, from: string | null, path: string) => {
+		const there = fs.stat(target);
+		if (!there) return;
+		const self = from === null ? null : fs.stat(from);
+		if (!self || self.ino !== there.ino || self.dev !== there.dev) throw new Error(`${path} appeared meanwhile`);
+	};
+	/** Puts content back over a path. */
+	const restore = (target: string, content: string, mode: number | null) => {
 		const temp = tempName(target);
 		try {
 			fs.writeFile(temp, content);
 			if (mode !== null) fs.chmod(temp, mode);
-			if (replace) fs.rename(temp, target);
-			else {
-				fs.link(temp, target);
-				fs.unlink(temp);
-			}
+			fs.rename(temp, target);
 		} catch (e) {
 			if (fs.stat(temp)) fs.unlink(temp);
 			throw e;
@@ -223,25 +230,18 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 			current = s.file.path;
 			const before = s.file.before ?? '';
 			if (s.from === null) {
-				fs.link(s.temp, s.target);
+				claim(s.target, null, s.file.path);
+				fs.rename(s.temp, s.target);
 				undo.push({ path: s.file.path, run: () => fs.unlink(s.target) });
-				fs.unlink(s.temp);
-			} else if (s.from === s.target) {
-				fs.rename(s.temp, s.target);
-				undo.push({ path: s.file.path, run: () => restore(s.target, before, s.mode, true) });
-			} else if (caseOnly(s.file)) {
-				const from = s.from;
-				fs.rename(from, s.target);
-				undo.push({ path: s.file.from ?? s.file.path, run: () => fs.rename(s.target, from) });
-				fs.rename(s.temp, s.target);
-				undo.push({ path: s.file.path, run: () => restore(s.target, before, s.mode, true) });
 			} else {
-				const from = s.from;
-				fs.link(s.temp, s.target);
-				undo.push({ path: s.file.path, run: () => fs.unlink(s.target) });
-				fs.unlink(s.temp);
-				fs.unlink(from);
-				undo.push({ path: s.file.from ?? s.file.path, run: () => restore(from, before, s.mode, false) });
+				if (s.from !== s.target) {
+					const from = s.from;
+					claim(s.target, from, s.file.path);
+					fs.rename(from, s.target);
+					undo.push({ path: s.file.from ?? s.file.path, run: () => fs.rename(s.target, from) });
+				}
+				fs.rename(s.temp, s.target);
+				undo.push({ path: s.file.path, run: () => restore(s.target, before, s.mode) });
 			}
 			written.push(s.file.path);
 		}

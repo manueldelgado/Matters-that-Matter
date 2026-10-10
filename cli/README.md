@@ -166,7 +166,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 ## Safety
 
 - Only `mtm-` properties change, and the body only where an Action's details, checklist or link go. Everything else in a note stays as it is.
-- A write is all or nothing. Every file is checked against what was read; the new contents are written to hidden temporary files next to them; then they are moved into place. If a step fails, everything already moved is put back. A new note never replaces a file that appeared meanwhile.
+- A write is all or nothing. Every file is checked against what was read; the new contents are written to hidden temporary files next to them; then they are moved into place. If a step fails, everything already moved is put back. Before a new or renamed note takes its name, the name is checked again, so it doesn’t replace a file that appeared meanwhile. Files are only ever moved with renames, so Obsidian, if it is open, sees each change as it happens.
 - Line endings and file permissions are kept.
 - Writes stay inside the vault: nothing is written through a link (symlink) to a folder elsewhere. Linked files and folders are skipped when reading.
 - Nothing is deleted and settings are never written.
