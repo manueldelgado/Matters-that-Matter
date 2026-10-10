@@ -1,0 +1,385 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://matters-that-matter.app/schema/v1/settings.json",
+	"title": "Matters that Matter settings",
+	"description": "The plugin's settings file, data.json, in the plugin's folder under the vault's configuration folder (.obsidian/plugins/matters-that-matter/ unless the configuration folder has been changed in Obsidian). Notes store the IDs defined here; labels, tones and icons can change without touching any note. Other tools read this file to turn IDs into labels and to know which statuses count as done. The plugin writes it; other tools should not. This schema describes the file as the plugin writes it; Matters reads more than it allows, repairing older or damaged files when it loads them. Later versions of Matters may add settings; the file at this address is updated to list them, and a change that would refuse what was valid before gets a new address (v2). A newer plugin raises schemaVersion when its settings change.",
+	"type": "object",
+	"required": [
+		"schemaVersion",
+		"setupDone",
+		"folders",
+		"statuses",
+		"types",
+		"spheres",
+		"inboxPath",
+		"boardPath",
+		"defaultInboxPosition",
+		"showDone",
+		"weekStart",
+		"dateLanguages",
+		"openMattersAsOverview",
+		"todayInNewTabs",
+		"inlineChips"
+	],
+	"properties": {
+		"schemaVersion": {
+			"description": "The version of this file's layout, raised by a newer plugin when its settings change. The plugin upgrades older files when it loads them. Version 7 adds linksAddActions.",
+			"type": "integer",
+			"minimum": 6,
+			"maximum": 7
+		},
+		"setupDone": {
+			"description": "Whether first-run setup has finished. Until it has, the plugin changes no notes except through setup.",
+			"type": "boolean"
+		},
+		"folders": {
+			"description": "Where new notes are created, as paths from the vault's root. Changing a folder never moves existing notes, and notes are recognised by mtm-kind wherever they are.",
+			"type": "object",
+			"required": [
+				"matters",
+				"actions",
+				"boards",
+				"people"
+			],
+			"properties": {
+				"matters": {
+					"description": "The folder for new Matter notes.",
+					"type": "string"
+				},
+				"actions": {
+					"description": "The folder for new Action notes.",
+					"type": "string"
+				},
+				"boards": {
+					"description": "The folder for the .base files that hold the board, list, calendar and timeline.",
+					"type": "string"
+				},
+				"people": {
+					"description": "The folder for new person notes. People can live anywhere in the vault.",
+					"type": "string"
+				}
+			},
+			"additionalProperties": false
+		},
+		"statuses": {
+			"description": "The workflow's statuses, in board column order. IDs are unique within the list. Exactly one is the backlog status and exactly one is the done status.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"$ref": "#/$defs/status"
+			},
+			"contains": {
+				"type": "object",
+				"required": [
+					"backlog"
+				],
+				"properties": {
+					"backlog": {
+						"const": true
+					}
+				}
+			},
+			"minContains": 1,
+			"maxContains": 1,
+			"allOf": [
+				{
+					"contains": {
+						"type": "object",
+						"required": [
+							"done"
+						],
+						"properties": {
+							"done": {
+								"const": true
+							}
+						}
+					},
+					"minContains": 1,
+					"maxContains": 1
+				}
+			]
+		},
+		"types": {
+			"description": "The Action types, in the order the plugin shows them. IDs are unique within the list. Exactly one is the default type.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"$ref": "#/$defs/type"
+			},
+			"contains": {
+				"type": "object",
+				"required": [
+					"default"
+				],
+				"properties": {
+					"default": {
+						"const": true
+					}
+				}
+			},
+			"minContains": 1,
+			"maxContains": 1
+		},
+		"spheres": {
+			"description": "The Spheres (spheres of life such as Home, Work or Family) that group Matters, in the order the plugin shows them. IDs are unique within the list. Empty when none are set up.",
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/sphere"
+			}
+		},
+		"inboxPath": {
+			"description": "The path of the Inbox note. This setting, not the note's name, decides which Matter is the Inbox.",
+			"type": "string",
+			"pattern": "\\.md$"
+		},
+		"boardPath": {
+			"description": "The path of the main board, which \"Open board\" opens (with several boards in the boards folder, it asks which).",
+			"type": "string",
+			"pattern": "\\.base$"
+		},
+		"defaultInboxPosition": {
+			"description": "Where the Inbox lane sits on boards that don't choose for themselves: top or bottom.",
+			"enum": [
+				"top",
+				"bottom"
+			]
+		},
+		"showDone": {
+			"description": "Whether the board, list, calendar and timeline show done Actions, unless a view chooses otherwise.",
+			"type": "boolean"
+		},
+		"weekStart": {
+			"description": "The first day of the week on the calendar: monday or sunday.",
+			"enum": [
+				"monday",
+				"sunday"
+			]
+		},
+		"dateLanguages": {
+			"description": "The languages quick add reads dates in: en (English), es (Spanish), or both.",
+			"type": "array",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": {
+				"enum": [
+					"en",
+					"es"
+				]
+			}
+		},
+		"openMattersAsOverview": {
+			"description": "Whether a Matter note opens as its overview rather than as a note.",
+			"type": "boolean"
+		},
+		"todayInNewTabs": {
+			"description": "When new tabs show \"What matters today?\": every (every new tab), alone (only when no other tab is open) or off.",
+			"enum": [
+				"every",
+				"alone",
+				"off"
+			]
+		},
+		"inlineChips": {
+			"description": "Whether links to Action notes show as chips in reading view and Live Preview.",
+			"type": "boolean"
+		},
+		"linksAddActions": {
+			"description": "Whether obsidian:// links may add Actions. Required from version 7 of this file; absent before it.",
+			"type": "boolean"
+		}
+	},
+	"additionalProperties": false,
+	"if": {
+		"required": [
+			"schemaVersion"
+		],
+		"properties": {
+			"schemaVersion": {
+				"const": 7
+			}
+		}
+	},
+	"then": {
+		"required": [
+			"linksAddActions"
+		],
+		"properties": {
+			"linksAddActions": {
+				"type": "boolean"
+			}
+		}
+	},
+	"else": {
+		"not": {
+			"required": [
+				"linksAddActions"
+			],
+			"properties": {
+				"linksAddActions": true
+			}
+		}
+	},
+	"$defs": {
+		"id": {
+			"description": "A stable ID, made once from the label when the item is created and never changed. Notes store it.",
+			"type": "string",
+			"minLength": 1
+		},
+		"label": {
+			"description": "The name shown in the plugin. It can change without touching any note.",
+			"type": "string"
+		},
+		"icon": {
+			"description": "The name of a Lucide icon, such as phone or house.",
+			"type": "string",
+			"minLength": 1
+		},
+		"tone": {
+			"description": "A colour from the plugin's palette.",
+			"enum": [
+				"mint",
+				"sky",
+				"butter",
+				"lavender",
+				"peach",
+				"bubblegum",
+				"ink"
+			]
+		},
+		"status": {
+			"description": "A status: one column of the board.",
+			"type": "object",
+			"required": [
+				"id",
+				"label",
+				"tone",
+				"category"
+			],
+			"properties": {
+				"id": {
+					"$ref": "#/$defs/id",
+					"description": "The status's ID, which Action notes store in mtm-status."
+				},
+				"label": {
+					"$ref": "#/$defs/label"
+				},
+				"tone": {
+					"$ref": "#/$defs/tone",
+					"description": "The colour of the status's pill and column heading. Status never colours a card."
+				},
+				"category": {
+					"description": "What the status means: open (not started), active (in progress or waiting) or closed (done). An Action in a closed status is done.",
+					"enum": [
+						"open",
+						"active",
+						"closed"
+					]
+				},
+				"backlog": {
+					"description": "Marks the backlog status, where captured Actions land and where \"Reopen\" puts them. Never a closed status.",
+					"type": "boolean"
+				},
+				"done": {
+					"description": "Marks the done status, which \"Mark as done\" sets. Always a closed status.",
+					"type": "boolean"
+				}
+			},
+			"allOf": [
+				{
+					"if": {
+						"required": [
+							"backlog"
+						],
+						"properties": {
+							"backlog": {
+								"const": true
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"category": {
+								"not": {
+									"const": "closed"
+								}
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"required": [
+							"done"
+						],
+						"properties": {
+							"done": {
+								"const": true
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"category": {
+								"const": "closed"
+							}
+						}
+					}
+				}
+			],
+			"additionalProperties": false
+		},
+		"type": {
+			"description": "An Action type: it gives its Actions their colour and icon.",
+			"type": "object",
+			"required": [
+				"id",
+				"label",
+				"icon",
+				"tone"
+			],
+			"properties": {
+				"id": {
+					"$ref": "#/$defs/id",
+					"description": "The type's ID, which Action notes store in mtm-type."
+				},
+				"label": {
+					"$ref": "#/$defs/label"
+				},
+				"icon": {
+					"$ref": "#/$defs/icon"
+				},
+				"tone": {
+					"$ref": "#/$defs/tone",
+					"description": "The colour of the type's cards."
+				},
+				"default": {
+					"description": "Marks the default type: used for new Actions without a type, and when an Action's type is absent or unknown.",
+					"type": "boolean"
+				}
+			},
+			"additionalProperties": false
+		},
+		"sphere": {
+			"description": "A Sphere: a label with an icon that groups related Matters.",
+			"type": "object",
+			"required": [
+				"id",
+				"label",
+				"icon"
+			],
+			"properties": {
+				"id": {
+					"$ref": "#/$defs/id",
+					"description": "The Sphere's ID, which Matter notes store in mtm-sphere."
+				},
+				"label": {
+					"$ref": "#/$defs/label"
+				},
+				"icon": {
+					"$ref": "#/$defs/icon"
+				}
+			},
+			"additionalProperties": false
+		}
+	}
+}
