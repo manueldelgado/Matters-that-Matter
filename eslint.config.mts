@@ -33,7 +33,7 @@ export default defineConfig(
 	...obsidianmd.configs.recommended,
 	{
 		// Node scripts, the test configuration and the tests that read files or run scripts: they never ship in the plugin.
-		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**', 'vitest.config.ts'],
+		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**', 'tests/skills/**', 'vitest.config.ts'],
 		languageOptions: {
 			globals: {
 				...globals.node,
