@@ -1,0 +1,4 @@
+- Wikilink: [[Hotel 50% (depósito) für Zoë]]
+- Markdown: [hotel](Hotel%2050%%20(depósito)%20für%20Zoë.md)
+- Markdown with the name: [Hotel 50% (depósito) für Zoë](Hotel%2050%%20(depósito)%20für%20Zoë.md)
+- In angle brackets: [brackets](<Hotel 50% (depósito) für Zoë.md>)

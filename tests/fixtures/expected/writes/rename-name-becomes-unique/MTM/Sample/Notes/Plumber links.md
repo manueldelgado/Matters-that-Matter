@@ -1,0 +1,3 @@
+- Lower case: [[Call the plumber]]
+- By path, to the plain note: [[MTM/Sample/Edge cases/Twins/Call the plumber]]
+- By path, to the Action: [[call the plumber later]]

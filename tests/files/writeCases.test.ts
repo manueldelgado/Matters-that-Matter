@@ -311,7 +311,8 @@ function bothTrees(c: WriteCase): { obsidian: Map<string, string>; mine: Map<str
 	const mine = new Map<string, string>(Object.entries(c.setup ?? {}));
 	for (const [path, text] of r.written) mine.set(path, text);
 	for (const path of r.removed) mine.delete(path);
-	return { obsidian, mine, obsidianRemoved, mineRemoved: r.removed };
+	// Obsidian's removed.json lists fixture files only; a setup note moved away was never in the fixture.
+	return { obsidian, mine, obsidianRemoved, mineRemoved: r.removed.filter((path) => !(path in (c.setup ?? {}))) };
 }
 
 /** What a note says: its properties as the index reads them, and its body with line endings made plain. */
