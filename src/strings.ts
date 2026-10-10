@@ -19,6 +19,7 @@ export const STRINGS = {
 	},
 	untitledAction: 'Untitled Action',
 	untitledMatter: 'Untitled Matter',
+	untitledPerson: 'Untitled person',
 
 	tones: {
 		mint: 'Mint',
@@ -728,6 +729,33 @@ export const STRINGS = {
 		spheres: 'Spheres',
 		spheresDesc: 'Group related Matters: Home, Work, Family. Each Matter is in one Sphere or none. Boards show them as bands and can focus on some.',
 		spheresAliases: ['groups', 'areas', 'spheres of life'],
+		otherTools: 'Other tools',
+		linksAddActions: 'Let links add Actions',
+		linksAddActionsDesc:
+			'Links that start with obsidian://mtm-add can add Actions, from Shortcuts, launchers, other apps or your own notes. They can’t change or delete anything, and each one shows a notice.',
+		linksAddActionsAliases: ['links', 'URI', 'obsidian://', 'Shortcuts', 'automation'],
+		otherToolsNote: 'Scripts and AI assistants can work with your Matters too, through the command line and an MCP server.',
+		otherToolsDocs: 'Connect other tools ↗',
+		otherToolsDocsUrl: 'https://matters-that-matter.app/docs/connect/',
+	},
+
+	/** obsidian://mtm-add, mtm-quick-add and mtm-open. */
+	links: {
+		fromLink: 'From a link',
+		tooMany: 'Stopped adding Actions from links: more than ten arrived in a minute. Links work again in a minute.',
+		tooManyOpens: 'Stopped opening things from links: more than ten arrived in a minute. Links work again in a minute.',
+		addFailed: (message: string) => `A link tried to add an Action, but the note couldn’t be written: ${message}`,
+		openFailed: (message: string) => `The link couldn’t open it: ${message}`,
+		turnedOff:
+			'A link tried to add an Action, but links can’t add Actions in this vault. You can allow it in Matters’ settings, under Other tools.',
+		notSetUp: 'Matters isn’t set up in this vault yet, so the link wasn’t used. Run setup first.',
+		notAdded: (reason: string) => `A link tried to add an Action, but it wasn’t added. ${reason}`,
+		noAction: (name: string) => `No Action called “${name}” here.`,
+		severalActions: (name: string, example: string) => `Several Actions are called “${name}”. Use its path in the link, such as ${example}.`,
+		noMatter: (name: string) => `No Matter called “${name}” here.`,
+		severalMatters: (name: string, example: string) => `Several Matters are called “${name}”. Use its path in the link, such as ${example}.`,
+		noBoard: (name: string) => `No board called “${name}” here.`,
+		severalBoards: (name: string, example: string) => `Several boards are called “${name}”. Use its path in the link, such as ${example}.`,
 	},
 
 	/** The `matters` code block in notes. */

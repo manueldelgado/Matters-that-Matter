@@ -58,12 +58,14 @@ export interface MattersSettings {
 	todayInNewTabs: TodayInNewTabs;
 	/** Links to Action notes render as chips in reading view and Live Preview. */
 	inlineChips: boolean;
+	/** `obsidian://mtm-add` links may add Actions (opening and the Quick add dialog work either way). */
+	linksAddActions: boolean;
 }
 
 export type TodayInNewTabs = 'every' | 'alone' | 'off';
 
 export const DEFAULT_SETTINGS: MattersSettings = {
-	schemaVersion: 6,
+	schemaVersion: 7,
 	setupDone: false,
 	folders: {
 		matters: 'MTM/Matters',
@@ -96,4 +98,5 @@ export const DEFAULT_SETTINGS: MattersSettings = {
 	openMattersAsOverview: true,
 	todayInNewTabs: 'every',
 	inlineChips: true,
+	linksAddActions: true,
 };

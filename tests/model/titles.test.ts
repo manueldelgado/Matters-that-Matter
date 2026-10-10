@@ -13,6 +13,8 @@ describe('sanitiseTitle', () => {
 
 	it('removes leading dots', () => {
 		expect(sanitiseTitle('...hidden')).toBe('hidden');
+		expect(sanitiseTitle('../../.config/plugins')).toBe('config plugins');
+		expect(sanitiseTitle('. . .x')).toBe('x');
 	});
 
 	it('caps the length at 100 characters', () => {

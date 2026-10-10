@@ -95,12 +95,35 @@ describe('schema 6', () => {
 	it('turns chips for links to Actions on for settings from schema 5', () => {
 		const s = migrateSettings({ schemaVersion: 5, setupDone: true });
 		expect(s.inlineChips).toBe(true);
-		expect(s.schemaVersion).toBe(6);
+		expect(s.schemaVersion).toBe(7);
 	});
 
 	it('keeps a choice and repairs a value that is not true or false', () => {
 		expect(migrateSettings({ schemaVersion: 6, inlineChips: false }).inlineChips).toBe(false);
 		expect(migrateSettings({ schemaVersion: 6, inlineChips: 'yes' }).inlineChips).toBe(true);
+	});
+});
+
+describe('schema 7', () => {
+	it('lets links add Actions for settings from schema 6', () => {
+		const s = migrateSettings({ schemaVersion: 6, setupDone: true, inlineChips: false });
+		expect(s.linksAddActions).toBe(true);
+		expect(s.inlineChips).toBe(false);
+		expect(s.schemaVersion).toBe(7);
+	});
+
+	it('keeps a choice already made, through the step and after it', () => {
+		expect(migrateSettings({ schemaVersion: 6, linksAddActions: false }).linksAddActions).toBe(false);
+		expect(migrateSettings({ schemaVersion: 7, linksAddActions: false }).linksAddActions).toBe(false);
+	});
+
+	it.each([['a string', 'no'], ['a number', 0], ['null', null], ['missing', undefined]])('repairs %s to on', (_name, value) => {
+		expect(migrateSettings({ schemaVersion: 7, linksAddActions: value }).linksAddActions).toBe(true);
+		expect(migrateSettings({ schemaVersion: 6, linksAddActions: value }).linksAddActions).toBe(true);
+	});
+
+	it('is on in the defaults', () => {
+		expect(DEFAULT_SETTINGS.linksAddActions).toBe(true);
 	});
 });
 

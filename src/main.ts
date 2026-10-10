@@ -31,6 +31,7 @@ import { Watchers } from './vault/watchers';
 import { pathSettingsAfterRename } from './services/renames';
 import { NoteDecorations } from './views/notes/noteDecorations';
 import { TodayPanels } from './views/today/todayPanels';
+import { LinkHandlers } from './links';
 
 export default class MattersPlugin extends Plugin {
 	settings!: MattersSettings;
@@ -55,6 +56,8 @@ export default class MattersPlugin extends Plugin {
 		this.registerView(VIEW_MATTER_OVERVIEW, (leaf) => new MatterOverviewView(leaf, this));
 		this.basesAvailable = registerCollectionViews(this);
 		registerCommands(this);
+		// obsidian:// links: registered now, run once the layout is ready (they wait for it on their own).
+		new LinkHandlers(this).register();
 		this.addSettingTab(new MattersSettingTab(this.app, this));
 		this.ribbonEl = this.addRibbonIcon('square-kanban', STRINGS.ribbon, () => void this.openBoard());
 		this.ribbonEl.addClass('mtm-ribbon');
@@ -178,6 +181,12 @@ export default class MattersPlugin extends Plugin {
 		const board = vault.getFileByPath(normalizePath(this.settings.boardPath)) ?? boards[0];
 		if (board) open(board);
 		else new Notice(STRINGS.notices.boardMissing(this.settings.boardPath));
+	}
+
+	/** Opens one board file (an obsidian://mtm-open link names it). */
+	async openBoardFile(file: TFile): Promise<void> {
+		this.pendingReveal = null;
+		await this.showBoardFile(file, null);
 	}
 
 	/** A board already open is brought forward; otherwise it opens in a new tab, never over the note being read. */
