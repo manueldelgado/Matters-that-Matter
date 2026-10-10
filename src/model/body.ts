@@ -50,7 +50,7 @@ function fenced(lines: readonly string[]): boolean[] {
 // They are recognised by their token alone, at the start of a line and outside code blocks; the rest is a note
 // for people reading the file, and is rewritten to the standard wording whenever the plugin writes the body.
 
-export const DETAILS_OPEN = "<!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->";
+export const DETAILS_OPEN = "<!-- mtm-details: the Action's details, as edited in Matters that Matter. Keep this line. -->";
 export const DETAILS_CLOSE = '<!-- /mtm-details: end of the details. Write details above this line. -->';
 const OPEN_RE = /^<!-- mtm-details(?![\w-])/;
 const CLOSE_RE = /^<!-- \/mtm-details(?![\w-])/;

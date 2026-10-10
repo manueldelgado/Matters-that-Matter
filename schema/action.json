@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://matters-that-matter.app/schema/v1/action.json",
 	"title": "Action note properties",
-	"description": "The properties of an Action note in Matters that Matter: one unit of work, shown as one card on the board. The note's file name is the Action's title and its body holds the details and checklist. Only the mtm- properties listed here belong to an Action; any property without the mtm- prefix is allowed and left alone. A note needs only mtm-kind to be an Action, but a tool that creates one should also set mtm-type, mtm-status and mtm-matter, as Matters does. Statuses and types are IDs from the plugin's settings (data.json; see settings.json), never labels. This schema describes what a tool should write; Matters reads more than it allows (older forms and values written by hand) and never rewrites them on its own. Later versions of Matters may add mtm- properties; the file at this address is updated to list them, and a change that would refuse what was valid before gets a new address (v2).",
+	"description": "The properties of an Action note in Matters that Matter: one unit of work, shown as one card on the board. The note's file name is the Action's title and its body holds the details and checklist. Only the mtm- properties listed here belong to an Action; any property without the mtm- prefix is allowed and left alone. A note needs only mtm-kind to be an Action, but a tool that creates one should also set mtm-type, mtm-status and mtm-matter, as the plugin does. Statuses and types are IDs from the plugin's settings (data.json; see settings.json), never labels. This schema describes what a tool should write; Matters that Matter reads more than it allows (older forms and values written by hand) and never rewrites them on its own. Later versions of the plugin may add mtm- properties; the file at this address is updated to list them, and a change that would refuse what was valid before gets a new address (v2).",
 	"type": "object",
 	"required": [
 		"mtm-kind"
@@ -27,11 +27,11 @@
 			"$ref": "#/$defs/link"
 		},
 		"mtm-start": {
-			"description": "When work on the Action starts: YYYY-MM-DD for a whole day, or YYYY-MM-DDTHH:mm for a time (24-hour clock, local time, no seconds or time zone). Optional. On its own it marks a single day on the calendar and the timeline. Matters also reads a time with seconds (which Obsidian's date picker writes) and a space before the time, but a tool should write one of these two forms.",
+			"description": "When work on the Action starts: YYYY-MM-DD for a whole day, or YYYY-MM-DDTHH:mm for a time (24-hour clock, local time, no seconds or time zone). Optional. On its own it marks a single day on the calendar and the timeline. Matters that Matter also reads a time with seconds (which Obsidian's date picker writes) and a space before the time, but a tool should write one of these two forms.",
 			"$ref": "#/$defs/dateOrDateTime"
 		},
 		"mtm-due": {
-			"description": "When the Action is due: YYYY-MM-DD for a whole day, or YYYY-MM-DDTHH:mm for a time (24-hour clock, local time, no seconds or time zone). Optional. A whole-day Action is overdue from the next day; a timed one once its time has passed. Done Actions are never overdue. Matters also reads a time with seconds (which Obsidian's date picker writes) and a space before the time, but a tool should write one of these two forms.",
+			"description": "When the Action is due: YYYY-MM-DD for a whole day, or YYYY-MM-DDTHH:mm for a time (24-hour clock, local time, no seconds or time zone). Optional. A whole-day Action is overdue from the next day; a timed one once its time has passed. Done Actions are never overdue. Matters that Matter also reads a time with seconds (which Obsidian's date picker writes) and a space before the time, but a tool should write one of these two forms.",
 			"$ref": "#/$defs/dateOrDateTime"
 		},
 		"mtm-priority": {
@@ -55,7 +55,7 @@
 			}
 		},
 		"mtm-waiting-since": {
-			"description": "The day mtm-waiting-on was set or last changed to another person, as YYYY-MM-DD. Set it to today when you set or change mtm-waiting-on, and remove it when you remove mtm-waiting-on. Never fill it in for older Actions that lack it. Matters ignores it while mtm-waiting-on is absent.",
+			"description": "The day mtm-waiting-on was set or last changed to another person, as YYYY-MM-DD. Set it to today when you set or change mtm-waiting-on, and remove it when you remove mtm-waiting-on. Never fill it in for older Actions that lack it. The plugin ignores it while mtm-waiting-on is absent.",
 			"$ref": "#/$defs/date"
 		},
 		"mtm-completed": {
@@ -63,7 +63,7 @@
 			"$ref": "#/$defs/date"
 		},
 		"mtm-order": {
-			"description": "The Action's position within its board cell, lower first, on boards and lists ordered by hand. Written by Matters; other tools never need to set it, and should remove it when they move the Action to another status or Matter, as Matters does.",
+			"description": "The Action's position within its board cell, lower first, on boards and lists ordered by hand. Written by Matters that Matter; other tools never need to set it, and should remove it when they move the Action to another status or Matter, as the plugin does.",
 			"type": "number"
 		},
 		"mtm-sample": {

@@ -269,7 +269,7 @@ function usageError(ctx: Context, message: string): number {
 	return EXIT.unmatched;
 }
 
-/** Reads work before setup, but say so: what they show may not be what Matters will show. */
+/** Reads work before setup, but say so: what they show may not be what the plugin will show. */
 function setupHint(ctx: Context): void {
 	if (!ctx.vault.settings.setupDone) print(ctx.io.stderr, ctx.err.y(STRINGS.ops.notSetUp));
 }

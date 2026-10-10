@@ -1,6 +1,6 @@
-// `mtm mcp`: Matters as an MCP server over stdio, for AI assistants. Ten tools over the same operations as the
+// `mtm mcp`: Matters that Matter as an MCP server over stdio, for AI assistants. Ten tools over the same operations as the
 // command line; each call reads the vault afresh, and writes go through the same all-or-nothing writer. No network
-// listener, only Matters data out (an Action's details, checklist and the names of linked notes, never other notes'
+// listener, only the plugin's data out (an Action's details, checklist and the names of linked notes, never other notes'
 // content), nothing deleted, settings never written.
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';

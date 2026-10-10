@@ -118,7 +118,7 @@ const HOSTILE: [string, LinkParams, string | null, string | null, string[]][] = 
 	// Fences inside quotes, callouts and lists
 	['a tilde fence in a quote', { title: 'A', details: '> ~~~dataviewjs\n> dv.x\n> ~~~' }, 'MTM/Actions/A.md', '> \\~\\~\\~dataviewjs\n> dv.x\n> \\~\\~\\~\n', []],
 	['a tilde fence right after the quote marker', { title: 'A', details: '>~~~dataviewjs' }, 'MTM/Actions/A.md', '>\\~\\~\\~dataviewjs\n', []],
-	['tilde fences in list items', { title: 'A', details: '- ~~~dataviewjs\n1. ~~~dataviewjs' }, 'MTM/Actions/A.md', "<!-- mtm-details: the Action's details, as edited in Matters. Keep this line. -->\n- \\~\\~\\~dataviewjs\n1. \\~\\~\\~dataviewjs\n<!-- /mtm-details: end of the details. Write details above this line. -->\n", []],
+	['tilde fences in list items', { title: 'A', details: '- ~~~dataviewjs\n1. ~~~dataviewjs' }, 'MTM/Actions/A.md', "<!-- mtm-details: the Action's details, as edited in Matters that Matter. Keep this line. -->\n- \\~\\~\\~dataviewjs\n1. \\~\\~\\~dataviewjs\n<!-- /mtm-details: end of the details. Write details above this line. -->\n", []],
 	['a long run of tildes', { title: 'A', details: '~~~~~~js' }, 'MTM/Actions/A.md', '\\~\\~\\~\\~\\~\\~js\n', []],
 	// Schemes behind a backslash, next to web addresses, and in links a renderer reads loosely
 	['a backslash before a bare scheme', { title: 'A', details: '\\obsidian://evil' }, 'MTM/Actions/A.md', '\\\\obsidian\\://evil\n', []],

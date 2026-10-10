@@ -40,7 +40,7 @@ describe('repeated notices from links', () => {
 		const gap = new NoticeGap();
 		expect(gap.allow('No Action called “x” here.', T0)).toBe(true);
 		expect(gap.allow('No Action called “x” here.', T0 + 1_000)).toBe(false);
-		expect(gap.allow('Matters isn’t set up', T0 + 1_000)).toBe(true);
+		expect(gap.allow('Matters that Matter isn’t set up', T0 + 1_000)).toBe(true);
 		expect(gap.allow('No Action called “x” here.', T0 + NOTICE_GAP_MS)).toBe(true);
 	});
 

@@ -1,5 +1,5 @@
 // `mtm open`: an `obsidian://mtm-open` link for an Action or a Matter, handed to the system to open. The plugin
-// handles the link (it needs a version of Matters with links).
+// handles the link (it needs a version of the plugin with links).
 //
 // The link names the vault by its ID when Obsidian's own list of vaults (`obsidian.json`) knows the folder, so two
 // vaults with the same folder name can't be confused; otherwise by the folder's name, as Obsidian shows it.
@@ -13,7 +13,7 @@ export type Opener = (url: string) => Promise<void>;
 /** What a link opens: an Action note (`file`, as Obsidian's own links name notes), a Matter or a board. */
 export type OpenTarget = { file: string } | { matter: string } | { board: string };
 
-/** The link Matters opens: `obsidian://mtm-open?vault=<ID or name>&file=<path>` (or `matter=`, `board=`). */
+/** The link the plugin opens: `obsidian://mtm-open?vault=<ID or name>&file=<path>` (or `matter=`, `board=`). */
 export function openUrl(vault: string, target: OpenTarget): string {
 	const [key, value] = Object.entries(target)[0] as [string, string];
 	return `obsidian://mtm-open?vault=${encodeURIComponent(vault)}&${key}=${encodeURIComponent(value)}`;

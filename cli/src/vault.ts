@@ -1,4 +1,4 @@
-// Finding the vault and Matters' settings in it. A folder without an Obsidian configuration folder, or without the
+// Finding the vault and the plugin's settings in it. A folder without an Obsidian configuration folder, or without the
 // plugin's settings, isn't ready: nothing is read from it and nothing is written to it. Settings go through the
 // plugin's own migrations, as the plugin reads them; settings from a newer version are read as they are (the
 // operations then warn on reads and refuse writes).
