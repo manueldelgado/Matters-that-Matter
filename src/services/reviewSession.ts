@@ -125,16 +125,18 @@ export interface ReviewTally {
 	closed: number;
 	nextAdded: number;
 	outcomes: number;
+	/** Matters that got a review note. */
+	notes: number;
 }
 
 export function emptyTally(): ReviewTally {
-	return { reviewed: 0, skipped: 0, woken: 0, madeDormant: 0, closed: 0, nextAdded: 0, outcomes: 0 };
+	return { reviewed: 0, skipped: 0, woken: 0, madeDormant: 0, closed: 0, nextAdded: 0, outcomes: 0, notes: 0 };
 }
 
 export type TallyKey = keyof ReviewTally;
 
 /** The tally's lines in a fixed order, without zeros. */
 export function tallyLines(t: ReviewTally): { key: TallyKey; count: number }[] {
-	const order: TallyKey[] = ['reviewed', 'nextAdded', 'outcomes', 'woken', 'madeDormant', 'closed', 'skipped'];
+	const order: TallyKey[] = ['reviewed', 'nextAdded', 'outcomes', 'notes', 'woken', 'madeDormant', 'closed', 'skipped'];
 	return order.filter((key) => t[key] > 0).map((key) => ({ key, count: t[key] }));
 }

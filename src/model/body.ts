@@ -1,4 +1,7 @@
-// Action note body: details and checklist. Edits change only the targeted lines, and repair damaged details markers.
+// Note bodies: an Action's details and checklist, and the review notes at the end of a Matter note.
+// Edits change only the targeted lines, and repair damaged details markers.
+
+import { parseMtmDate, type Ymd } from './dates';
 
 const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/;
 const LIST_RE = /^\s*(?:[-*+]|\d+[.)])(?:\s|$)/;
@@ -310,4 +313,102 @@ export function toggleTask(content: string, line: number, text: string, checked:
 	const matches = (i: number) => parseTask(lines[i] ?? '')?.text === text;
 	const target = matches(line) ? line : taskLines(content).find(matches);
 	return target === undefined ? content : repairDetailsMarkers(setTaskChecked(content, target, checked));
+}
+
+// ——— Review notes ———
+// A review can leave one dated line at the end of the Matter note: "- Reviewed 2026-10-09: text". The word stays
+// English in notes whatever the interface language, so the line's shape always recognises it.
+
+/** Review notes are capped at this many characters. */
+export const REVIEW_NOTE_MAX = 300;
+const REVIEW_LINE_RE = /^- Reviewed (\d{4}-\d{2}-\d{2}): (.+)$/;
+
+export interface ReviewNote {
+	date: Ymd;
+	text: string;
+}
+
+/** Line breaks of every kind, and tabs: none of them may stay in a one-line note. */
+const NOTE_BREAKS_RE = /[^\S\r\n\t\v\f\u0085\u2028\u2029]*[\r\n\t\v\f\u0085\u2028\u2029]+\s*/g;
+
+/** The text as it is written: trimmed, line breaks and tabs as spaces, capped. Everything else is kept as typed. */
+export function cleanReviewNote(text: string): string {
+	const flat = text.replace(NOTE_BREAKS_RE, ' ').trim();
+	// Capped by characters, not UTF-16 units, so an emoji is never cut in half.
+	const chars = Array.from(flat);
+	return chars.length > REVIEW_NOTE_MAX ? chars.slice(0, REVIEW_NOTE_MAX).join('').trimEnd() : flat;
+}
+
+/** The line a review note is written as, or null when the text is empty. */
+export function reviewNoteLine(ymd: Ymd, text: string): string | null {
+	const clean = cleanReviewNote(text);
+	return clean ? `- Reviewed ${ymd}: ${clean}` : null;
+}
+
+/** The review note on a line, or null (other lines, malformed dates, empty text). */
+export function parseReviewNote(line: string): ReviewNote | null {
+	const m = REVIEW_LINE_RE.exec(line.replace(/\r$/, ''));
+	const date = m ? parseMtmDate(m[1]) : null;
+	const text = (m?.[2] ?? '').trim();
+	return date && !date.time && text ? { date: date.date, text } : null;
+}
+
+/** The latest review note in the body (by date, then the later line), or null. Frontmatter and code blocks never count. */
+export function latestReviewNote(content: string): ReviewNote | null {
+	let latest: ReviewNote | null = null;
+	const lines = splitFrontmatter(content).body.replace(/\r\n/g, '\n').split('\n');
+	const inCode = fenced(lines);
+	for (let i = 0; i < lines.length; i++) {
+		if (inCode[i]) continue;
+		const note = parseReviewNote(lines[i] ?? '');
+		if (note && (!latest || note.date >= latest.date)) latest = note;
+	}
+	return latest;
+}
+
+/** Adds a line after the body's last non-empty line: a blank line first unless that line is a review note; one trailing newline. */
+function appendLine(content: string, line: string): string {
+	const { frontmatter, body } = splitFrontmatter(content);
+	const head = frontmatter && !frontmatter.endsWith('\n') ? `${frontmatter}\n` : frontmatter;
+	const lines = body.split('\n');
+	let end = lines.length;
+	while (end > 0 && (lines[end - 1] ?? '').trim() === '') end--;
+	if (!end) return `${head}${line}\n`;
+	const kept = lines.slice(0, end);
+	const gap = parseReviewNote(kept[end - 1] ?? '') ? [] : [''];
+	return `${head}${[...kept, ...gap, line].join('\n')}\n`;
+}
+
+/** Appends "- Reviewed <ymd>: <text>" at the end of the note. Empty text leaves the note unchanged. */
+export function appendReviewNote(content: string, ymd: Ymd, text: string): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return appendReviewNote(content.replace(/\r\n/g, '\n'), ymd, text).replace(/\n/g, eol);
+	const line = reviewNoteLine(ymd, text);
+	return line ? appendLine(content, line) : content;
+}
+
+/**
+ * Replaces a review note written earlier (`previous`, the exact line) with a new one, in place: its last occurrence
+ * in the body, so an earlier identical note stays. Empty text removes it. When the line isn't there any more
+ * (edited or deleted by hand), the new note is appended instead.
+ */
+export function replaceReviewNote(content: string, previous: string, ymd: Ymd, text: string): string {
+	const eol = eolOf(content);
+	if (eol !== '\n') return replaceReviewNote(content.replace(/\r\n/g, '\n'), previous, ymd, text).replace(/\n/g, eol);
+	const line = reviewNoteLine(ymd, text);
+	const { frontmatter, body } = splitFrontmatter(content);
+	const lines = body.split('\n');
+	let at = -1;
+	for (let i = lines.length - 1; i >= 0 && at < 0; i--) if ((lines[i] ?? '').trimEnd() === previous.trimEnd()) at = i;
+	if (at < 0) return line ? appendLine(content, line) : content;
+	if (line) {
+		lines[at] = line;
+		return frontmatter + lines.join('\n');
+	}
+	lines.splice(at, 1);
+	// Removing the last note leaves no trailing blank lines behind.
+	let end = lines.length;
+	while (end > 0 && (lines[end - 1] ?? '').trim() === '') end--;
+	if (end === lines.length || at < end) return frontmatter + lines.join('\n');
+	return end ? `${frontmatter}${lines.slice(0, end).join('\n')}\n` : frontmatter;
 }

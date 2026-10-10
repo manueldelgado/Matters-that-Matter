@@ -79,6 +79,7 @@ export function renderTally(parent: HTMLElement, tally: ReviewTally): void {
 		reviewed: 'circle-check',
 		nextAdded: 'arrow-right-to-line',
 		outcomes: 'flag',
+		notes: 'sticky-note',
 		woken: 'circle-play',
 		madeDormant: 'moon',
 		closed: 'archive',
@@ -92,4 +93,45 @@ export function renderTally(parent: HTMLElement, tally: ReviewTally): void {
 		appendIcon(token, icons[key]);
 		token.appendText(t[key](count));
 	}
+}
+
+/**
+ * The review note: one line, saved when it commits (Enter or leaving the field), like the outcome. Escape puts back
+ * what was saved and leaves the field, without closing the dialog. Enter never also moves to the next step.
+ * `onCommit` returns the text now kept.
+ */
+export function renderNoteField(parent: HTMLElement, saved: string, onCommit: (text: string) => string): HTMLInputElement {
+	const r = STRINGS.review;
+	const input = parent.createEl('input', {
+		cls: 'mtm-review-note',
+		type: 'text',
+		value: saved,
+		// No maxlength: it counts UTF-16 units, and a pasted note is put on one line before it is capped.
+		attr: { placeholder: r.notePlaceholder, 'aria-label': r.questions.note, spellcheck: 'true' },
+	});
+	let cancelled = false;
+	input.addEventListener('keydown', (e) => {
+		if (e.isComposing) return;
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			e.stopPropagation();
+			input.blur();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			e.stopPropagation();
+			cancelled = true;
+			input.blur();
+		}
+	});
+	input.addEventListener('blur', () => {
+		if (cancelled) {
+			cancelled = false;
+			input.value = saved;
+			return;
+		}
+		// The field shows the text as it is written (trimmed, on one line).
+		saved = onCommit(input.value);
+		input.value = saved;
+	});
+	return input;
 }

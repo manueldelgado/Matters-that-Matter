@@ -3,6 +3,7 @@
 import { Component, debounce, ItemView, Keymap, MarkdownRenderer, normalizePath, Notice, type Menu, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
+import { latestReviewNote } from '../../model/body';
 import { toYmd } from '../../model/dates';
 import type { Cadence, MatterState } from '../../model/matters';
 import { overviewModel } from '../../services/overviewModel';
@@ -158,7 +159,9 @@ export class MatterOverviewView extends ItemView {
 		const today = toYmd(now);
 		const matter = matterInfo(app, file, settings, today);
 		const items = allActionItems(app, settings).filter((i) => i.effective.matterPath === file.path);
-		const body = matter.isInbox ? null : await noteBody(app, file);
+		const content = matter.isInbox ? null : await app.vault.cachedRead(file);
+		const body = content === null ? null : noteBody(app, file, content);
+		const lastNote = content === null ? null : latestReviewNote(content);
 		if (token !== this.renderToken) return;
 
 		refreshViewTitle(this);
@@ -172,6 +175,7 @@ export class MatterOverviewView extends ItemView {
 				file,
 				rawCadence: frontmatterOf(app, file)?.['mtm-review-every'],
 				body,
+				lastNote,
 				model: overviewModel(items, settings.statuses, now, today, this.showAllDone),
 				people: peopleOf(app, items.map((i) => i.path)),
 				notes: backlinksTo(app, file),
