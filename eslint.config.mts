@@ -31,7 +31,7 @@ export default defineConfig(
 	...obsidianmd.configs.recommended,
 	{
 		// Node scripts and the tests that run them: they never ship in the plugin.
-		files: ['scripts/**', 'tests/scripts/**'],
+		files: ['scripts/**', 'tests/scripts/**', 'tests/files/**'],
 		languageOptions: {
 			globals: {
 				...globals.node,
@@ -43,8 +43,8 @@ export default defineConfig(
 		},
 	},
 	{
-		// It imports its own bundle of the plugin's source from a data URL; the rule guards against injected markup.
-		files: ['scripts/fixture-vault.mjs'],
+		// They import their own bundle of the plugin's source from a data URL; the rule guards against injected markup.
+		files: ['scripts/fixture-vault.mjs', 'scripts/perf-files.mjs'],
 		rules: {
 			'no-unsanitized/method': 'off',
 		},
