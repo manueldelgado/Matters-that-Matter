@@ -1373,6 +1373,9 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .mtm-review-last>.svg-icon{flex:none;align-self:center;width:14px;height:14px;color:var(--mtm-butter-icon)}
 .mtm-review-last-when{flex:none;font-size:11.5px;font-weight:700;color:var(--text-muted)}
 .mtm-review-last-text{font-family:var(--mtm-font-display);font-size:14px}
+/* Phones: the modal doesn't wrap text, so long lines would widen the sheet. */
+.mtm-review-since,.mtm-review-last{white-space:normal}
+.mtm-review-last-text{min-width:0;overflow-wrap:anywhere}
 /* Overview: the same line under the review controls. */
 .mtm-overview-controls+.mtm-review-last{margin:10px 0 0}
 /* ——— Show on board ——— */
