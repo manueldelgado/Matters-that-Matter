@@ -1,5 +1,5 @@
 // A Matter's editable parts, shared by the Matter overview and the review session: the outcome (edited in place),
-// the state control and the review rhythm.
+// the state control and the review rhythm; and the latest review note.
 
 import { parseCadence, type Cadence, type MatterState } from '../../model/matters';
 import { STRINGS } from '../../strings';
@@ -112,4 +112,18 @@ export function renderCadenceControl(parent: HTMLElement, rawCadence: unknown, c
 		if (custom && !cadence) fields.focus();
 	}
 	if (raw && !cadence) parent.createSpan({ cls: 'mtm-field-hint', text: o.invalidCadence(raw) });
+}
+
+/**
+ * The latest review note, as a margin note: "Last time, 23 Sep" (or "Last note, …") and the text. Appended to
+ * `parent`, or with `after`, placed right after that element.
+ */
+export function renderLastNote(parent: HTMLElement, when: string, text: string, after?: HTMLElement): HTMLElement {
+	const el = createDiv({ cls: 'mtm-review-last' });
+	if (after) after.after(el);
+	else parent.appendChild(el);
+	appendIcon(el, 'sticky-note');
+	el.createSpan({ cls: 'mtm-review-last-when', text: when });
+	el.createSpan({ cls: 'mtm-review-last-text', text });
+	return el;
 }

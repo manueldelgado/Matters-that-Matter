@@ -125,11 +125,12 @@ describe('the end of a session', () => {
 	});
 
 	it('tallies in a fixed order, without zeros', () => {
-		const t = { ...emptyTally(), reviewed: 3, outcomes: 1, nextAdded: 1 };
+		const t = { ...emptyTally(), reviewed: 3, outcomes: 1, nextAdded: 1, notes: 2 };
 		expect(tallyLines(t)).toEqual([
 			{ key: 'reviewed', count: 3 },
 			{ key: 'nextAdded', count: 1 },
 			{ key: 'outcomes', count: 1 },
+			{ key: 'notes', count: 2 },
 		]);
 		expect(tallyLines(emptyTally())).toEqual([]);
 	});

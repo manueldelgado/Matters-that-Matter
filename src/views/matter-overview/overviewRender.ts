@@ -4,13 +4,14 @@ import { setIcon, setTooltip, type TFile } from 'obsidian';
 import type { MattersSettings } from '../../settings';
 import { backlogStatus } from '../../model/workflow';
 import { STRINGS } from '../../strings';
-import { dayLabel, toYmd, type Ymd } from '../../model/dates';
+import type { ReviewNote } from '../../model/body';
+import { dayLabel, shortDate, toYmd, type Ymd } from '../../model/dates';
 import type { Cadence, MatterState } from '../../model/matters';
 import type { ActionItem } from '../../services/actionItems';
 import type { MatterInfo } from '../../services/boardModel';
 import { reviewState, type OverviewModel } from '../../services/overviewModel';
 import { avatarEl, bindCardActions, renderCard } from '../../ui/components/card';
-import { renderCadenceControl, renderOutcomeField, renderStateSeg, STATE_ICONS } from '../../ui/components/matterControls';
+import { renderCadenceControl, renderLastNote, renderOutcomeField, renderStateSeg, STATE_ICONS } from '../../ui/components/matterControls';
 import { appendIcon, pressable, statusClasses, tileEl } from '../../ui/components/dom';
 
 export interface OverviewData {
@@ -19,6 +20,8 @@ export interface OverviewData {
 	rawCadence: unknown;
 	/** Null for the Inbox, which has no about section. */
 	body: string | null;
+	/** The latest review note; null for the Inbox or without one. */
+	lastNote: ReviewNote | null;
 	model: OverviewModel;
 	people: TFile[];
 	notes: TFile[];
@@ -164,6 +167,8 @@ function renderControls(header: HTMLElement, d: OverviewData, h: OverviewHandler
 	}
 
 	renderCadenceControl(controls, d.rawCadence, d.customCadence, h, o.review);
+
+	if (d.lastNote) renderLastNote(header, o.lastNote(shortDate(d.lastNote.date, d.today)), d.lastNote.text);
 }
 
 function renderStats(header: HTMLElement, d: OverviewData): void {

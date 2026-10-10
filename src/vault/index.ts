@@ -116,9 +116,8 @@ export function backlinksTo(app: App, target: TFile): TFile[] {
 	return out.sort((a, b) => b.stat.mtime - a.stat.mtime);
 }
 
-/** The note's body: the text after the frontmatter. */
-export async function noteBody(app: App, file: TFile): Promise<string> {
-	const text = await app.vault.cachedRead(file);
+/** The note's body: the text after the frontmatter. `text` is the note's content, already read. */
+export function noteBody(app: App, file: TFile, text: string): string {
 	const end = app.metadataCache.getFileCache(file)?.frontmatterPosition?.end.offset;
 	return end === undefined ? text : text.slice(end).replace(/^\r?\n/, '');
 }

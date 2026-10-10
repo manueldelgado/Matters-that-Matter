@@ -6,6 +6,7 @@ import {
 	compareMtmDates,
 	dateLabel,
 	dayLabel,
+	shortDate,
 	daysBetween,
 	formatMtmDate,
 	isOverdue,
@@ -154,5 +155,13 @@ describe('fromInputs', () => {
 		expect(fromInputs('', '09:30')).toBeNull();
 		expect(fromInputs('2026-02-30', '')).toBeNull();
 		expect(fromInputs('2026-10-15', '25:00')).toEqual({ date: '2026-10-15' });
+	});
+});
+
+describe('shortDate', () => {
+	it('is the day and short month, with the year when not this year', () => {
+		expect(shortDate('2026-09-23', '2026-10-10')).toBe('23 Sep');
+		expect(shortDate('2026-10-09', '2026-10-10')).toBe('9 Oct');
+		expect(shortDate('2025-12-30', '2026-01-02')).toBe('30 Dec 2025');
 	});
 });

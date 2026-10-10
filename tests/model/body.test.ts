@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+	appendReviewNote,
 	checklistItems,
+	cleanReviewNote,
+	latestReviewNote,
+	parseReviewNote,
+	replaceReviewNote,
+	REVIEW_NOTE_MAX,
+	reviewNoteLine,
 	DETAILS_CLOSE as C,
 	DETAILS_OPEN as O,
 	getDetails,
@@ -356,6 +363,147 @@ describe('details markers', () => {
 			const damaged = crlf(`${fm}${O}\nBuy:\n- milk\n\n- [ ] Ask\n`);
 			expect(getDetails(damaged)).toBe('Buy:\n- milk');
 			expect(toggleTask(damaged, 7, 'Ask', true)).toBe(crlf(`${fm}${O}\nBuy:\n- milk\n${C}\n\n- [x] Ask\n`));
+		});
+	});
+});
+
+describe('review notes', () => {
+	const matter = '---\nmtm-kind: matter\nmtm-state: active\n---\n';
+	const day = '2026-10-09';
+
+	describe('appending', () => {
+		it('writes the line alone in an empty body', () => {
+			expect(appendReviewNote(matter, day, 'Chase Marco')).toBe(`${matter}- Reviewed 2026-10-09: Chase Marco\n`);
+			expect(appendReviewNote('', day, 'Chase Marco')).toBe('- Reviewed 2026-10-09: Chase Marco\n');
+		});
+
+		it('writes after frontmatter without a final newline', () => {
+			expect(appendReviewNote('---\nmtm-kind: matter\n---', day, 'Note')).toBe('---\nmtm-kind: matter\n---\n- Reviewed 2026-10-09: Note\n');
+		});
+
+		it('leaves a blank line after text, and ends with one newline', () => {
+			expect(appendReviewNote(`${matter}Budget agreed.`, day, 'Tiler free')).toBe(`${matter}Budget agreed.\n\n- Reviewed 2026-10-09: Tiler free\n`);
+			expect(appendReviewNote(`${matter}Budget agreed.\n\n\n`, day, 'Tiler free')).toBe(`${matter}Budget agreed.\n\n- Reviewed 2026-10-09: Tiler free\n`);
+		});
+
+		it('leaves a blank line after a list that is not review notes', () => {
+			expect(appendReviewNote(`${matter}Plan:\n- [ ] Quote\n- Tiles\n`, day, 'Note')).toBe(`${matter}Plan:\n- [ ] Quote\n- Tiles\n\n- Reviewed 2026-10-09: Note\n`);
+		});
+
+		it('joins earlier review notes without a blank line', () => {
+			const before = `${matter}Text\n\n- Reviewed 2026-09-23: Chase Marco\n\n`;
+			expect(appendReviewNote(before, day, 'Tiler free')).toBe(`${matter}Text\n\n- Reviewed 2026-09-23: Chase Marco\n- Reviewed 2026-10-09: Tiler free\n`);
+		});
+
+		it('keeps CRLF line endings', () => {
+			const crlf = '---\r\nmtm-kind: matter\r\n---\r\nBudget agreed.\r\n';
+			expect(appendReviewNote(crlf, day, 'Note')).toBe('---\r\nmtm-kind: matter\r\n---\r\nBudget agreed.\r\n\r\n- Reviewed 2026-10-09: Note\r\n');
+		});
+
+		it('writes nothing for empty text', () => {
+			expect(appendReviewNote(`${matter}Text`, day, '  \n\t ')).toBe(`${matter}Text`);
+			expect(reviewNoteLine(day, ' ')).toBeNull();
+		});
+	});
+
+	describe('the text', () => {
+		it('is trimmed, with line breaks and tabs as spaces', () => {
+			expect(cleanReviewNote('  Chase Marco\nif nothing\r\nby Friday\tthanks  ')).toBe('Chase Marco if nothing by Friday thanks');
+			expect(cleanReviewNote('a \n\n b')).toBe('a b');
+		});
+
+		it('puts every kind of line break on one line, so the line written can be found again', () => {
+			const odd = 'a\u2028b\u2029c\vd\fe\u0085f';
+			expect(cleanReviewNote(odd)).toBe('a b c d e f');
+			const line = reviewNoteLine(day, odd) ?? '';
+			const once = appendReviewNote(`${matter}Text\n`, day, odd);
+			expect(once.split('\n')).toContain(line);
+			expect(replaceReviewNote(once, line, day, 'Second')).toBe(`${matter}Text\n\n- Reviewed 2026-10-09: Second\n`);
+		});
+
+		it('keeps backticks, links and embeds as typed', () => {
+			expect(cleanReviewNote('Ask `Marco` about [[Quote]] and ![[plan.png]]')).toBe('Ask `Marco` about [[Quote]] and ![[plan.png]]');
+		});
+
+		it('is capped', () => {
+			expect(cleanReviewNote('x'.repeat(400))).toHaveLength(REVIEW_NOTE_MAX);
+			expect(Array.from(cleanReviewNote('😀'.repeat(400)))).toHaveLength(REVIEW_NOTE_MAX);
+			expect(cleanReviewNote(`${'x'.repeat(299)} y`)).toBe('x'.repeat(299));
+		});
+	});
+
+	describe('replacing the line written in this step', () => {
+		it('replaces it in place', () => {
+			const once = appendReviewNote(`${matter}Text\n`, day, 'First');
+			expect(replaceReviewNote(once, '- Reviewed 2026-10-09: First', day, 'Second')).toBe(`${matter}Text\n\n- Reviewed 2026-10-09: Second\n`);
+		});
+
+		it('leaves an earlier note from the same day alone, even with the same text', () => {
+			const earlier = `${matter}Text\n\n- Reviewed 2026-10-09: Same\n`;
+			const mine = appendReviewNote(earlier, day, 'Same');
+			expect(replaceReviewNote(mine, '- Reviewed 2026-10-09: Same', day, 'Changed')).toBe(
+				`${matter}Text\n\n- Reviewed 2026-10-09: Same\n- Reviewed 2026-10-09: Changed\n`,
+			);
+		});
+
+		it('removes it when the text is emptied', () => {
+			const once = appendReviewNote(`${matter}Text\n`, day, 'First');
+			expect(replaceReviewNote(once, '- Reviewed 2026-10-09: First', day, '')).toBe(`${matter}Text\n`);
+			expect(replaceReviewNote(`${matter}- Reviewed 2026-10-09: First\n`, '- Reviewed 2026-10-09: First', day, '')).toBe(matter);
+		});
+
+		it('appends when the line has gone', () => {
+			expect(replaceReviewNote(`${matter}Text\n`, '- Reviewed 2026-10-09: First', day, 'Second')).toBe(`${matter}Text\n\n- Reviewed 2026-10-09: Second\n`);
+			expect(replaceReviewNote(`${matter}Text\n`, '- Reviewed 2026-10-09: First', day, '')).toBe(`${matter}Text\n`);
+		});
+
+		it('keeps CRLF line endings', () => {
+			const crlf = '---\r\nmtm-kind: matter\r\n---\r\nText\r\n\r\n- Reviewed 2026-10-09: First\r\n';
+			expect(replaceReviewNote(crlf, '- Reviewed 2026-10-09: First', day, 'Second')).toBe('---\r\nmtm-kind: matter\r\n---\r\nText\r\n\r\n- Reviewed 2026-10-09: Second\r\n');
+		});
+	});
+
+	describe('the latest note', () => {
+		it('is the latest by date, wherever it is in the body', () => {
+			const content = `${matter}- Reviewed 2026-10-01: Newest\n\nText\n\n- Reviewed 2026-09-23: Older\n`;
+			expect(latestReviewNote(content)).toEqual({ date: '2026-10-01', text: 'Newest' });
+		});
+
+		it('is the later line on the same day', () => {
+			expect(latestReviewNote(`${matter}- Reviewed 2026-10-09: One\n- Reviewed 2026-10-09: Two\n`)).toEqual({ date: day, text: 'Two' });
+		});
+
+		it('reads CRLF notes', () => {
+			expect(latestReviewNote('---\r\na: 1\r\n---\r\n- Reviewed 2026-10-09: Note\r\n')).toEqual({ date: day, text: 'Note' });
+		});
+
+		it('ignores malformed lines', () => {
+			for (const line of [
+				'- Reviewed 2026-10-9: Short date',
+				'- Reviewed 2026-13-01: No such month',
+				'- Reviewed 2026-02-30: No such day',
+				'- Reviewed 2026-10-09:',
+				'- Reviewed 2026-10-09:   ',
+				'- Reviewed 2026-10-09 Missing colon',
+				'  - Reviewed 2026-10-09: Indented',
+				'* Reviewed 2026-10-09: Other bullet',
+				'- reviewed 2026-10-09: Lower case',
+				'- Reviewed 2026-10-09T10:00: Timed',
+			])
+				expect(parseReviewNote(line)).toBeNull();
+			expect(latestReviewNote(`${matter}- Reviewed 2026-13-01: Bad\n- Reviewed 2026-09-23: Good\n`)).toEqual({ date: '2026-09-23', text: 'Good' });
+			expect(latestReviewNote(`${matter}Nothing here\n`)).toBeNull();
+		});
+
+		it('never counts lines in code blocks', () => {
+			const content = `${matter}- Reviewed 2026-09-23: Real\n\n\`\`\`\n- Reviewed 2026-12-01: In backticks\n\`\`\`\n~~~md\n- Reviewed 2026-11-01: In tildes\n~~~\n`;
+			expect(latestReviewNote(content)).toEqual({ date: '2026-09-23', text: 'Real' });
+			expect(latestReviewNote(`${matter}\`\`\`\n- Reviewed 2026-12-01: Unclosed\n`)).toBeNull();
+		});
+
+		it('never counts lines in the frontmatter', () => {
+			const content = '---\nmtm-kind: matter\n- Reviewed 2026-12-01: In frontmatter\n---\n- Reviewed 2026-09-23: In body\n';
+			expect(latestReviewNote(content)).toEqual({ date: '2026-09-23', text: 'In body' });
 		});
 	});
 });

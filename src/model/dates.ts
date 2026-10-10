@@ -115,6 +115,13 @@ export function dayLabel(ymd: Ymd, today: Ymd): string {
 	return ymd.slice(0, 4) === today.slice(0, 4) ? label : `${label} ${y}`;
 }
 
+/** "23 Sep", with the year when it is not this year ("23 Sep 2025"). */
+export function shortDate(ymd: Ymd, today: Ymd): string {
+	const [y, m = 1, d = 1] = ymd.split('-').map(Number);
+	const label = `${d} ${STRINGS.dates.monthsShort[m - 1] ?? ''}`;
+	return ymd.slice(0, 4) === today.slice(0, 4) ? label : `${label} ${y}`;
+}
+
 /** The day label, followed by the time for timed values: "Tomorrow 10:00". */
 export function dateLabel(d: MtmDate, today: Ymd): string {
 	const day = dayLabel(d.date, today);

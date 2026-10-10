@@ -2,7 +2,8 @@
 
 import { normalizePath, type App, type TFile } from 'obsidian';
 import type { MattersSettings } from '../settings';
-import { toYmd } from '../model/dates';
+import { appendReviewNote, replaceReviewNote, reviewNoteLine } from '../model/body';
+import { toYmd, type Ymd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { formatCadence, nextLaneOrder, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
 import { laneOf, newMatterFrontmatter } from '../services/notesModel';
@@ -62,6 +63,16 @@ export async function setMatterOutcome(app: App, file: TFile, text: string | nul
 		if (outcome) fm['mtm-outcome'] = outcome;
 		else delete fm['mtm-outcome'];
 	});
+}
+
+/**
+ * Writes a review note at the end of the Matter note. With `replaceLine` (the line this returned before, in the same
+ * review step), that line is replaced instead, so saving again never touches an earlier note; empty text removes it.
+ * Returns the line now in the note, or null when there is none.
+ */
+export async function writeReviewNote(app: App, file: TFile, ymd: Ymd, text: string, replaceLine?: string | null): Promise<string | null> {
+	await app.vault.process(file, (content) => (replaceLine ? replaceReviewNote(content, replaceLine, ymd, text) : appendReviewNote(content, ymd, text)));
+	return reviewNoteLine(ymd, text);
 }
 
 export interface NewMatter {

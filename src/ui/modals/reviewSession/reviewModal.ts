@@ -5,7 +5,8 @@
 import { Keymap, Modal, Notice, Scope, type EventRef, type TFile } from 'obsidian';
 import type MattersPlugin from '../../../main';
 import { STRINGS } from '../../../strings';
-import { dayLabel, toYmd } from '../../../model/dates';
+import { cleanReviewNote, latestReviewNote, reviewNoteLine, type ReviewNote } from '../../../model/body';
+import { dayLabel, shortDate, toYmd } from '../../../model/dates';
 import type { MatterState } from '../../../model/matters';
 import type { ActionItem } from '../../../services/actionItems';
 import { orderMatters, type MatterInfo } from '../../../services/boardModel';
@@ -21,12 +22,12 @@ import {
 	type ReviewTally,
 } from '../../../services/reviewSession';
 import { allActionItems, allMatters } from '../../../vault/index';
-import { markReviewed, setMatterOutcome, setMatterState, setReviewCadence } from '../../../vault/matterWrites';
+import { markReviewed, setMatterOutcome, setMatterState, setReviewCadence, writeReviewNote } from '../../../vault/matterWrites';
 import { bindCardActions, renderCard } from '../../components/card';
 import { appendIcon, pressable, tileEl } from '../../components/dom';
-import { renderCadenceControl, renderOutcomeField, renderStateSeg } from '../../components/matterControls';
+import { renderCadenceControl, renderLastNote, renderOutcomeField, renderStateSeg } from '../../components/matterControls';
 import { kbd } from '../processInbox/processRender';
-import { question, renderBar, renderHead, renderTally, reviewLabel } from './reviewRender';
+import { question, renderBar, renderHead, renderNoteField, renderTally, reviewLabel } from './reviewRender';
 
 /** Cards shown under "Long waits" at the end. */
 const END_WAITS = 4;
@@ -59,6 +60,17 @@ export class ReviewModal extends Modal {
 	private customCadence = false;
 	/** Open Actions in the current Matter when quick add opened, to count a next step added. */
 	private openBefore: number | null = null;
+	/** Per Matter: the review note this session kept, and the line it wrote with its text (replaced when saved again). */
+	private noteTexts = new Map<string, string>();
+	private noteLines = new Map<string, { line: string; text: string }>();
+	/** The step whose note field is showing, for saving it when the step ends. */
+	private noteStep: { path: string; file: TFile } | null = null;
+	/** Note writes one after another, so a second save always knows the line the first one wrote. */
+	private noteWrites: Promise<void> = Promise.resolve();
+	/** Per Matter: the latest review note when its step opened (null: none, or still being read). */
+	private lastNotes = new Map<string, ReviewNote | null>();
+	/** Where "Last time" goes in the current step: after this element. */
+	private lastAnchor: HTMLElement | null = null;
 	private cacheRefs: EventRef[] = [];
 	private vaultRefs: EventRef[] = [];
 	private renderSoon: number | null = null;
@@ -110,6 +122,7 @@ export class ReviewModal extends Modal {
 	}
 
 	onClose(): void {
+		this.flushNote();
 		for (const ref of this.cacheRefs) this.app.metadataCache.offref(ref);
 		for (const ref of this.vaultRefs) this.app.vault.offref(ref);
 		this.cacheRefs = [];
@@ -147,12 +160,15 @@ export class ReviewModal extends Modal {
 		return this.app.vault.getFileByPath(path);
 	}
 
-	private async write(fn: () => Promise<unknown>): Promise<void> {
+	/** Runs a write; a failure shows a notice. Whether it worked. */
+	private async write(fn: () => Promise<unknown>): Promise<boolean> {
 		try {
 			await fn();
+			return true;
 		} catch (e) {
 			console.error('Matters that Matter: write failed', e);
 			new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+			return false;
 		}
 	}
 
@@ -165,6 +181,7 @@ export class ReviewModal extends Modal {
 	}
 
 	private advance(): void {
+		this.flushNote();
 		this.customCadence = false;
 		this.index++;
 		if (this.index < this.queue.length) {
@@ -180,11 +197,13 @@ export class ReviewModal extends Modal {
 	}
 
 	private skip(): void {
+		this.flushNote();
 		this.tally.skipped++;
 		this.advance();
 	}
 
 	private async markAndNext(): Promise<void> {
+		this.flushNote();
 		const path = this.queue[this.index];
 		const file = path ? this.file(path) : null;
 		if (file) {
@@ -311,6 +330,7 @@ export class ReviewModal extends Modal {
 
 	private renderStep(): void {
 		const r = STRINGS.review;
+		this.noteStep = null;
 		const { contentEl } = this;
 		const now = new Date();
 		const today = toYmd(now);
@@ -328,6 +348,11 @@ export class ReviewModal extends Modal {
 		if (!this.context.only) renderBar(contentEl, { position: this.index + 1, total: this.queue.length, done: this.index });
 		else renderBar(contentEl);
 		renderHeadAndSince(contentEl, step, this.settings.spheres, today);
+		const anchor = contentEl.lastElementChild;
+		this.lastAnchor = anchor?.instanceOf(HTMLElement) ? anchor : null;
+		const lastNote = this.lastNotes.get(matter.path);
+		if (lastNote) renderLastNote(contentEl, r.lastTime(shortDate(lastNote.date, today)), lastNote.text);
+		else if (lastNote === undefined && !matter.isInbox) this.loadLastNote(matter.path, file);
 
 		const body = contentEl.createDiv({ cls: 'mtm-review-body' });
 		if (!step.dormant) this.renderNeedsLook(body, step, now);
@@ -366,6 +391,11 @@ export class ReviewModal extends Modal {
 		const next = nextReview(matter.review?.cadence ?? null, today);
 		row.createSpan({ cls: 'mtm-field-hint', text: next ? r.nextReview(dayLabel(next, today)) : r.noRhythm });
 
+		if (!matter.isInbox) {
+			this.noteStep = { path: matter.path, file };
+			renderNoteField(question(body, r.questions.note), this.noteTexts.get(matter.path) ?? '', (value) => this.saveNote(matter.path, file, value));
+		}
+
 		const footer = contentEl.createDiv({ cls: 'mtm-modal-footer' });
 		const hints = footer.createSpan({ cls: 'mtm-process-hints' });
 		for (const [key, label] of [
@@ -377,12 +407,67 @@ export class ReviewModal extends Modal {
 			hint.appendText(label);
 		}
 		footer.createEl('button', { text: r.openMatter }).addEventListener('click', () => {
+			this.flushNote();
 			this.close();
 			void this.plugin.openMatter(matter.path);
 		});
 		footer.createEl('button', { text: r.skip }).addEventListener('click', () => this.skip());
 		const last = this.index >= this.queue.length - 1;
 		footer.createEl('button', { cls: 'mod-cta', text: last ? r.reviewed : r.reviewedNext }).addEventListener('click', () => void this.markAndNext());
+	}
+
+	/** Reads the Matter's latest review note once per step, and shows it when it arrives. */
+	private loadLastNote(path: string, file: TFile): void {
+		this.lastNotes.set(path, null);
+		this.app.vault
+			.cachedRead(file)
+			.then((content) => {
+				const note = latestReviewNote(content);
+				this.lastNotes.set(path, note);
+				const anchor = this.lastAnchor;
+				if (!note || this.phase !== 'step' || this.queue[this.index] !== path || !anchor?.isConnected) return;
+				// Placed without a re-render, so a field being typed in keeps its text.
+				renderLastNote(this.contentEl, STRINGS.review.lastTime(shortDate(note.date, toYmd(new Date()))), note.text, anchor);
+			})
+			.catch((e) => console.error('Matters that Matter: could not read the review notes', e));
+	}
+
+	/**
+	 * Saves what the note field holds when the step ends. Leaving the field saves it too, but a tap on a button
+	 * doesn't always take the focus away (iOS), and a field removed from the page doesn't reliably report it.
+	 */
+	private flushNote(): void {
+		const step = this.noteStep;
+		const input = this.contentEl.querySelector('input.mtm-review-note');
+		if (this.phase !== 'step' || !step || !input?.instanceOf(HTMLInputElement)) return;
+		this.saveNote(step.path, step.file, input.value);
+	}
+
+	/** Saves the step's review note: the first save adds a line, later ones replace it (empty removes it). */
+	private saveNote(path: string, file: TFile, value: string): string {
+		const text = cleanReviewNote(value);
+		if (text === (this.noteTexts.get(path) ?? '')) return text;
+		this.noteTexts.set(path, text);
+		// Counted now, so the end screen has it even while the write is still going.
+		this.countNotes();
+		this.noteWrites = this.noteWrites.then(async () => {
+			const ymd = toYmd(new Date());
+			const line = reviewNoteLine(ymd, text);
+			const ok = await this.write(() => writeReviewNote(this.app, file, ymd, text, this.noteLines.get(path)?.line ?? null));
+			if (!ok) {
+				// Not written: the session keeps what the note holds, so the next save tries again.
+				this.noteTexts.set(path, this.noteLines.get(path)?.text ?? '');
+				this.countNotes();
+				return;
+			}
+			if (line) this.noteLines.set(path, { line, text });
+			else this.noteLines.delete(path);
+		});
+		return text;
+	}
+
+	private countNotes(): void {
+		this.tally.notes = [...this.noteTexts.values()].filter((t) => t).length;
 	}
 
 	private cards(parent: HTMLElement, list: readonly ActionItem[], now: Date, withMatter = false): void {
