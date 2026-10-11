@@ -24,7 +24,7 @@ Use the plugin's words with the user, capitalised as shown: **Action**, **Matter
 - Add an Action only for something new. Matters that Matter doesn't check for duplicates, so check yourself when in doubt.
 - **Adding never creates a Matter.** If the user names a Matter that doesn't exist, the Action goes to the Inbox (say so), or ask whether to create the Matter first. Create a Matter only when the user agrees.
 - Never create person notes on your own. Link people who already have a note; otherwise mention the person in the title or details.
-- New Actions go to the backlog status (the first column, often "Later") unless the user says otherwise; use the default type unless the kind of Action is clear (a call, a purchase).
+- New Actions go to the backlog status (the one with `backlog: true`, often "Later") unless the user says otherwise; use the default type unless the kind of Action is clear (a call, a purchase).
 - Nothing is ever deleted. To finish an Action, mark it as done; to drop one, ask the user to delete it in Obsidian.
 
 ## With the MCP server (preferred)
@@ -64,7 +64,7 @@ npx -y matters-that-matter update "Call Marco about the quote" --due 2026-10-20 
 npx -y matters-that-matter done "Call Marco about the quote" --vault ~/Notes
 ```
 
-Commands: `today`, `list`, `show`, `add`, `update`, `done`, `reopen`, `matters`, `add-matter`, `workflow`, `parse` (what quick add would make of a text; writes nothing). `--dry-run` shows what a write would change without writing; `--json` gives raw and effective values for scripts. `npx -y matters-that-matter <command> --help` lists each command's fields.
+Commands: `today`, `list`, `show`, `add`, `update`, `done`, `reopen`, `matters`, `add-matter`, `workflow`, `parse` (what quick add would make of a text; writes nothing), `open` (opens the Action or Matter in Obsidian through a link). `--dry-run` shows what a write would change without writing; `--json` gives raw and effective values for scripts. `npx -y matters-that-matter <command> --help` lists each command's fields.
 
 ## Without tools: writing the notes
 
@@ -72,7 +72,7 @@ Only when neither the MCP server nor the command line is available, read and wri
 
 1. **Settings.** Read `<vault>/.obsidian/plugins/matters-that-matter/data.json` (the configuration folder can have another name; look for `plugins/matters-that-matter/data.json`). If it is missing or `setupDone` is not `true`, don't write: ask the user to run setup in Obsidian. If `schemaVersion` is above 7, the format may have changed: read, but don't write. Take IDs from `statuses`, `types` and `spheres`; the backlog status has `backlog: true`, the done status `done: true`, the default type `default: true`. A status whose `category` is `closed` means done.
 2. **Finding notes.** Actions are notes with `mtm-kind: action`, Matters notes with `mtm-kind: matter`, wherever they are. The Inbox is the note at `inboxPath`.
-3. **A new Action** is a note in `folders.actions`. Its file name is its title: remove `/ \ : * ? " < > | # ^ [ ]`, collapse spaces, trim, at most 100 characters; if any note in the vault already has the name (ignoring case), add " 2", " 3"…
+3. **A new Action** is a note in `folders.actions`. Its file name is its title: replace each of `/ \ : * ? " < > | # ^ [ ]` with a space, collapse runs of whitespace to one space, trim, drop leading dots, at most 100 characters. If any note in the vault already has the name (ignoring case), add " 2", " 3"…, as the tools do, so the new note doesn't take over links to the other one.
 4. **Frontmatter.** Always set `mtm-kind: action`, `mtm-type`, `mtm-status` and `mtm-matter` explicitly. `mtm-matter` is a quoted wikilink to the Matter note (`"[[Kitchen renovation]]"`; the Inbox's own link when there is no Matter), in the shortest form that is unique in the vault. Dates are `YYYY-MM-DD` (all day) or `YYYY-MM-DDTHH:mm` (local time). `mtm-priority` is 1 (high), 2 or 3. People are quoted wikilinks; `mtm-people` is always a list.
 5. **Body.** Plain Markdown: the details first, then checklist items (`- [ ] …`).
 
