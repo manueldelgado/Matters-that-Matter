@@ -3,7 +3,8 @@ name: Release Obsidian plugin
 on:
     push:
         tags:
-            - '*'
+            # Plugin releases only (1.1.0); CLI releases are tagged cli-x.y.z and published to npm by hand.
+            - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
     build:
