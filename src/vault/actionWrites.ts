@@ -15,7 +15,7 @@ import { matterLink as matterLinkFor, newActionFrontmatter, personKey } from '..
 import { STRINGS } from '../strings';
 import { now } from './clock';
 import { resolverFor, targetResolver } from './index';
-import { createNote, ensureFolder, frontmatterOf, linkTo, pathTaken, type Frontmatter } from './notes';
+import { createNote, ensureFolder, frontmatterOf, linkTo, nameTaken, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 export interface ActionTarget {
 	statusId?: string;
@@ -44,7 +44,7 @@ export async function editAction(app: App, file: TFile, settings: MattersSetting
 	const today = toYmd(now());
 	const resolve = targetResolver(app, file.path);
 	const keyOf = (raw: unknown) => personKey(raw, resolve);
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
 		fm['mtm-matter'] = matterLink(app, matterPath, file.path);
@@ -58,7 +58,7 @@ export async function writeCardOrders(app: App, writes: readonly OrderWrite[]): 
 	for (const w of writes) {
 		const file = app.vault.getFileByPath(normalizePath(w.path));
 		if (!file) continue;
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			fm['mtm-order'] = w.order;
 		});
 	}
@@ -86,12 +86,12 @@ export interface NewAction {
 	people?: readonly TFile[];
 }
 
-/** Creates an Action note in the Actions folder with explicit status, Matter and type. */
+/** Creates an Action note in the Actions folder with explicit status, Matter and type, under a name no other note has. */
 export async function createAction(app: App, settings: MattersSettings, init: NewAction): Promise<TFile> {
 	const folder = normalizePath(settings.folders.actions);
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.title) || STRINGS.untitledAction;
-	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
+	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`) || nameTaken(app, t));
 	const path = `${folder}/${title}.md`;
 	const fm = newActionFrontmatter(
 		{

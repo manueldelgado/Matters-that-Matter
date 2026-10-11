@@ -10,47 +10,47 @@ import { laneOf, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { now } from './clock';
 import { noteData } from './index';
-import { createNote, ensureFolder, notesOfKind, pathTaken, type Frontmatter } from './notes';
+import { createNote, ensureFolder, nameTaken, notesOfKind, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 export async function writeLaneOrders(app: App, writes: readonly LaneOrderWrite[]): Promise<void> {
 	for (const w of writes) {
 		const file = app.vault.getFileByPath(normalizePath(w.path));
 		if (!file) continue;
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			fm['mtm-lane-order'] = w.laneOrder;
 		});
 	}
 }
 
 export async function markReviewed(app: App, file: TFile): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		fm['mtm-last-reviewed'] = toYmd(now());
 	});
 }
 
 export async function setMatterState(app: App, file: TFile, state: MatterState): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		fm['mtm-state'] = state;
 	});
 }
 
 /** Writes the canonical cadence, or removes it ("Never"); mtm-last-reviewed is left alone. */
 export async function setReviewCadence(app: App, file: TFile, cadence: Cadence | null): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		if (cadence) fm['mtm-review-every'] = formatCadence(cadence);
 		else delete fm['mtm-review-every'];
 	});
 }
 
 export async function setMatterIcon(app: App, file: TFile, icon: string): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		fm['mtm-icon'] = icon;
 	});
 }
 
 /** Puts a Matter in a Sphere, or in none (removes the property). */
 export async function setMatterSphere(app: App, file: TFile, sphereId: string | null): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		if (sphereId) fm['mtm-sphere'] = sphereId;
 		else delete fm['mtm-sphere'];
 	});
@@ -59,7 +59,7 @@ export async function setMatterSphere(app: App, file: TFile, sphereId: string | 
 /** Writes the outcome as one line, or removes it when blank. */
 export async function setMatterOutcome(app: App, file: TFile, text: string | null): Promise<void> {
 	const outcome = parseOutcome(text);
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+	await processFrontMatter(app, file, (fm: Frontmatter) => {
 		if (outcome) fm['mtm-outcome'] = outcome;
 		else delete fm['mtm-outcome'];
 	});
@@ -83,12 +83,12 @@ export interface NewMatter {
 	outcome?: string | null;
 }
 
-/** Creates an active Matter in the Matters folder, after the last lane. */
+/** Creates an active Matter in the Matters folder, after the last lane, under a name no other note has. */
 export async function createMatter(app: App, settings: MattersSettings, init: NewMatter): Promise<TFile> {
 	const folder = normalizePath(settings.folders.matters);
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.name) || STRINGS.untitledMatter;
-	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`));
+	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`) || nameTaken(app, t));
 	// The Inbox's lane order doesn't count: it has its own place on the board.
 	const lanes = notesOfKind(app, 'matter').map((f) => laneOf(noteData(app, f), settings.inboxPath));
 	return createNote(app, `${folder}/${title}.md`, newMatterFrontmatter(init, nextLaneOrder(lanes)));

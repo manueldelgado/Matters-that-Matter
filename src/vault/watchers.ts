@@ -13,7 +13,7 @@ import { effectiveAction } from '../services/effective';
 import { inboxRepairs, isInboxDuplicate, renamedInbox } from '../services/inboxGuard';
 import { now } from './clock';
 import { resolverFor, targetResolver } from './index';
-import { createNote, ensureFolder, frontmatterOf, notesOfKind, type Frontmatter } from './notes';
+import { createNote, ensureFolder, frontmatterOf, notesOfKind, processFrontMatter, type Frontmatter } from './notes';
 
 const INBOX_RESTORE_DELAY = 4000;
 /** Time for the re-created Inbox's own changes to pass before the guard watches it again. */
@@ -105,7 +105,7 @@ export class Watchers {
 			let sinceChange = this.waiting.observe(file.path, this.personKey(file, fm['mtm-waiting-on']), since, hasCompletedValue(since));
 			if (sinceChange === 'set' && since === today) sinceChange = 'none';
 			if (change !== 'none' || sinceChange !== 'none') {
-				await app.fileManager.processFrontMatter(file, (data: Frontmatter) => {
+				await processFrontMatter(app, file, (data: Frontmatter) => {
 					if (change === 'set') data['mtm-completed'] = today;
 					else if (change === 'remove') delete data['mtm-completed'];
 					if (sinceChange === 'set') data['mtm-waiting-since'] = today;
@@ -121,7 +121,7 @@ export class Watchers {
 	private async guardInbox(file: TFile, fm: Frontmatter | undefined): Promise<void> {
 		const repairs = inboxRepairs(fm);
 		if (Object.keys(repairs).length === 0) return;
-		await this.plugin.app.fileManager.processFrontMatter(file, (data: Frontmatter) => Object.assign(data, repairs));
+		await processFrontMatter(this.plugin.app, file, (data: Frontmatter) => Object.assign(data, repairs));
 		new Notice(STRINGS.notices.inboxRestoredProperties);
 	}
 

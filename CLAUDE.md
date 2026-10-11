@@ -65,7 +65,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Don't name a view member `focus`: it shadows `View.focus()`, which Obsidian calls.
 - A hidden tab reads `scrollLeft`/`scrollTop` as 0 and ignores writes: save and restore scroll only when `clientWidth > 0` (see `CollectionView.captureScroll`).
 - Background tabs may be deferred (no view): find a leaf by `getViewState().state`, not by `leaf.view`.
-- File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`.
+- File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`. A new Action or Matter also avoids a name any note in the vault has (`nameTaken`), so it can't take over that note's links.
 - Obsidian rejects `\ / :` in file names even where the OS allows them: run every generated name through `sanitiseTitle`.
 - Renaming a folder fires `rename` for the folder and for every file inside it; rules that follow paths must be idempotent across those events.
 - Notes may use CRLF: body edits keep the note's line ending.
@@ -81,7 +81,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Keep dependencies few and browser-compatible; everything is bundled into `main.js`. The plugin must never import `cli/` (Node only); `yaml` and the MCP SDK reach only the CLI bundle.
 - Obsidian links: Obsidian's URI handler overwrites an `action` parameter with the link's own name, so `mtm-open` names an Action with `file=`. Everything arriving through a link is made inert (`services/linkInput.ts`); calls wait until the layout and settings are ready.
 - Outside writers (the CLI, the MCP server) rename notes with plain renames: a link-then-unlink rename leaves Obsidian believing the old file still exists.
-- Obsidian's `processFrontMatter` adds a second properties block in front of a note that starts with a byte-order mark or whose `---` lines have trailing spaces; the files layer edits such notes in place.
+- Obsidian reads a properties block only when the note's first line is exactly `---` (after an optional byte-order mark); the closing line may have trailing spaces. Its `processFrontMatter` adds a second block in front of a note that starts with a byte-order mark or whose closing line has trailing spaces, so the plugin writes properties through `processFrontMatter` in `vault/notes.ts`, which makes such fence lines plain first; the files layer edits such notes in place.
 
 ## Privacy and policies
 
