@@ -139,7 +139,7 @@ The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, suc
 `--json` prints JSON on standard output. Reads give the values as they are, with both the raw properties and the values the plugin shows (so scripts never re-implement its rules):
 
 ```bash
-mtm list --matter Kitchen --json | jq '.[0]'
+mtm list --matter Kitchen --status next --json | jq '.[0]'
 ```
 
 ```json
@@ -169,9 +169,9 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML so they can't be changed. Nothing was written. Also when `mtm open` couldn't open the link. |
+| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML, or use YAML the command line can't change safely (anchors, aliases, tags), so they can't be changed; change those in Obsidian. Nothing was written. Also when `mtm open` couldn't open the link. |
 | 2 | The vault isn't ready: no vault named, no settings of Matters that Matter, setup not done, or settings from a newer version of the plugin (reads still work then, with a warning; writes are refused) |
-| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
+| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. If the vault changed, try again; make a read-only note writable first. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
 
