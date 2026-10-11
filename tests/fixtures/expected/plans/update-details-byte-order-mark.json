@@ -1,0 +1,20 @@
+{
+	"case": "update-details-byte-order-mark",
+	"description": "New details for a note that starts with a byte-order mark: the body changes, the mark and the properties stay.",
+	"alwaysUpdateLinks": true,
+	"setup": {},
+	"plan": {
+		"creates": [],
+		"edits": [],
+		"bodies": [
+			{
+				"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
+				"edit": {
+					"kind": "details",
+					"text": "Packed and labelled."
+				}
+			}
+		],
+		"renames": []
+	}
+}

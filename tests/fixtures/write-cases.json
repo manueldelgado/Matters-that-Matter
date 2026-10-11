@@ -467,6 +467,16 @@
 		"now": "2026-10-09T12:00"
 	},
 	{
+		"name": "update-details-byte-order-mark",
+		"description": "New details for a note that starts with a byte-order mark: the body changes, the mark and the properties stay.",
+		"op": "updateAction",
+		"input": {
+			"action": "More - byte-order mark",
+			"details": "Packed and labelled."
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
 		"name": "update-fence-whitespace",
 		"description": "A closing fence line with a space and a tab after the dashes: the block is edited where it is, never a second one added.",
 		"op": "updateAction",

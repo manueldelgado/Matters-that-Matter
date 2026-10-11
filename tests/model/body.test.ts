@@ -36,6 +36,21 @@ describe('splitFrontmatter', () => {
 		const crlf = '---\r\na: 1\r\n---\r\nBody';
 		expect(splitFrontmatter(crlf).body).toBe('Body');
 	});
+
+	it('reads the block as Obsidian does: after a byte-order mark, empty, or closed by a line with trailing spaces', () => {
+		expect(splitFrontmatter(`\uFEFF${fm}Body`)).toEqual({ frontmatter: `\uFEFF${fm}`, body: 'Body' });
+		expect(splitFrontmatter('---\n---\nBody')).toEqual({ frontmatter: '---\n---\n', body: 'Body' });
+		expect(splitFrontmatter('---\na: 1\n--- \t\nBody').body).toBe('Body');
+		// An opening line with spaces after the dashes is no block to Obsidian.
+		expect(splitFrontmatter('---  \na: 1\n---\nBody').frontmatter).toBe('');
+	});
+
+	it('keeps the properties of a note that starts with a byte-order mark when its details change', () => {
+		const note = `\uFEFF${fm}Old details.\n\n- [ ] a\n`;
+		expect(getDetails(note)).toBe('Old details.');
+		expect(setDetails(note, 'New details')).toBe(`\uFEFF${fm}New details\n\n- [ ] a\n`);
+		expect(insertTask(note, 'b')).toBe(`\uFEFF${fm}Old details.\n\n- [ ] a\n- [ ] b\n`);
+	});
 });
 
 describe('details', () => {

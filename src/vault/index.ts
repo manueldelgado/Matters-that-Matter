@@ -119,5 +119,7 @@ export function backlinksTo(app: App, target: TFile): TFile[] {
 /** The note's body: the text after the frontmatter. `text` is the note's content, already read. */
 export function noteBody(app: App, file: TFile, text: string): string {
 	const end = app.metadataCache.getFileCache(file)?.frontmatterPosition?.end.offset;
-	return end === undefined ? text : text.slice(end).replace(/^\r?\n/, '');
+	// The cache counts offsets from after a byte-order mark.
+	const content = text.startsWith('\uFEFF') ? text.slice(1) : text;
+	return end === undefined ? content : content.slice(end).replace(/^\r?\n/, '');
 }
