@@ -130,6 +130,7 @@ export const CLI = {
 	unreadableProperties: (path: string) => `The properties of ${path} aren’t valid YAML, so nothing was written. Fix them in Obsidian first.`,
 	notMtm: (path: string) => `Only mtm- properties are ever written, so nothing was written to ${path}.`,
 	outsideVault: (path: string) => `${path} is outside the vault, so nothing was written.`,
+	readOnly: (path: string) => `${path} is read-only, so nothing was written.`,
 	planOutFailed: (file: string) => `The plan couldn’t be written to ${file}.`,
 
 	// Ambiguity.

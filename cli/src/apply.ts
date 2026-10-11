@@ -1,8 +1,10 @@
 // Writing a plan's files safely, all or nothing:
 //
-// 1. Check: every path stays inside the vault, every file is still what the plan saw (a hash of its content), and
-//    every new path is still free.
-// 2. Stage: each file's new content goes to a temporary file next to it (with the old file's mode).
+// 1. Check: every path stays inside the vault, every file is still what the plan saw (a hash of its content), every
+//    new path is still free, and no note to be changed or renamed is read-only (its owner can't write it).
+// 2. Stage: each file's new content goes to a temporary file in the same folder (with the old file's mode). Its name
+//    is short and doesn't repeat the note's (`.mtm-<process>-<n>-<random>.tmp`), so a note whose name is near the
+//    file system's limit can still be written; it starts with a dot, so Obsidian and the vault's reader skip it.
 // 3. Check again, then commit with renames only: an edited file's new content is renamed over it; a new file is
 //    renamed into place; a renamed note is moved to its new name, then its new content renamed over it. Obsidian's
 //    file watcher sees each of these as the move or change it is.
@@ -17,9 +19,9 @@
 //
 // The bytes written are exactly what the files layer computed (line endings and all).
 
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, sep } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import type { FileWrite as LayerWrite } from './filesLayer';
 
 /** What the writer needs of each file the files layer computed. */
@@ -31,6 +33,8 @@ export type ApplyResult =
 	| { ok: false; reason: 'changed'; path: string }
 	/** A path would leave the vault. Nothing was written. */
 	| { ok: false; reason: 'unsafe'; path: string }
+	/** A note to be changed or renamed is read-only. Nothing was written. */
+	| { ok: false; reason: 'read-only'; path: string }
 	/** Writing failed; everything committed was put back except the files in `left`. */
 	| { ok: false; reason: 'failed'; path: string; error: string; left: string[] };
 
@@ -85,7 +89,11 @@ const caseOnly = (file: FileWrite) => file.from !== null && file.from !== file.p
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 let counter = 0;
-const tempName = (target: string) => join(dirname(target), `.${basename(target)}.mtm-${process.pid}-${(counter++).toString(36)}.tmp`);
+/** A temporary file in the target's folder; the random part keeps it clear of one a crashed run left behind. */
+const tempName = (target: string) => join(dirname(target), `.mtm-${process.pid}-${(counter++).toString(36)}-${randomBytes(3).toString('hex')}.tmp`);
+
+/** Whether the file's owner may write it (a note made read-only, say with `chmod 444`, may not). */
+const writable = (mode: number) => (mode & 0o200) !== 0;
 
 interface Staged {
 	file: FileWrite;
@@ -149,6 +157,13 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 	const changed = stale();
 	if (changed !== null) return { ok: false, reason: 'changed', path: changed };
 
+	// A read-only note is left alone: a rename would replace it all the same, so nothing is written.
+	for (const file of outcome.files) {
+		if (file.from === null) continue;
+		const mode = fs.stat(full(file.from))?.mode;
+		if (mode !== undefined && !writable(mode)) return { ok: false, reason: 'read-only', path: file.from };
+	}
+
 	// Stage.
 	const staged: Staged[] = [];
 	const madeDirs: string[] = [];
@@ -157,7 +172,7 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 			try {
 				if (fs.stat(s.temp)) fs.unlink(s.temp);
 			} catch {
-				// A temporary file left behind is hidden from Obsidian (its name starts with a dot).
+				// A temporary file left behind (`.mtm-….tmp`) is hidden from Obsidian: its name starts with a dot.
 			}
 		}
 		for (const d of [...madeDirs].reverse()) {

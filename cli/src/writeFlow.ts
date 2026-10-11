@@ -36,7 +36,10 @@ export type WriteFlow<T> =
 	| { ok: true; r: Extract<OpResult<T>, { ok: true }>; snap: Snapshot; outcome: FileOutcome | null; written: boolean }
 	/** The operation refused: nothing was planned. */
 	| { ok: false; kind: 'op'; error: OpError }
-	/** The plan couldn't be applied, or the write failed: `changed` when the vault changed meanwhile or a write failed. */
+	/**
+	 * The plan couldn't be applied, or the write failed: `changed` when the vault changed meanwhile, a write failed or
+	 * was refused (outside the vault, a read-only note).
+	 */
 	| { ok: false; kind: 'write'; error: ErrorJson['error']; changed: boolean };
 
 /**
@@ -114,6 +117,7 @@ function writeFailure(failed: Exclude<ApplyResult, { ok: true }>): ErrorJson['er
 	let left: string[] = [];
 	if (failed.reason === 'changed') message = CLI.changedMeanwhile(failed.path);
 	else if (failed.reason === 'unsafe') message = CLI.outsideVault(failed.path);
+	else if (failed.reason === 'read-only') message = CLI.readOnly(failed.path);
 	else {
 		left = failed.left;
 		message = left.length ? CLI.writeFailedLeft(failed.path, failed.error, left) : CLI.writeFailed(failed.path, failed.error);

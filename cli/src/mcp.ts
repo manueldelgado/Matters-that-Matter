@@ -491,8 +491,10 @@ export async function serveMcp(config: McpConfig, transport?: Transport): Promis
 	if (transport) await server.connect(transport);
 	else {
 		await server.connect(new StdioServerTransport());
-		// The host ends the session by closing standard input.
+		// The host ends the session by closing standard input; a host gone without closing it leaves standard output
+		// closed (a write to it fails quietly, see pipes.ts), which ends the session too.
 		process.stdin.once('end', () => void server.close());
+		process.stdout.once('close', () => void server.close());
 	}
 	return closed;
 }

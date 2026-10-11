@@ -1,12 +1,14 @@
 // The command line's parts: arguments, safe writes, the vault's file list, the open link, the package.
 
+import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from '../../cli/src/args';
 import { applyOutcome, nodeFs, type ApplyFs, type FileWrite } from '../../cli/src/apply';
 import { cachingReader, fsVaultReader } from '../../cli/src/fsVault';
-import { obsidianSettingsDir, openUrl, vaultRef } from '../../cli/src/open';
+import { obsidianSettingsDir, openUrl, systemOpener, vaultRef, type Spawner } from '../../cli/src/open';
+import { isClosedPipe, quietOnClosedPipe } from '../../cli/src/pipes';
 import { vaultPath } from '../../cli/src/vault';
 import { PACKAGE_NAME, VERSION } from '../../cli/src/version';
 import { tempDir, writeFiles } from './helpers';
@@ -123,7 +125,7 @@ describe('safe writes', () => {
 		const root = dir();
 		writeFiles(root, { 'Old.md': 'x\n' });
 		const calls: string[] = [];
-		const rel = (p: string) => p.slice(root.length + 1).replace(/\.[^/]*\.mtm-[^/]*\.tmp$/, '<temp>');
+		const rel = (p: string) => p.slice(root.length + 1).replace(/\.mtm-[^/]*\.tmp$/, '<temp>');
 		const fs: ApplyFs = {
 			...nodeFs,
 			rename: (a, b) => (calls.push(`rename ${rel(a)} → ${rel(b)}`), nodeFs.rename(a, b)),
@@ -133,6 +135,44 @@ describe('safe writes', () => {
 		expect(r.ok).toBe(true);
 		expect(calls).toEqual(['rename Old.md → New/Name.md', 'rename New/<temp> → New/Name.md', 'rename <temp> → Made.md']);
 		expect(readdirSync(root).sort()).toEqual(['Made.md', 'New']);
+	});
+
+	it('names temporary files briefly, without the note’s name, so a note with a long name can still be written', () => {
+		const root = dir();
+		// 250 bytes: the limit of many file systems is 255, which a temporary name repeating the note's would pass.
+		const long = `${'a'.repeat(247)}.md`;
+		writeFiles(root, { [long]: 'x\n' });
+		const created: string[] = [];
+		const fs: ApplyFs = { ...nodeFs, writeFile: (p, text) => (created.push(p.slice(root.length + 1)), nodeFs.writeFile(p, text)) };
+		expect(applyOutcome(root, outcome([{ path: long, from: long, before: 'x\n', after: 'y\n' }]), fs).ok).toBe(true);
+		expect(created).toHaveLength(1);
+		expect(created[0]).toMatch(/^\.mtm-\d+-[0-9a-z]+-[0-9a-f]{6}\.tmp$/);
+		expect(Buffer.byteLength(created[0] ?? '')).toBeLessThan(40);
+		// It starts with a dot, so reading the vault skips it, as Obsidian does.
+		writeFiles(root, { [created[0] ?? '']: 'left behind' });
+		expect(fsVaultReader(root, '.obsidian').list()).toEqual([long]);
+	});
+
+	it('refuses, writing nothing, when a note to be changed or renamed is read-only', () => {
+		const root = dir();
+		writeFiles(root, { 'Locked.md': 'l\n', 'Open.md': 'o\n' });
+		chmodSync(join(root, 'Locked.md'), 0o444);
+		const edit = applyOutcome(
+			root,
+			outcome([
+				{ path: 'Open.md', from: 'Open.md', before: 'o\n', after: 'o changed\n' },
+				{ path: 'Locked.md', from: 'Locked.md', before: 'l\n', after: 'l changed\n' },
+				{ path: 'New.md', from: null, before: null, after: 'new\n' },
+			]),
+		);
+		expect(edit).toEqual({ ok: false, reason: 'read-only', path: 'Locked.md' });
+		const rename = applyOutcome(root, outcome([{ path: 'Moved/Locked.md', from: 'Locked.md', before: 'l\n', after: 'l\n' }]));
+		expect(rename).toEqual({ ok: false, reason: 'read-only', path: 'Locked.md' });
+		expect(readFileSync(join(root, 'Locked.md'), 'utf8')).toBe('l\n');
+		expect(readFileSync(join(root, 'Open.md'), 'utf8')).toBe('o\n');
+		expect(statSync(join(root, 'Locked.md')).mode & 0o777).toBe(0o444);
+		expect(readdirSync(root).sort()).toEqual(['Locked.md', 'Open.md']);
+		chmodSync(join(root, 'Locked.md'), 0o644);
 	});
 
 	it('a rename that only changes case', () => {
@@ -362,6 +402,65 @@ describe('the open link', () => {
 		expect(openUrl('My vault', { file: 'MTM/Actions/Call & ask.md' })).toBe('obsidian://mtm-open?vault=My%20vault&file=MTM%2FActions%2FCall%20%26%20ask.md');
 		expect(openUrl('Notes', { matter: 'Kitchen renovation' })).toBe('obsidian://mtm-open?vault=Notes&matter=Kitchen%20renovation');
 		expect(openUrl('Notes', { board: 'Matters' })).toBe('obsidian://mtm-open?vault=Notes&board=Matters');
+	});
+});
+
+describe('asking the system to open a link', () => {
+	/** A started process that does what the test says, when it says. */
+	const fakeChild = () => {
+		const child = Object.assign(new EventEmitter(), { unrefs: 0, unref: () => void child.unrefs++ });
+		return child;
+	};
+	const spawning = (child: ReturnType<typeof fakeChild>) => {
+		const calls: { command: string; args: readonly string[] }[] = [];
+		const spawner: Spawner = (command, args) => (calls.push({ command, args }), child);
+		return { calls, spawner };
+	};
+	const url = 'obsidian://mtm-open?vault=Notes&file=A.md';
+
+	it('opens when the system’s opener ends well', async () => {
+		const child = fakeChild();
+		const { calls, spawner } = spawning(child);
+		const opened = systemOpener('darwin', spawner, 1000)(url);
+		child.emit('spawn');
+		child.emit('exit', 0, null);
+		await expect(opened).resolves.toBeUndefined();
+		expect(calls).toEqual([{ command: 'open', args: [url] }]);
+		expect(child.unrefs).toBe(1);
+	});
+
+	it('fails when nothing handles the link (the opener ends with an error code), or the opener can’t start', async () => {
+		const child = fakeChild();
+		const opened = systemOpener('linux', spawning(child).spawner, 1000)(url);
+		child.emit('spawn');
+		child.emit('exit', 4, null);
+		await expect(opened).rejects.toThrow('The opener ended with 4');
+		const missing = fakeChild();
+		const notStarted = systemOpener('linux', spawning(missing).spawner, 1000)(url);
+		missing.emit('error', new Error('spawn xdg-open ENOENT'));
+		await expect(notStarted).rejects.toThrow('ENOENT');
+	});
+
+	it('takes an opener still running after the wait as opening the link', async () => {
+		const child = fakeChild();
+		const opened = systemOpener('darwin', spawning(child).spawner, 5)(url);
+		child.emit('spawn');
+		await expect(opened).resolves.toBeUndefined();
+		// Its end, later, changes nothing.
+		child.emit('exit', 1, null);
+		expect(child.unrefs).toBe(1);
+	});
+});
+
+describe('output to a pipe that closes early', () => {
+	it('is dropped quietly; other errors are not', () => {
+		const stream = new EventEmitter();
+		quietOnClosedPipe(stream);
+		expect(() => stream.emit('error', Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }))).not.toThrow();
+		expect(() => stream.emit('error', Object.assign(new Error('destroyed'), { code: 'ERR_STREAM_DESTROYED' }))).not.toThrow();
+		expect(() => stream.emit('error', Object.assign(new Error('no space'), { code: 'ENOSPC' }))).toThrow('no space');
+		expect(isClosedPipe({ code: 'EPIPE' })).toBe(true);
+		expect(isClosedPipe({})).toBe(false);
 	});
 });
 

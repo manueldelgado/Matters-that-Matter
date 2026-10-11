@@ -2,6 +2,10 @@
 
 import { homedir } from 'node:os';
 import { run } from './main';
+import { quietOnClosedPipe } from './pipes';
+
+quietOnClosedPipe(process.stdout);
+quietOnClosedPipe(process.stderr);
 
 run(process.argv.slice(2), {
 	stdout: process.stdout,
