@@ -39,7 +39,7 @@ function unsafe(path: string): FrontmatterError {
 
 /**
  * Where the properties block is, found as the index finds it (and Obsidian's cache reads it): the note's first line
- * is `---` (spaces or tabs after it allowed) and a later line is the same; offsets in the text after a byte-order
+ * is exactly `---` and a later line is `---`, spaces or tabs after it allowed; offsets in the text after a byte-order
  * mark, which callers strip first.
  */
 export interface FrontmatterSpan {

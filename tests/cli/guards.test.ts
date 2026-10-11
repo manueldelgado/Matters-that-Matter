@@ -229,6 +229,20 @@ describe('a read-only note: exit 3, nothing written', () => {
 		expect(readFileSync(note, 'utf8')).toBe(text);
 		chmodSync(note, 0o644);
 	});
+
+	it('says so in a dry run too', async () => {
+		const root = keep(syntheticVault());
+		const note = join(root, 'MTM/Actions/Send the invoice.md');
+		chmodSync(note, 0o444);
+		const before = hashes(root);
+		expect(await mtm(['done', 'Send the invoice', '--dry-run', '--vault', root], writer)).toEqual({
+			code: 3,
+			stdout: '',
+			stderr: 'MTM/Actions/Send the invoice.md is read-only, so nothing was written.\n',
+		});
+		expect(hashes(root)).toEqual(before);
+		chmodSync(note, 0o644);
+	});
 });
 
 describe('a plan the files layer can’t apply', () => {

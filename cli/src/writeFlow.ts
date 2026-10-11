@@ -3,7 +3,7 @@
 
 import type { VaultReader } from '../../src/files/index';
 import type { OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
-import { applyOutcome, type ApplyFs, type ApplyResult } from './apply';
+import { applyOutcome, readOnlyNote, type ApplyFs, type ApplyResult } from './apply';
 import { contentsAfter as defaultContentsAfter, snapshotOf, WriteError, type ContentsAfter, type FileOutcome } from './filesLayer';
 import { cachingReader, fsVaultReader } from './fsVault';
 import type { ErrorJson } from './json';
@@ -84,7 +84,11 @@ export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<
 			if (attempt === 1 && (e.code === 'exists' || e.code === 'missing')) continue;
 			return { ok: false, kind: 'write', ...planFailure(e) };
 		}
-		if (src.dryRun) return { ok: true, r, snap, outcome, written: false };
+		if (src.dryRun) {
+			const readOnly = readOnlyNote(src.vault.root, outcome, src.fs);
+			if (readOnly !== null) return { ok: false, kind: 'write', error: writeFailure({ ok: false, reason: 'read-only', path: readOnly }), changed: true };
+			return { ok: true, r, snap, outcome, written: false };
+		}
 		const applied = applyOutcome(src.vault.root, outcome, src.fs);
 		if (applied.ok) return { ok: true, r, snap, outcome, written: true };
 		if (attempt === 1 && applied.reason === 'changed') continue;

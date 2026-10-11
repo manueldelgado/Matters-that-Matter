@@ -83,12 +83,15 @@ export interface NewMatter {
 	outcome?: string | null;
 }
 
-/** Creates an active Matter in the Matters folder, after the last lane, under a name no other note has. */
-export async function createMatter(app: App, settings: MattersSettings, init: NewMatter): Promise<TFile> {
+/**
+ * Creates an active Matter in the Matters folder, after the last lane, under a name no other note has. `from` is
+ * the Action the Matter is made from (Process Inbox): it may keep the same name.
+ */
+export async function createMatter(app: App, settings: MattersSettings, init: NewMatter, from?: TFile): Promise<TFile> {
 	const folder = normalizePath(settings.folders.matters);
 	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.name) || STRINGS.untitledMatter;
-	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`) || nameTaken(app, t));
+	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`) || nameTaken(app, t, from));
 	// The Inbox's lane order doesn't count: it has its own place on the board.
 	const lanes = notesOfKind(app, 'matter').map((f) => laneOf(noteData(app, f), settings.inboxPath));
 	return createNote(app, `${folder}/${title}.md`, newMatterFrontmatter(init, nextLaneOrder(lanes)));

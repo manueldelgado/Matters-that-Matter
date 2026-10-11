@@ -5,7 +5,7 @@ import { parseMtmDate, type Ymd } from './dates';
 
 // As Obsidian reads it: after an optional byte-order mark (`Vault.process` keeps it), an opening line that is exactly
 // `---`, possibly nothing in between, and a closing `---` line that may have spaces or tabs after the dashes.
-const FRONTMATTER_RE = /^\uFEFF?---\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?:\r?\n|$)/;
+const FRONTMATTER_RE = /^\uFEFF?---\r?\n(?:---[ \t]*(?:\r?\n|$)|[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$))/;
 const LIST_RE = /^\s*(?:[-*+]|\d+[.)])(?:\s|$)/;
 const HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
 const EMBED_RE = /^\s*!\[/;
