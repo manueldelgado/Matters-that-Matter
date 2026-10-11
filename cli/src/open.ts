@@ -4,8 +4,9 @@
 // The link names the vault by its ID when Obsidian's own list of vaults (`obsidian.json`) knows the folder, so two
 // vaults with the same folder name can't be confused; otherwise by the folder's name, as Obsidian shows it.
 
-import { spawn } from 'node:child_process';
+import { spawn, type SpawnOptions } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { basename, join } from 'node:path';
 
 export type Opener = (url: string) => Promise<void>;
@@ -56,23 +57,48 @@ export function vaultRef(root: string, obsidianDir: string | null): string {
 	return basename(here);
 }
 
+/** What the opener needs of a started process (Node's `ChildProcess` has it); tests pass a fake. */
+export interface OpenerChild {
+	once(event: 'error', listener: (e: Error) => void): unknown;
+	once(event: 'spawn', listener: () => void): unknown;
+	once(event: 'exit', listener: (code: number | null, signal: string | null) => void): unknown;
+	unref(): void;
+}
+
+export type Spawner = (command: string, args: readonly string[], options: SpawnOptions) => OpenerChild;
+
+/** How long to wait for the system's opener to say whether it could open the link. */
+export const OPENER_WAIT_MS = 3000;
+
 /**
  * Asks the system to open a link: `open` on macOS, `xdg-open` on Linux and others, `start` through `cmd` on Windows
- * (the link quoted as one argument; not yet tried on Windows).
+ * (the link quoted as one argument; not yet tried on Windows). The opener's exit code says whether anything handles
+ * `obsidian://` links: a non-zero code (or one that couldn't start) fails; one still running after a few seconds is
+ * taken as opening it.
  */
-export function systemOpener(platform: string = process.platform): Opener {
+export function systemOpener(platform: string = process.platform, spawner: Spawner = spawn, waitMs: number = OPENER_WAIT_MS): Opener {
 	return (url) =>
 		new Promise((resolve, reject) => {
 			const child =
 				platform === 'darwin'
-					? spawn('open', [url], { stdio: 'ignore', detached: true })
+					? spawner('open', [url], { stdio: 'ignore', detached: true })
 					: platform === 'win32'
-						? spawn('cmd', ['/d', '/s', '/c', `start "" "${url}"`], { stdio: 'ignore', detached: true, windowsHide: true, windowsVerbatimArguments: true })
-						: spawn('xdg-open', [url], { stdio: 'ignore', detached: true });
-			child.once('error', reject);
-			child.once('spawn', () => {
+						? spawner('cmd', ['/d', '/s', '/c', `start "" "${url}"`], { stdio: 'ignore', detached: true, windowsHide: true, windowsVerbatimArguments: true })
+						: spawner('xdg-open', [url], { stdio: 'ignore', detached: true });
+			let timer: ReturnType<typeof setTimeout> | null = null;
+			let settled = false;
+			const settle = (error: Error | null) => {
+				if (settled) return;
+				settled = true;
+				if (timer) clearTimeout(timer);
 				child.unref();
-				resolve();
+				if (error) reject(error);
+				else resolve();
+			};
+			child.once('error', (e) => settle(e));
+			child.once('spawn', () => {
+				timer = setTimeout(() => settle(null), waitMs);
 			});
+			child.once('exit', (code, signal) => settle(code === 0 ? null : new Error(`The opener ended with ${code ?? signal}`)));
 		});
 }

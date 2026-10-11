@@ -43,7 +43,7 @@ The documentation for other tools: https://matters-that-matter.app/docs/connect/
 
 (Shortened: the file holds more display settings, which other tools can ignore.)
 
-- **IDs, not labels.** Notes store `id`. Labels, tones and icons can change without touching any note. IDs are lowercase letters, digits and hyphens, made once from the label and never changed.
+- **IDs, not labels.** Notes store `id`. Labels, tones and icons can change without touching any note. IDs the plugin makes from a label are lowercase letters, digits and hyphens; IDs taken over from existing notes keep their form. Compare IDs exactly as stored. An ID is made once and never changed.
 - **Statuses** are the board's columns, in order. `category` says what a status means: `open` (not started), `active` (in progress or waiting) or `closed` (done). Exactly one status has `backlog: true` (where new Actions land and where "Reopen" puts them; never closed) and exactly one has `done: true` (what "Mark as done" sets; always closed). There can be other closed statuses: reason about the category, never about a particular ID.
 - **Types** give Actions their colour and icon. Exactly one has `default: true`.
 - **Spheres** group Matters (Home, Work). The list can be empty.
@@ -91,7 +91,7 @@ The minimal Action is a note with only `mtm-kind: action`: it shows in the Inbox
 
 ### File names
 
-- Start from the title; remove `/ \ : * ? " < > | # ^ [ ]` (they break file names or links); collapse runs of whitespace to one space; trim; drop leading dots; cap at 100 characters.
+- Start from the title; replace each of `/ \ : * ? " < > | # ^ [ ]` with a space (they break file names or links); collapse runs of whitespace to one space; trim; drop leading dots; cap at 100 characters.
 - If a note with that name already exists, in the folder or anywhere else in the vault (ignoring case), append " 2", " 3"… until the name is free. A name another note already has would make links to that note reach the new one.
 - Changing an Action's title means renaming its file. Renaming outside Obsidian leaves links to the old name broken, so rename through the command line or the MCP server (which update links when Obsidian's "Automatically update internal links" is on), or let the user rename in Obsidian.
 

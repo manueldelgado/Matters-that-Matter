@@ -174,9 +174,9 @@ describe('what the files layer writes', () => {
 });
 
 describe('what the files layer writes in the harder cases', () => {
-	it('edits a block whose fence lines have spaces after the dashes where it is, keeping the fences', () => {
+	it('edits a block whose closing line has spaces after the dashes where it is, keeping the fences', () => {
 		expect(file('update-fence-whitespace', 'MTM/Sample/Edge cases/Edge - fence with spaces.md')).toBe(
-			'---  \nmtm-kind: action\nmtm-type: write\nmtm-status: doing\nmtm-matter: "[[Kitchen renovation]]"\n--- \t\nFence lines with spaces after the dashes.\n',
+			'---\nmtm-kind: action\nmtm-type: write\nmtm-status: doing\nmtm-matter: "[[Kitchen renovation]]"\n--- \t\nFence lines with spaces after the dashes.\n',
 		);
 	});
 

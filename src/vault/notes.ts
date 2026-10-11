@@ -1,6 +1,7 @@
 // Reading MTM notes through metadataCache, and creating files and folders.
 
 import { normalizePath, TFile, type App, type TAbstractFile } from 'obsidian';
+import { plainFences } from '../files/fences';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import type { Frontmatter } from '../services/notesModel';
@@ -39,6 +40,28 @@ export function pathTaken(app: App, path: string, except?: TAbstractFile): boole
 	return !!parent?.children.some((child) => child !== except && child.path.toLowerCase() === lower);
 }
 
+/**
+ * Whether a Markdown note anywhere in the vault already has this name, ignoring case. A new note with that name
+ * would receive every link written to the other one by name.
+ */
+export function nameTaken(app: App, name: string): boolean {
+	const lower = name.toLowerCase();
+	return app.vault.getMarkdownFiles().some((f) => f.basename.toLowerCase() === lower);
+}
+
+/**
+ * Changes a note's properties through `FileManager.processFrontMatter`. Obsidian reads a properties block after a
+ * byte-order mark, or between `---` lines with trailing spaces, but `processFrontMatter` doesn't find it there and
+ * writes a second block in front, so the note would lose its properties: such fence lines are made plain first.
+ */
+export async function processFrontMatter(app: App, file: TFile, change: (fm: Frontmatter) => void): Promise<void> {
+	// The adapter, because `Vault.read` hides a byte-order mark.
+	if (plainFences(await app.vault.adapter.read(file.path)) !== null) {
+		await app.vault.process(file, (content) => plainFences(content) ?? content);
+	}
+	await app.fileManager.processFrontMatter(file, change);
+}
+
 export function exists(app: App, path: string): boolean {
 	return app.vault.getAbstractFileByPath(normalizePath(path)) !== null;
 }
@@ -56,7 +79,7 @@ export async function ensureFolder(app: App, path: string): Promise<void> {
 export async function createNote(app: App, path: string, frontmatter: Frontmatter, body = ''): Promise<TFile> {
 	const file = await app.vault.create(normalizePath(path), body);
 	if (Object.keys(frontmatter).length > 0) {
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			Object.assign(fm, frontmatter);
 		});
 	}

@@ -101,17 +101,27 @@ Renamed to “Call Marco about the revised quote”
     Notes/Kitchen plan.md      line 7
 ```
 
+When another note in the vault already has the new name, links to that note are given its path (`[[Notes/Kitchen ideas]]`), so they keep reaching it and not the renamed Action, as Obsidian does; they are listed with the others.
+
 When the setting is off, the links are left as they are, as Obsidian would leave them, and `mtm` says how many now point to the old name, and where. With the setting off, a new title that another note in the vault already has is refused, since links to that note could lead to the Action instead. `add` and `add-matter` never take a name another note has: the new note gets " 2". `--dry-run` shows all of this before anything is written.
 
 `done` sets the done status and today's completion date; `reopen` moves a done Action back to the backlog status.
 
+### Adding a Matter
+
+```bash
+mtm add-matter "Garden shed" --sphere Home --review-every 1m
+```
+
+The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, such as `house`), `--sphere`, `--state` (`active`, the default, `dormant` or `closed`), `--outcome` (what done looks like, in one line) and `--review-every` (a review rhythm such as `7d`, `2w` or `1m`).
+
 ### Listing
 
-`mtm list` shows open Actions grouped by Matter, in board order; late ones say "late". Filters: `--matter`, `--status`, `--type`, `--sphere`, `--person`, `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
+`mtm list` shows open Actions grouped by Matter, in board order; late ones say "late". Filters: `--matter`, `--status` (a done status shows done Actions), `--type`, `--sphere`, `--person` (with this person, or waiting on them), `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
 
 ### Opening in Obsidian
 
-`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that the plugin handles (a version of Matters that Matter with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). Opening links on Windows hasn't been tried yet.
+`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that the plugin handles (a version of Matters that Matter with links): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). When the system can't open the link (nothing handles `obsidian://` links, say), `mtm` says so, prints the link to open yourself and exits with code 1. Opening links on Windows hasn't been tried yet.
 
 ## Options
 
@@ -159,15 +169,15 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML so they can't be changed. Nothing was written. |
+| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML so they can't be changed. Nothing was written. Also when `mtm open` couldn't open the link. |
 | 2 | The vault isn't ready: no vault named, no settings of Matters that Matter, setup not done, or settings from a newer version of the plugin (reads still work then, with a warning; writes are refused) |
-| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
+| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
 
 - Only `mtm-` properties change, and the body only where an Action's details, checklist or link go. Everything else in a note stays as it is.
-- A write is all or nothing. Every file is checked against what was read; the new contents are written to hidden temporary files next to them; then they are moved into place. If a step fails, everything already moved is put back. Before a new or renamed note takes its name, the name is checked again, so it doesn’t replace a file that appeared meanwhile. Files are only ever moved with renames, so Obsidian, if it is open, sees each change as it happens.
-- Line endings and file permissions are kept.
+- A write is all or nothing. Every file is checked against what was read; the new contents are written to hidden temporary files next to them (named `.mtm-….tmp`; one left behind by a crash can be deleted); then they are moved into place. If a step fails, everything already moved is put back. Before a new or renamed note takes its name, the name is checked again, so it doesn’t replace a file that appeared meanwhile. Files are only ever moved with renames, so Obsidian, if it is open, sees each change as it happens.
+- Line endings and file permissions are kept. A note made read-only (say with `chmod 444`) is never written: the whole write is refused and nothing is changed.
 - Writes stay inside the vault: nothing is written through a link (symlink) to a folder elsewhere. Linked files and folders are skipped when reading.
 - Nothing is deleted and settings are never written.
 

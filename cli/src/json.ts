@@ -47,9 +47,10 @@ export type ErrorJson = {
 		| {
 				/**
 				 * Exit code 3: `changed`, `exists`, `missing` (the vault changed meanwhile), `failed` (put back, or `left`
-				 * lists what couldn't be), `unsafe`. Exit code 1: `invalid-properties`, `not-mtm`, `usage`, `open-failed`.
+				 * lists what couldn't be), `unsafe` (a write would have gone outside the vault), `read-only` (a note to be
+				 * changed is read-only). Exit code 1: `invalid-properties`, `not-mtm`, `usage`, `open-failed`.
 				 */
-				code: 'changed' | 'exists' | 'missing' | 'failed' | 'unsafe' | 'invalid-properties' | 'not-mtm' | 'usage' | 'open-failed';
+				code: 'changed' | 'exists' | 'missing' | 'failed' | 'unsafe' | 'read-only' | 'invalid-properties' | 'not-mtm' | 'usage' | 'open-failed';
 				message: string;
 				path?: string;
 				left?: string[];

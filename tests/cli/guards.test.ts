@@ -1,7 +1,7 @@
 // When the vault isn't ready, bad input, colour, and the exit codes that say which.
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { nodeFs, type ApplyFs } from '../../cli/src/apply';
 import { WriteError } from '../../cli/src/filesLayer';
@@ -205,6 +205,29 @@ describe('a write that fails: exit 3, everything put back', () => {
 			stderr: 'Writing MTM/Actions/Send the invoice.md failed (disk full). Everything was put back as it was; nothing was changed.\n',
 		});
 		expect(hashes(root)).toEqual(before);
+	});
+});
+
+describe('a read-only note: exit 3, nothing written', () => {
+	it('refuses the whole write and says which note', async () => {
+		const root = keep(syntheticVault());
+		const note = join(root, 'MTM/Actions/Send the invoice.md');
+		const text = readFileSync(note, 'utf8');
+		chmodSync(note, 0o444);
+		const before = hashes(root);
+		expect(await mtm(['done', 'Send the invoice', '--vault', root], writer)).toEqual({
+			code: 3,
+			stdout: '',
+			stderr: 'MTM/Actions/Send the invoice.md is read-only, so nothing was written.\n',
+		});
+		const r = await mtm(['update', 'Send the invoice', '--title', 'Send the October invoice', '--json', '--vault', root], writer);
+		expect(r.code).toBe(3);
+		expect(JSON.parse(r.stdout)).toEqual({
+			error: { code: 'read-only', path: 'MTM/Actions/Send the invoice.md', message: 'MTM/Actions/Send the invoice.md is read-only, so nothing was written.', left: [] },
+		});
+		expect(hashes(root)).toEqual(before);
+		expect(readFileSync(note, 'utf8')).toBe(text);
+		chmodSync(note, 0o644);
 	});
 });
 

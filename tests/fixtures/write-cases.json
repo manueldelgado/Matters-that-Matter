@@ -467,8 +467,18 @@
 		"now": "2026-10-09T12:00"
 	},
 	{
+		"name": "update-details-byte-order-mark",
+		"description": "New details for a note that starts with a byte-order mark: the body changes, the mark and the properties stay.",
+		"op": "updateAction",
+		"input": {
+			"action": "More - byte-order mark",
+			"details": "Packed and labelled."
+		},
+		"now": "2026-10-09T12:00"
+	},
+	{
 		"name": "update-fence-whitespace",
-		"description": "Fence lines with spaces and a tab after the dashes: the block is edited where it is, never a second one added.",
+		"description": "A closing fence line with a space and a tab after the dashes: the block is edited where it is, never a second one added.",
 		"op": "updateAction",
 		"input": {
 			"action": "Edge - fence with spaces",
@@ -476,7 +486,7 @@
 		},
 		"now": "2026-10-09T12:00",
 		"setup": {
-			"MTM/Sample/Edge cases/Edge - fence with spaces.md": "---  \nmtm-kind: action\nmtm-type: write\nmtm-status: next\nmtm-matter: \"[[Kitchen renovation]]\"\n--- \t\nFence lines with spaces after the dashes.\n"
+			"MTM/Sample/Edge cases/Edge - fence with spaces.md": "---\nmtm-kind: action\nmtm-type: write\nmtm-status: next\nmtm-matter: \"[[Kitchen renovation]]\"\n--- \t\nFence lines with spaces after the dashes.\n"
 		}
 	},
 	{

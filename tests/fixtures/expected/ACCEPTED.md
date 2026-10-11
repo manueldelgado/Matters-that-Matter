@@ -14,12 +14,10 @@ There are none: the file index reproduces `cache.json` byte for byte.
 
 Differences between what Obsidian leaves after applying a write case's plan (`writes/<case>/`) and what the files layer (`src/files/write.ts`) leaves for the same plan. `tests/files/writeCases.test.ts` ignores exactly the files listed in the `json writes` block below, and fails when one of them no longer differs. Each entry is `{ "case": "…", "path": "…", "reason": "…" }`: `path` is the vault path of a file in that case's result. A style difference still has to say the same thing: the test checks that both files have the same properties, as the index reads them, and the same body once line endings are made plain; `"keys": ["…"]` names properties whose values may differ. A difference in meaning must say so with `"meaning": true`, which skips those checks; nothing else can pass as style.
 
-Two are style only: the properties read the same and every link reaches the same file. When Obsidian changes a property it writes the whole block again in its own style (comments dropped, quoting and number forms normalised, flow lists as block lists); the files layer changes only the `mtm-` keys a plan names and leaves every other byte. Seen in `update-unusual-yaml` and, for links in properties, in `rename-to-a-taken-name`.
+Five are style only: the properties read the same and every link reaches the same file. When Obsidian changes a property it writes the whole block again in its own style (comments dropped, quoting and number forms normalised, flow lists as block lists); the files layer changes only the `mtm-` keys a plan names and leaves every other byte. Seen in `update-unusual-yaml` and, for links in properties, in `rename-to-a-taken-name`. Obsidian's own `processFrontMatter` would damage two kinds of note: one that starts with a byte-order mark, and one whose closing fence line has spaces after the dashes (an opening line with spaces it doesn't read as a block at all). It doesn't see their properties, writes a new block in front, and the old block (with `mtm-kind`) stays below as text. The plugin makes such fence lines plain before it writes properties (`vault/notes.ts`), as the oracle does: it drops the mark or the spaces, and the block is edited in place. The files layer keeps both. Seen in `update-byte-order-mark`, `update-byte-order-mark-properties` and `update-fence-whitespace`.
 
-Four are differences in meaning, accepted because Obsidian's own write damages the note or its links and the files layer is deliberately safer:
+One is a difference in meaning, accepted because Obsidian's own write damages the links and the files layer is deliberately safer:
 
-- **A byte-order mark** (`update-byte-order-mark`, `update-byte-order-mark-properties`): Obsidian's `processFrontMatter` doesn't see the properties after the mark, so it writes a new block in front of the mark with only the properties the write sets; the old block, with `mtm-kind`, stays after it as text and the note stops being an Action.
-- **Fence lines with spaces after the dashes** (`update-fence-whitespace`): Obsidian reads such a block, but `processFrontMatter` doesn't find it and writes a second block in front, with the same result.
 - **A percent sign in a renamed note's name** (`rename-to-a-title-with-symbols`): Obsidian writes `%` as it is in Markdown links, which then don't read back; the files layer writes `%25`.
 
 Every other case matches Obsidian byte for byte: the renames with links updated and not updated, a name that becomes unique (`rename-name-becomes-unique`: the same links rewritten as Obsidian rewrites them), and a CRLF note (`update-crlf`).
@@ -39,20 +37,17 @@ Every other case matches Obsidian byte for byte: the renames with links updated 
 	{
 		"case": "update-byte-order-mark",
 		"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
-		"reason": "A difference in meaning, where the files layer is deliberately safer. Obsidian's processFrontMatter doesn't see the properties of a note that starts with a byte-order mark: it writes a new block, with only the properties the write sets, in front of the mark, and the old block (with mtm-kind) stays after it as text, so the note stops being an Action. The files layer edits the block after the mark, keeps the mark and every other property.",
-		"meaning": true
+		"reason": "Style only. The note starts with a byte-order mark, which Obsidian's processFrontMatter can't see past: the plugin drops the mark before writing properties, so Obsidian edits the block in place. The files layer edits the block after the mark and keeps it. The properties and the body read the same."
 	},
 	{
 		"case": "update-byte-order-mark-properties",
 		"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
-		"reason": "A difference in meaning, where the files layer is deliberately safer. Obsidian's processFrontMatter doesn't see the properties of a note that starts with a byte-order mark: it writes a new block, with only the properties the write sets, in front of the mark, and the old block (with mtm-kind) stays after it as text, so the note stops being an Action. The files layer edits the block after the mark, keeps the mark and every other property. The same as update-byte-order-mark, with no body edit: processFrontMatter alone.",
-		"meaning": true
+		"reason": "Style only. The same as update-byte-order-mark, with no body edit: the plugin drops the mark before processFrontMatter; the files layer keeps it. The properties and the body read the same."
 	},
 	{
 		"case": "update-fence-whitespace",
 		"path": "MTM/Sample/Edge cases/Edge - fence with spaces.md",
-		"reason": "A difference in meaning, where the files layer is deliberately safer. Obsidian reads properties between fence lines with spaces or tabs after the dashes, but its processFrontMatter doesn't find them: it writes a second block, with only the properties the write sets, in front of the note, and the old block (with mtm-kind and the old status) stays after it as text, so the note stops being an Action. The files layer edits the block where it is and keeps its fence lines.",
-		"meaning": true
+		"reason": "Style only. The closing fence line has a space and a tab after the dashes, which Obsidian's processFrontMatter can't see past: the plugin makes the line plain before writing properties, so Obsidian edits the block in place. The files layer keeps the line as written. The properties and the body read the same."
 	},
 	{
 		"case": "rename-to-a-title-with-symbols",

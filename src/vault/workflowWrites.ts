@@ -6,7 +6,7 @@ import { applyCardOrder } from '../services/cardOrder';
 import { applyStatus } from '../services/completion';
 import { toYmd } from '../model/dates';
 import { now } from './clock';
-import { frontmatterOf, notesOfKind, type Frontmatter } from './notes';
+import { frontmatterOf, notesOfKind, processFrontMatter, type Frontmatter } from './notes';
 
 /** Actions whose raw value for the key is exactly the ID. */
 export function actionsUsing(app: App, key: 'mtm-status' | 'mtm-type', id: string): TFile[] {
@@ -16,7 +16,7 @@ export function actionsUsing(app: App, key: 'mtm-status' | 'mtm-type', id: strin
 export async function moveStatus(app: App, files: readonly TFile[], from: StatusDef, to: StatusDef): Promise<number> {
 	const today = toYmd(now());
 	for (const file of files) {
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			applyStatus(fm, to, from.category, today);
 			// Another cell: the card joins it after its numbered cards.
 			applyCardOrder(fm, from.id !== to.id);
@@ -27,7 +27,7 @@ export async function moveStatus(app: App, files: readonly TFile[], from: Status
 
 export async function moveType(app: App, files: readonly TFile[], toId: string): Promise<number> {
 	for (const file of files) {
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			fm['mtm-type'] = toId;
 		});
 	}
@@ -42,7 +42,7 @@ export function mattersInSphere(app: App, id: string): TFile[] {
 /** Moves Matters to another Sphere, or to none when `toId` is null. */
 export async function moveSphere(app: App, files: readonly TFile[], toId: string | null): Promise<number> {
 	for (const file of files) {
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			if (toId) fm['mtm-sphere'] = toId;
 			else delete fm['mtm-sphere'];
 		});

@@ -7,128 +7,11 @@ import { frontmatterValueLine, setFrontmatterString } from './frontmatterEdit';
 import { readFrontmatter, stripBom } from './frontmatter';
 import { bodyLinks, frontmatterLinks, linkpath, type LinkRef } from './links';
 import type { LinkFormat } from './linkText';
-import { byCodeUnit, extensionOf, nameOf, parentOf } from './paths';
+import { byCodeUnit, extensionOf, nameOf } from './paths';
+import { FileLookup, nameWithoutExtension, withoutExtension } from './resolve';
 import { scanBody, splitLines } from './scan';
 
-// ——— Obsidian's file lookup ———
-
-/**
- * Files by name, as Obsidian's metadata cache keeps them to resolve links: each name (lower case, extension
- * included) lists its files in the order they were added. A renamed file is added again at the end of its new
- * name's list, as Obsidian does.
- */
-export class FileLookup {
-	private readonly exact: Set<string>;
-	private readonly byName: Map<string, string[]>;
-
-	constructor(paths: Iterable<string>, byName?: Map<string, string[]>) {
-		this.exact = new Set(paths);
-		if (byName) {
-			this.byName = byName;
-			return;
-		}
-		this.byName = new Map();
-		for (const path of [...this.exact].sort(byCodeUnit)) {
-			const key = nameOf(path).toLowerCase();
-			const list = this.byName.get(key);
-			if (list) list.push(path);
-			else this.byName.set(key, [path]);
-		}
-	}
-
-	has(path: string): boolean {
-		return this.exact.has(path);
-	}
-
-	/** The lookup after `from` is renamed to `to`. */
-	renamed(from: string, to: string): FileLookup {
-		const byName = new Map([...this.byName].map(([k, v]) => [k, v.filter((p) => p !== from)] as const));
-		const key = nameOf(to).toLowerCase();
-		byName.set(key, [...(byName.get(key) ?? []), to]);
-		for (const [k, v] of byName) if (v.length === 0) byName.delete(k);
-		return new FileLookup([...[...this.exact].filter((p) => p !== from), to], byName);
-	}
-
-	/**
-	 * Every file a link path (no `#` part) can mean from `sourcePath`, best first (Obsidian's `getLinkpathDest`): an
-	 * exact or relative path wins alone; otherwise every file whose path ends with the link, those under the source's
-	 * folder first, shorter paths first.
-	 */
-	destinations(link: string, sourcePath: string): string[] {
-		if (link === '') return this.exact.has(sourcePath) ? [sourcePath] : [];
-		if (link.startsWith('file:')) return [];
-		let o = link.toLowerCase();
-		let name = nameOf(o);
-		let list = name.includes('.') ? this.byName.get(name) : undefined;
-		if (!list) {
-			o = `${link}.md`.toLowerCase();
-			name = nameOf(o);
-			list = this.byName.get(name);
-		}
-		if (!list) return [];
-		if (name === o && list.length === 1) return [...list];
-		let folder = parentOf(sourcePath).toLowerCase();
-		if (o.startsWith('./') || o.startsWith('../')) {
-			if (o.startsWith('./../')) o = o.slice(2);
-			if (o.startsWith('./')) {
-				if (folder !== '') folder += '/';
-				o = folder + o.slice(2);
-			} else {
-				while (o.startsWith('../')) {
-					o = o.slice(3);
-					folder = parentOf(folder);
-				}
-				if (folder !== '') folder += '/';
-				o = folder + o;
-			}
-			for (const path of list) if (path.toLowerCase() === o) return [path];
-		}
-		if (o.startsWith('/')) o = o.slice(1);
-		for (const path of list) if (path.toLowerCase() === o) return [path];
-		if (link.startsWith('/')) return [];
-		const near: string[] = [];
-		const far: string[] = [];
-		for (const path of list) {
-			const lower = path.toLowerCase();
-			if (lower.endsWith(o)) (lower.startsWith(folder) ? near : far).push(path);
-		}
-		const byLength = (a: string, b: string) => a.length - b.length;
-		return [...near.sort(byLength), ...far.sort(byLength)];
-	}
-
-	/**
-	 * The link text Obsidian writes for `target` from `sourcePath` (`fileToLinktext`): with `omitMd` (wikilinks) a
-	 * note's `.md` is left out, Markdown links keep it.
-	 */
-	linkText(target: string, sourcePath: string, format: LinkFormat, omitMd: boolean): string {
-		const md = extensionOf(target) === 'md';
-		const full = md && omitMd ? withoutExtension(target) : target;
-		if (format === 'absolute') return full;
-		if (format === 'relative') {
-			let up = '';
-			let folder = parentOf(sourcePath);
-			while (folder !== '' && folder !== '/' && !full.startsWith(`${folder}/`)) {
-				up = `../${up}`;
-				folder = parentOf(folder);
-			}
-			return full.startsWith(`${folder}/`) ? up + full.slice(folder.length + 1) : up + full;
-		}
-		const short = md && omitMd ? nameWithoutExtension(target) : nameOf(target);
-		const found = this.destinations(linkpath(short), sourcePath);
-		return found.length === 1 && found[0] === target ? short : full;
-	}
-}
-
-/** The path without its extension (any extension), as Obsidian strips it. */
-function withoutExtension(path: string): string {
-	const dot = path.lastIndexOf('.');
-	return dot <= 0 || dot === path.length - 1 ? path : path.slice(0, dot);
-}
-
-/** The file name without its extension. */
-function nameWithoutExtension(path: string): string {
-	return withoutExtension(nameOf(path));
-}
+export { FileLookup } from './resolve';
 
 /** A name as a link shows it: a note's without `.md`, other files' with their extension. */
 const shownName = (path: string) => (extensionOf(nameOf(path)) === 'md' ? nameWithoutExtension(path) : nameOf(path));
@@ -269,7 +152,7 @@ function collectRefs(state: RenameState, lookup: FileLookup): Ref[] {
 		for (const ref of [...body.links, ...body.embeds] as LinkRef[]) {
 			add({ source, link: ref.link, original: ref.original, offset: (starts[ref.line] ?? 0) + ref.col, line: ref.line });
 		}
-		for (const ref of frontmatterLinks(info.frontmatter)) add({ source, link: ref.link, original: ref.original, key: ref.key, line: frontmatterValueLine(content, ref.key.split('.')) ?? 0 });
+		for (const ref of frontmatterLinks(info.frontmatter)) add({ source, link: ref.link, original: ref.original, key: ref.key, line: frontmatterValueLine(content, ref.key, ref.original) ?? 0 });
 	}
 	return refs;
 }
@@ -290,7 +173,7 @@ export function renameLinks(state: RenameState, from: string, to: string, option
 	const rewritten: LinkChange[] = [];
 	const dangling: LinkChange[] = [];
 	const body = new Map<string, { start: number; end: number; text: string; ref: Ref }[]>();
-	const props = new Map<string, { ref: Ref; text: string }[]>();
+	const props = new Map<string, { ref: Ref; text: string; target: string }[]>();
 
 	for (const ref of refs) {
 		const source = moved(ref.source);
@@ -314,7 +197,7 @@ export function renameLinks(state: RenameState, from: string, to: string, option
 			body.set(ref.source, list);
 		} else {
 			const list = props.get(ref.source) ?? [];
-			list.push({ ref, text });
+			list.push({ ref, text, target });
 			props.set(ref.source, list);
 		}
 	}
@@ -330,11 +213,25 @@ export function renameLinks(state: RenameState, from: string, to: string, option
 			content = content.slice(0, e.start) + e.text + content.slice(e.end);
 			rewritten.push(changeOf(e.ref, e.text));
 		}
-		for (const { ref, text } of props.get(source) ?? []) {
-			const done = setFrontmatterString(content, (ref.key ?? '').split('.'), text, source);
-			if (!done) continue;
+		const unwritten: { ref: Ref; target: string }[] = [];
+		for (const { ref, text, target } of props.get(source) ?? []) {
+			const done = setFrontmatterString(content, ref.key ?? '', text, source, ref.original);
+			if (!done) {
+				unwritten.push({ ref, target });
+				continue;
+			}
 			content = done.content;
 			rewritten.push(changeOf({ ...ref, line: done.line }, text));
+		}
+		// A value that can't be written where it was read (an alias, say) may follow one that was; one that now
+		// reaches anything else is a link left behind.
+		if (unwritten.length > 0) {
+			const now = frontmatterLinks(readFrontmatter(content).frontmatter);
+			for (const { ref, target } of unwritten) {
+				const link = now.find((l) => l.key === ref.key)?.link;
+				const reached = link === undefined ? null : (after.destinations(splitLink(link).path, moved(source))[0] ?? null);
+				if (reached !== target) dangling.push(changeOf(ref, null));
+			}
 		}
 		contents.set(source, bom + content);
 	}

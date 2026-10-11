@@ -25,6 +25,7 @@ export const FIXTURE_NOW = '2026-10-09T12:00';
 export const EDGE_FOLDER = 'MTM/Sample/Edge cases';
 const LINKS = `${EDGE_FOLDER}/Links`;
 const MORE = `${EDGE_FOLDER}/More links`;
+const RESOLUTION = `${EDGE_FOLDER}/Resolution`;
 
 // ——— The plugin's pure modules, bundled on the fly so they are always the current source ———
 
@@ -350,7 +351,7 @@ function edgeCases(mtm, notes, now) {
 			'```',
 		),
 	);
-	raw.push(...moreLinkCases());
+	raw.push(...moreLinkCases(), ...resolutionCases());
 	return raw;
 }
 
@@ -424,6 +425,42 @@ function moreLinkCases() {
 			'An escaped pipe outside a table: [[More - target\\|the target]].',
 		),
 	});
+	return raw;
+}
+
+/**
+ * How a link finds its note when several could match: a match under the linking note's folder first, a leading `/`
+ * from the vault root only, a link that ends a longer path without a folder boundary (`B/…` reaching `AB/…`), and
+ * `./` and `../`. Plain notes without properties, with names no other note has, so nothing else changes.
+ */
+function resolutionCases() {
+	const raw = [];
+	const note = (path, ...body) => raw.push({ path: `${RESOLUTION}/${path}.md`, content: lines(...body) });
+	note('B/Resolution - note', 'The shorter of two notes with this name, outside A.');
+	note('A/C/Resolution - note', 'The longer of two notes with this name, under A.');
+	note('AB/Resolution - thing', 'Reached by a link that ends with B/ and its name.');
+	note('A/Resolution - solo', 'The only note with this name.');
+	note(
+		'A/Resolution - source',
+		'Links from A:',
+		'',
+		'- By name, a match under this folder wins: [[Resolution - note]]',
+		'- From the vault root, which has no such note: [[/Resolution - solo]]',
+		'- Up a folder: [[../B/Resolution - note]]',
+		'- This folder: [[./C/Resolution - note]]',
+	);
+	note(
+		'Z/Resolution - source',
+		'Links from Z:',
+		'',
+		'- By name, the shorter path wins: [[Resolution - note]]',
+		'- From the vault root: [[/MTM/Sample/Edge cases/Resolution/A/Resolution - solo]]',
+		'- A path ending without a folder boundary: [[B/Resolution - thing]]',
+		'- A path ending at a folder boundary: [[AB/Resolution - thing]]',
+		'- Part of a longer path: [[C/Resolution - note]]',
+		'- By name, the only one: [[Resolution - solo]]',
+		'- From a folder above: [[Resolution/A/Resolution - solo]]',
+	);
 	return raw;
 }
 

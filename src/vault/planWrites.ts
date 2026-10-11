@@ -6,7 +6,7 @@ import { applyBodyEdit, applyFrontmatterEdit } from '../ops/plan';
 import type { Plan } from '../ops/types';
 import { withBody } from '../services/planContent';
 import type { Frontmatter } from './notes';
-import { ensureFolder } from './notes';
+import { ensureFolder, processFrontMatter } from './notes';
 
 const folderOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '');
 
@@ -27,14 +27,14 @@ export async function applyPlan(app: App, plan: Plan): Promise<void> {
 		if (folder) await ensureFolder(app, folder);
 		const file = await app.vault.create(path, '');
 		if (create.frontmatter.length) {
-			await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+			await processFrontMatter(app, file, (fm: Frontmatter) => {
 				for (const [key, value] of create.frontmatter) fm[key] = value;
 			});
 		}
 		if (create.body) await app.vault.process(file, (content) => withBody(content, create.body));
 	}
 	for (const edit of plan.edits) {
-		await app.fileManager.processFrontMatter(fileAt(app, edit.path), (fm: Frontmatter) => applyFrontmatterEdit(fm, edit));
+		await processFrontMatter(app, fileAt(app, edit.path), (fm: Frontmatter) => applyFrontmatterEdit(fm, edit));
 	}
 	for (const body of plan.bodies) {
 		await app.vault.process(fileAt(app, body.path), (content) => applyBodyEdit(content, body.edit));

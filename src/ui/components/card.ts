@@ -94,7 +94,7 @@ export interface CardContext {
 }
 
 /**
- * Selection and opening on a card (G4): click selects, Ctrl/Cmd-click or double-click opens; Enter opens and Space selects.
+ * Selection and opening on a card: click selects, Ctrl/Cmd-click or double-click opens; Enter opens and Space selects.
  * Keys pressed on something inside the card (an orphan badge's dismiss) stay with it.
  */
 export function bindCardActions(

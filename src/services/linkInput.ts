@@ -116,15 +116,19 @@ function defuseMarkdownLinks(text: string): string {
 /**
  * Bare addresses with a scheme other than http(s) (`obsidian://…`, `javascript:…`) get their colon escaped, so
  * nothing turns them into links, wherever they are: inside a web address too, since renderers end web addresses in
- * different places.
+ * different places. A renderer may start the scheme anywhere in the run of scheme characters before the colon
+ * (`1obsidian://`, `a1javascript:`, `x:obsidian://`), so the whole run is weighed: a colon followed by `//`, or by
+ * text after a run that ends in an acting scheme, is escaped unless the run is just http or https.
  */
 function defuseBareSchemes(text: string): string {
-	return text.replace(/(^|[^a-z0-9+.-])([a-z][a-z0-9+.-]*):/gi, (whole, before: string, scheme: string, offset: number, all: string) => {
+	// Runs of scheme characters are matched whole: a match can only start where a run starts.
+	return text.replace(/([a-z0-9+.-]+):/gi, (whole, run: string, offset: number, all: string) => {
+		const lower = run.toLowerCase();
+		if (!/[a-z]/.test(lower) || lower === 'http' || lower === 'https') return whole;
 		const after = all.slice(offset + whole.length);
-		const lower = scheme.toLowerCase();
-		if (lower === 'http' || lower === 'https') return whole;
-		const live = after.startsWith('//') || (BARE_SCHEMES.has(lower) && /^\S/u.test(after));
-		return live ? `${before}${scheme}\\:` : whole;
+		const acting = [...BARE_SCHEMES].some((scheme) => lower.endsWith(scheme));
+		const live = after.startsWith('//') || (acting && /^\S/u.test(after));
+		return live ? `${run}\\:` : whole;
 	});
 }
 
@@ -221,10 +225,14 @@ export function linkAddInput(params: LinkParams): AddActionInput {
 	return input;
 }
 
-/** The text an `mtm-quick-add` link puts in the dialog (nothing is added until the user presses Enter). */
+/**
+ * The text an `mtm-quick-add` link puts in the dialog (nothing is added until the user presses Enter). Quick add
+ * turns it only into a file name, Matter and person names and dates, never into a note's body or a property as
+ * written, so it is shown without escapes: control characters go, line breaks become spaces, backticks apostrophes.
+ */
 export function linkQuickAddText(params: LinkParams): string {
 	const text = param(params, 'text');
-	return text === undefined ? '' : linkText(text);
+	return text === undefined ? '' : cap(dropControls(text, false), TEXT_LIMIT).replace(/`/g, "'").trim();
 }
 
 // ——— Opening ———

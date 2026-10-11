@@ -3,7 +3,7 @@
 import { normalizePath, type App, type TFile } from 'obsidian';
 import { uniqueTitle } from '../model/titles';
 import { stripMtmProperties } from '../services/processInbox';
-import { ensureFolder, pathTaken, type Frontmatter } from './notes';
+import { ensureFolder, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 /** What Undo needs to bring a trashed note back. */
 export interface TrashedNote {
@@ -38,7 +38,7 @@ export function defaultNoteFolder(app: App, file: TFile): string {
 
 /** Removes every mtm- property (the body stays) and moves the note, so links update. */
 export async function keepAsNote(app: App, file: TFile, folder: string): Promise<void> {
-	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => stripMtmProperties(fm));
+	await processFrontMatter(app, file, (fm: Frontmatter) => stripMtmProperties(fm));
 	const target = normalizePath(folder.trim()) === '/' ? '' : normalizePath(folder.trim());
 	if (target) await ensureFolder(app, target);
 	const current = file.parent?.path === '/' ? '' : (file.parent?.path ?? '');

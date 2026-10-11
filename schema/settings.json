@@ -221,7 +221,7 @@
 	},
 	"$defs": {
 		"id": {
-			"description": "A stable ID, made once from the label when the item is created and never changed. Notes store it.",
+			"description": "A stable ID, made once when the item is created and never changed. Notes store it. IDs the plugin makes from a label are lowercase letters, digits and hyphens; IDs taken over from existing notes keep their form. Compare IDs exactly as stored.",
 			"type": "string",
 			"minLength": 1
 		},

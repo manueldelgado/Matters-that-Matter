@@ -55,12 +55,20 @@ export function readPriority(value: number | string | null): Read<Priority | nul
 	return fail({ code: 'invalid', field: 'priority', value: String(value), message: T.badPriority(String(value)) });
 }
 
-/** A date in a stored form (seconds and a space allowed) or in words, as quick add reads them; null or '' removes it. */
+/** Starts like a calendar date in figures (2026-10-16, 2026/10/16): read only in a stored form, never as words. */
+const LOOKS_STORED = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
+
+/**
+ * A date in a stored form (seconds and a space allowed) or in words, as quick add reads them; null or '' removes it.
+ * Anything else that starts like a date in figures is refused rather than guessed: a time zone (`Z`, `+02:00`) or a
+ * month or day out of range would otherwise be read as other words, and a different date would be stored.
+ */
 export function readDate(key: string, value: string | null, s: Snapshot): Read<string | null> {
 	const field = publicField(key);
 	if (value === null || value.trim() === '') return done(null);
 	const stored = parseMtmDate(value);
 	if (stored) return done(formatMtmDate(stored));
+	if (LOOKS_STORED.test(value)) return fail({ code: 'invalid', field, value, message: T.badStoredDate(value) });
 	const words = parseDateText(value, s.now, s.settings.dateLanguages);
 	if (!words) return fail({ code: 'invalid', field, value, message: T.badDate(value) });
 	if (words.start) return fail({ code: 'invalid', field, value, message: T.dateRange(value) });
@@ -108,7 +116,12 @@ export function webAddress(text: string): string | null {
 		return null;
 	}
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-	return url.href.replace(MARKUP, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`);
+	return (
+		url.href
+			.replace(MARKUP, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
+			// A `%` that starts no escape is encoded too, so `%%` (a comment marker) never reaches the note.
+			.replace(/%(?![0-9a-f]{2})/gi, '%25')
+	);
 }
 
 /** Lists from other tools must be lists of text. */

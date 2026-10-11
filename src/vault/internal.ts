@@ -153,7 +153,10 @@ export function currentThemeName(app: App): string | null {
  */
 export function showThemeInBrowser(app: App, name: string): boolean {
 	try {
-		const get = method((app.workspace as unknown as Record<string, unknown>).protocolHandlers, 'get');
+		// Obsidian 1.14 keeps the handlers in `protocolHandler.handlers`; earlier versions in `protocolHandlers`.
+		const workspace = app.workspace as unknown as Record<string, unknown>;
+		const holder = workspace.protocolHandler as Record<string, unknown> | undefined;
+		const get = method(holder?.handlers, 'get') ?? method(workspace.protocolHandlers, 'get');
 		const handler = get?.('show-theme');
 		if (typeof handler !== 'function') return false;
 		(handler as Fn)({ action: 'show-theme', name });

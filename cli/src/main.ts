@@ -1,6 +1,7 @@
 // The command line: arguments in, an operation on a snapshot of the vault, human or JSON output, an exit code.
 // Exit codes: 0 done; 1 nothing matched, several did, or the input can't be read (nothing written); 2 the vault
-// isn't ready; 3 a file changed while writing.
+// isn't ready; 3 the write didn't happen (a file changed meanwhile, a path would leave the vault, a note is read-only,
+// or writing failed and was put back).
 
 import { writeFileSync } from 'node:fs';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';

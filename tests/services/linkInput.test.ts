@@ -102,6 +102,9 @@ const HOSTILE: [string, LinkParams, string | null, string | null, string[]][] = 
 	['a ../ path as the link', { title: 'A', link: '../../etc/passwd' }, null, null, []],
 	['a web address as the link', { title: 'A', link: 'https://example.com/a(b)' }, 'MTM/Actions/A.md', '<https://example.com/a%28b%29>\n', []],
 	['a note as the link', { title: 'A', link: 'Some note' }, 'MTM/Actions/A.md', '[[Some note]]\n', []],
+	['comment markers in a web address', { title: 'A', link: 'https://x.com/%%a' }, 'MTM/Actions/A.md', '<https://x.com/%25%25a>\n', []],
+	['comment markers ending a web address', { title: 'A', link: 'https://x.com/a%%' }, 'MTM/Actions/A.md', '<https://x.com/a%25%25>\n', []],
+	['comment markers in the query and fragment of a web address', { title: 'A', link: 'https://x.com/?q=%%#%%' }, 'MTM/Actions/A.md', '<https://x.com/?q=%25%25#%25%25>\n', []],
 	// Other schemes inside text, title and details
 	['a Markdown link to obsidian: in the text', { text: 'Click [here](obsidian://open?vault=x&file=y) /call' }, 'MTM/Actions/Click here (obsidian open vault=x&file=y).md', '', []],
 	['a Markdown link to javascript: in the title', { title: 'Click [here](javascript:alert(1))' }, 'MTM/Actions/Click here (javascript alert(1)).md', '', []],
@@ -130,6 +133,10 @@ const HOSTILE: [string, LinkParams, string | null, string | null, string[]][] = 
 	['a space before an obsidian: destination', { title: 'A', details: '[x]( obsidian://e)' }, 'MTM/Actions/A.md', '\\[x\\]( obsidian\\://e)\n', []],
 	['a space before a javascript: destination', { title: 'A', details: '[x]( javascript:alert(1))' }, 'MTM/Actions/A.md', '\\[x\\]( javascript\\:alert(1))\n', []],
 	['an ideographic space in a link definition', { title: 'A', details: '[x]:\u3000obsidian://e' }, 'MTM/Actions/A.md', '\\[x\\]:\u3000obsidian\\://e\n', []],
+	['a scheme glued to a digit', { title: 'A', details: '1obsidian://x and 2javascript:alert(1)' }, 'MTM/Actions/A.md', '1obsidian\\://x and 2javascript\\:alert(1)\n', []],
+	['a scheme glued to letters and digits', { title: 'A', details: 'a1javascript:x and x9data:text/html,y' }, 'MTM/Actions/A.md', 'a1javascript\\:x and x9data\\:text/html,y\n', []],
+	['a scheme right after another colon', { title: 'A', details: 'x:obsidian://evil and see:javascript:y' }, 'MTM/Actions/A.md', 'x:obsidian\\://evil and see:javascript\\:y\n', []],
+	['a scheme glued to a digit in a checklist', { title: 'A', checklist: '1obsidian://x' }, 'MTM/Actions/A.md', '- [ ] 1obsidian\\://x\n', []],
 	['a percent-encoded scheme in a destination', { title: 'A', details: '[x](obsidian%3A%2F%2Fe)' }, 'MTM/Actions/A.md', '\\[x\\](obsidian%3A%2F%2Fe)\n', []],
 	// Invisible characters and comments
 	[
@@ -190,6 +197,10 @@ describe('links: hostile input written inert', () => {
 			'[x]( obsidian://y)',
 			'[x]:\u3000obsidian://y',
 			'[x](obsidian%3A%2F%2Fy)',
+			'1obsidian://x',
+			'a1javascript:x',
+			'x:obsidian://y',
+			'<https://x.com/%%a>',
 		];
 		for (const r of raw) expect(liveMarkup(r), r).not.toEqual([]);
 	});
@@ -270,6 +281,11 @@ describe('links: parameters', () => {
 	it('quick add text: one line, controls dropped, backticks as apostrophes', () => {
 		expect(linkQuickAddText({ text: 'Call\nMarco `now`\u0000 /call' })).toBe("Call Marco 'now' /call");
 		expect(linkQuickAddText({})).toBe('');
+	});
+
+	it('quick add text is shown without escapes: it only ever becomes a file name, names and dates', () => {
+		expect(linkQuickAddText({ text: 'Ring tel:0123 about [x](obsidian://y) #Kitchen' })).toBe('Ring tel:0123 about [x](obsidian://y) #Kitchen');
+		expect(linkQuickAddText({ text: 'z'.repeat(5_000) })).toBe('z'.repeat(1_000));
 	});
 
 	it('drops control and direction characters, keeping line breaks only where asked', () => {

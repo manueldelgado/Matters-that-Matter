@@ -164,6 +164,68 @@ describe('renaming with links', () => {
 		expect(r.dangling[0]).toEqual({ path: 'Backlinks.md', line: 1, key: 'related', before: '[[Old note]]', after: null });
 	});
 
+	it('rewrites links in properties whose keys hold dots', () => {
+		const dotted: Record<string, string> = {
+			'Folder/Old note.md': '',
+			'Dotted.md': ['---', 'see.also: "[[Old note]]"', 'a.b:', '  c.d:', '    - "[[Old note]]"', 'a: "[[Old note]]"', '---', ''].join('\n'),
+		};
+		const s = { files: Object.keys(dotted), content: (p: string) => dotted[p] ?? null };
+		const r = renameLinks(s, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: true, format: 'shortest' });
+		expect(r.contents.get('Dotted.md')).toBe((dotted['Dotted.md'] ?? '').replace(/Old note/g, 'New note'));
+		expect(r.rewritten.map((c) => [c.key, c.line])).toEqual([
+			['see.also', 1],
+			['a.b.c.d.0', 4],
+			['a', 5],
+		]);
+		expect(r.dangling).toEqual([]);
+		const off = renameLinks(s, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: false, format: 'shortest' });
+		expect(off.dangling.map((c) => [c.key, c.line])).toEqual([
+			['see.also', 1],
+			['a.b.c.d.0', 4],
+			['a', 5],
+		]);
+	});
+
+	it('tells apart a dotted key from a nested one', () => {
+		const both: Record<string, string> = {
+			'Folder/Old note.md': '',
+			'Both.md': ['---', 'a.b: "[[Other]]"', 'a:', '  b: "[[Old note]]"', '---', ''].join('\n'),
+			'Other.md': '',
+		};
+		const s = { files: Object.keys(both), content: (p: string) => both[p] ?? null };
+		const r = renameLinks(s, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: true, format: 'shortest' });
+		expect(r.contents.get('Both.md')).toBe((both['Both.md'] ?? '').replace('Old note', 'New note'));
+		expect(r.rewritten.map((c) => [c.key, c.line])).toEqual([['a.b', 3]]);
+	});
+
+	it('follows an alias to a value it rewrote, and counts a link it cannot rewrite as left behind', () => {
+		const aliased: Record<string, string> = {
+			'Folder/Old note.md': '',
+			'Aliased.md': ['---', 'first: &l "[[Old note]]"', 'again: *l', '---', ''].join('\n'),
+		};
+		const s = { files: Object.keys(aliased), content: (p: string) => aliased[p] ?? null };
+		const r = renameLinks(s, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: true, format: 'shortest' });
+		expect(r.contents.get('Aliased.md')).toBe((aliased['Aliased.md'] ?? '').replace('Old note', 'New note'));
+		expect(r.rewritten.map((c) => c.key)).toEqual(['first']);
+		expect(r.dangling).toEqual([]);
+		// Of `x.0` (the first item of `x`) and the key `x.0`, each is found by the value it holds.
+		const odd: Record<string, string> = {
+			'Folder/Old note.md': '',
+			'Odd.md': ['---', 'x:', '  - "[[Old note]]"', 'x.0: "[[Old note#h]]"', '---', ''].join('\n'),
+		};
+		const o = renameLinks({ files: Object.keys(odd), content: (p: string) => odd[p] ?? null }, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: true, format: 'shortest' });
+		expect(o.contents.get('Odd.md')).toBe((odd['Odd.md'] ?? '').replace(/Old note/g, 'New note'));
+		expect(o.dangling).toEqual([]);
+		// A link under a key that isn't plain text can't be found again to be written: it's left behind and counted.
+		const complex: Record<string, string> = {
+			'Folder/Old note.md': '',
+			'Complex.md': ['---', '? [a, b]', ': "[[Old note]]"', 'plain: "[[Old note]]"', '---', ''].join('\n'),
+		};
+		const c = renameLinks({ files: Object.keys(complex), content: (p: string) => complex[p] ?? null }, 'Folder/Old note.md', 'Folder/New note.md', { updateLinks: true, format: 'shortest' });
+		expect(c.rewritten.map((l) => l.key)).toEqual(['plain']);
+		expect(c.dangling.map((l) => [l.key, l.after])).toEqual([[expect.any(String), null]]);
+	});
+
 	it('only lists vault files it is given', () => {
 		expect(all.filter((p) => isVaultFile(p, '.obsidian')).length).toBe(index.files.length);
 	});

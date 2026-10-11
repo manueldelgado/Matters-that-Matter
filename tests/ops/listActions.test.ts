@@ -42,6 +42,13 @@ describe('listActions', () => {
 		expect(titles(input)).toEqual(expected);
 	});
 
+	it.each([
+		['dueFrom', 'due-from', '2026-10-09T00:00:00Z'],
+		['dueTo', 'due-to', '2026-13-12'],
+	] as const)('%s reads dates as adding does: a time zone or a month 13 is refused', (key, field, value) => {
+		expect(listActions({ [key]: value }, s)).toMatchObject({ ok: false, error: { code: 'invalid', field, value } });
+	});
+
 	it('closed Actions only when asked, or when the status asked for is closed', () => {
 		expect(titles({ matter: 'Kitchen renovation', done: true })).toContain('Order the tiles');
 		expect(titles({ status: 'Done' })).toEqual(['Order the tiles']);

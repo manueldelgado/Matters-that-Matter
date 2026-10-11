@@ -3,7 +3,7 @@
 
 import { normalizePath, TFile, type App } from 'obsidian';
 import { isLinkTo, type PlannedValue, type SetupPlan } from '../services/setupPlan';
-import { createNote, ensureFolder, linkTo, type Frontmatter } from './notes';
+import { createNote, ensureFolder, linkTo, processFrontMatter, type Frontmatter } from './notes';
 
 function resolveValues(app: App, values: Record<string, PlannedValue>, sourcePath: string): Frontmatter {
 	const out: Frontmatter = {};
@@ -35,7 +35,7 @@ export async function executePlan(app: App, plan: SetupPlan): Promise<void> {
 		const file = app.vault.getAbstractFileByPath(normalizePath(change.path));
 		if (!(file instanceof TFile)) continue;
 		const add = resolveValues(app, change.add, change.path);
-		await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		await processFrontMatter(app, file, (fm: Frontmatter) => {
 			// Another MTM note (an Action) is never turned into a Matter.
 			if (fm['mtm-kind'] !== undefined && fm['mtm-kind'] !== 'matter') return;
 			fm['mtm-kind'] = add['mtm-kind'];
