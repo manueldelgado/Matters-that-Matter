@@ -1,5 +1,5 @@
 // `mtm open`: an `obsidian://mtm-open` link for an Action or a Matter, handed to the system to open. The plugin
-// handles the link (it needs a version of the plugin with links).
+// handles the link (it needs Matters that Matter 1.1.0 or later).
 //
 // The link names the vault by its ID when Obsidian's own list of vaults (`obsidian.json`) knows the folder, so two
 // vaults with the same folder name can't be confused; otherwise by the folder's name, as Obsidian shows it.

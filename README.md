@@ -15,8 +15,8 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 ## Features
 
 - **Four views of the same notes.** Board, list, calendar and timeline are Bases views, so they live in a `.base` file next to your other bases and respect its filters.
-- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, or change them from the inspector. On a phone, the board shows one Matter at a time.
-- **Cards in your own order.** Cells sort themselves by priority, due date and title, or select **Order by hand** and every card stays where you drop it. Right-click a card (touch and hold on a phone) for **Move to top**, **Move up** and **Move down**. Lists follow the same order.
+- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, change them from the inspector, or right-click a card for every status, **Mark as done** or **Reopen**, and **Move to Matter…**. On a phone, the board shows one Matter at a time.
+- **Cards in your own order.** Cells sort themselves by priority, due date and title, or select **Order by hand** and every card stays where you drop it. Right-click a card (touch and hold on a phone) for **Move to top**, **Move up** and **Move down**. Lists can follow the same order too, with **Order by hand** in their toolbar.
 - **Colour means type.** Action types (call, message, write, meet, buy, visit, or your own) give every card its colour and icon. You choose labels, icons and colours in settings.
 - **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish; turn off the one you don't write in.
 - **The inspector**, in the right sidebar, edits the selected Action: status, type, Matter, priority, dates, who you're waiting on, people, details and a checklist.

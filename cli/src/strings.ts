@@ -86,7 +86,7 @@ The statuses, Action types and Spheres, with the IDs notes store.`,
 	parse: `<b>mtm parse</b> <text>
 What quick add would make of the text. Nothing is written.`,
 	open: `<b>mtm open</b> <action|matter>
-Opens an Action or a Matter in Obsidian, through a link the plugin handles (a version of Matters that Matter with links).`,
+Opens an Action or a Matter in Obsidian, through a link the plugin handles (Matters that Matter 1.1.0 or later).`,
 	mcp: `<b>mtm mcp</b> --vault <path>
 Runs as an MCP server over stdio, for AI assistants. Each tool reads the vault afresh. Tools that write say what
 they changed, and carry hints so the assistant’s app can ask first. Nothing is deleted and settings are never written.
