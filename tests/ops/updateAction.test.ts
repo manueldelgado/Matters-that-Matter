@@ -209,6 +209,10 @@ describe('updateAction: refusals plan nothing', () => {
 		['people', { people: ['Marco', 'Nobody'] }, 'unmatched', 'No note matches “Nobody”. People are notes, and they’re never created from here.'],
 		['priority', { priority: 'soon' }, 'invalid', '“soon” isn’t a priority. Use 1, 2 or 3, or high, medium or low.'],
 		['due', { due: 'whenever' }, 'invalid', undefined],
+		['due', { due: '2026-10-16T23:30:00Z' }, 'invalid', '“2026-10-16T23:30:00Z” isn’t a date Matters that Matter can read. Write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, in local time with no time zone, such as 2026-10-16 or 2026-10-16T10:00.'],
+		['due', { due: '2026-10-16T10:00+05:00' }, 'invalid', undefined],
+		['start', { start: '2026-10-16T10:00-08:00' }, 'invalid', undefined],
+		['start', { start: '2026-13-12' }, 'invalid', undefined],
 		['link', { link: 'obsidian://open' }, 'invalid', undefined],
 		['title', { title: '###' }, 'invalid', 'An Action needs a title.'],
 	] as const)('%s', (field, fields, code, message) => {

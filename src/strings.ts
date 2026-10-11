@@ -904,7 +904,8 @@ export const STRINGS = {
 				sampleThere: 'Sample content is already in your vault',
 				sampleThereHint: 'Remove it any time with “Remove sample content”.',
 				defaultsTitle: 'These settings start from their defaults:',
-				defaults: 'Inbox lane (first), Show done (on), Week starts on (Monday), Show Today in new tabs (every new tab) and Open Matters as their overview (on). Your notes don’t record them; change them in Settings.',
+				defaults:
+					'Inbox lane (first), Show done (on), Week starts on (Monday), Show Today in new tabs (every new tab), Open Matters as their overview (on), Show links to Actions as chips (on), Dates in English and Dates in Spanish (both on) and Let links add Actions (on). Your notes don’t record them; change them in Settings.',
 				putBack: 'Put it back',
 			},
 			arrived: {
@@ -947,12 +948,14 @@ export const STRINGS = {
 		// Values that can't be read.
 		badPriority: (value: string) => `“${value}” isn’t a priority. Use 1, 2 or 3, or high, medium or low.`,
 		badDate: (value: string) => `“${value}” isn’t a date Matters that Matter can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.`,
+		badStoredDate: (value: string) => `“${value}” isn’t a date Matters that Matter can read. Write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, in local time with no time zone, such as 2026-10-16 or 2026-10-16T10:00.`,
 		dateRange: (value: string) => `“${value}” is a range. Give the start and the due date separately.`,
 		badLink: (value: string) => `“${value}” isn’t a note in this vault or a web address (http or https).`,
 		noTitle: 'An Action needs a title.',
 		titleTaken: (title: string, path: string) =>
 			`Another note is called “${title}” (${path}). Links in this vault aren’t updated on renames, so links to that note could lead to this Action instead. Choose another title.`,
 		noName: 'A Matter needs a name.',
+		inboxName: 'The Inbox exists already: add Actions to it, or give the new Matter another name.',
 		badState: (value: string) => `“${value}” isn’t a Matter state. Use active, dormant or closed.`,
 		badRhythm: (value: string) => `“${value}” isn’t a review rhythm. Use a number of days, weeks or months, such as 2w.`,
 		badIcon: (value: string) => `“${value}” isn’t an icon name. Use a Lucide name, such as house.`,

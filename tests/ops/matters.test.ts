@@ -86,6 +86,16 @@ describe('addMatter', () => {
 		expect(addMatter(input, s)).toMatchObject({ ok: false, error: { code: 'invalid', field } });
 	});
 
+	it.each(['Inbox', 'inbox', '  INBOX ', 'Inbox 2', 'Inbox?'])('refuses a Matter named like the Inbox: %j', (name) => {
+		const r = addMatter({ name }, s);
+		expect(r).toMatchObject({ ok: false, error: { code: 'invalid', field: 'name', message: 'The Inbox exists already: add Actions to it, or give the new Matter another name.' } });
+		expect('plan' in r).toBe(false);
+	});
+
+	it('names that only contain the Inbox’s name are fine', () => {
+		expect(created({ name: 'Inbox zero' }).create.path).toBe('MTM/Matters/Inbox zero.md');
+	});
+
 	it('needs setup', () => {
 		expect(addMatter({ name: 'X' }, vault({}, { settings: { setupDone: false } }))).toMatchObject({ ok: false, error: { code: 'not-ready' } });
 	});

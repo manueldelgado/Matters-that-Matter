@@ -85,6 +85,30 @@ describe('addAction: fields', () => {
 		expect(created({ title: 'D', due }).fm['mtm-due']).toBe(expected);
 	});
 
+	it.each([
+		['a UTC time', '2026-10-16T23:30:00Z'],
+		['a time ahead of UTC', '2026-10-16T10:00+05:00'],
+		['a time behind UTC', '2026-10-16T10:00-08:00'],
+		['a time zone without a colon', '2026-10-16T10:00+0200'],
+		['month 13', '2026-13-12'],
+		['month 14', '2026-14-02'],
+		['day 32', '2026-10-32'],
+		['one-figure month and day', '2026-1-5'],
+		['slashes', '2026/10/16'],
+	])('a date in figures but not in a stored form is refused, never read as words: %s', (_, due) => {
+		for (const field of ['due', 'start'] as const) {
+			const r = addAction({ title: 'D', [field]: due }, s);
+			expect(r).toMatchObject({ ok: false, error: { code: 'invalid', field, value: due } });
+			expect(r.ok ? '' : r.error.message).toBe(`“${due}” isn’t a date Matters that Matter can read. Write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, in local time with no time zone, such as 2026-10-16 or 2026-10-16T10:00.`);
+		}
+	});
+
+	it('stored forms with seconds, fractions or a space still read', () => {
+		expect(created({ title: 'D', due: '2026-10-16T09:30:15.250' }).fm['mtm-due']).toBe('2026-10-16T09:30');
+		expect(created({ title: 'D', due: ' 2026-10-16 09:30 ' }).fm['mtm-due']).toBe('2026-10-16T09:30');
+		expect(created({ title: 'D', start: '2026-10-12' }).fm['mtm-start']).toBe('2026-10-12');
+	});
+
 	it('only the date languages in settings read words', () => {
 		const english = vault({}, { settings: { dateLanguages: ['en'] } });
 		expect(addAction({ title: 'D', due: 'el viernes' }, english)).toMatchObject({ ok: false, error: { code: 'invalid', field: 'due' } });
@@ -127,6 +151,9 @@ describe('addAction: fields', () => {
 		['a web address with an inline query', 'https://a.com/$=dv.x', '<https://a.com/%24=dv.x>'],
 		['a web address with an embed', 'https://a.com/![[x]]', '<https://a.com/%21%5B%5Bx%5D%5D>'],
 		['a web address with a pipe and angle brackets', 'https://a.com/a|b?<c>', '<https://a.com/a%7Cb?%3Cc%3E>'],
+		['a web address with comment markers', 'https://x.com/%%a?b=%%#c%%', '<https://x.com/%25%25a?b=%25%25#c%25%25>'],
+		['a web address with a stray % beside an escape', 'https://x.com/a%%41%2', '<https://x.com/a%25%41%252>'],
+		['a web address keeping its percent escapes', 'https://x.com/a%20b?q=%C3%A9', '<https://x.com/a%20b?q=%C3%A9>'],
 	])('link: %s', (_, link, line) => {
 		expect(created({ title: 'L', link }).create.body).toBe(`${line}\n`);
 	});

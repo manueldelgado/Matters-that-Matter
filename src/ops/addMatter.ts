@@ -3,6 +3,7 @@
 
 import { formatCadence, nextLaneOrder, parseCadence, parseOutcome, type MatterState } from '../model/matters';
 import { sanitiseTitle } from '../model/titles';
+import { isInboxDuplicate } from '../services/inboxGuard';
 import { matchDefined } from '../services/match';
 import { DEFAULT_MATTER_ICON, laneOf, matterInfo, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
@@ -64,6 +65,11 @@ export function addMatter(input: AddMatterInput, s: Snapshot): OpResult<MatterSu
 	// A name any note has is taken, so links to that note never reach the new Matter.
 	const title = freeName(s, folder, base);
 	const path = joinPath(folder, `${title}.md`);
+	// A Matter named after the Inbox would be taken for a copy of it, and warned about on every start.
+	const inboxName = (settings.inboxPath.split('/').pop() ?? '').replace(/\.md$/i, '');
+	if (base.toLowerCase() === inboxName.toLowerCase() || isInboxDuplicate(path, settings.inboxPath)) {
+		return fail({ code: 'invalid', field: 'name', value: name.value, message: T.inboxName });
+	}
 	const lanes = s.notes.filter((n) => n.frontmatter?.['mtm-kind'] === 'matter').map((n) => laneOf(n, settings.inboxPath));
 	const fm = newMatterFrontmatter({ icon, state, reviewEvery, sphereId, outcome }, nextLaneOrder(lanes));
 
