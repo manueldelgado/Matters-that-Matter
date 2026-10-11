@@ -40,6 +40,7 @@ describe('splitFrontmatter', () => {
 	it('reads the block as Obsidian does: after a byte-order mark, empty, or closed by a line with trailing spaces', () => {
 		expect(splitFrontmatter(`\uFEFF${fm}Body`)).toEqual({ frontmatter: `\uFEFF${fm}`, body: 'Body' });
 		expect(splitFrontmatter('---\n---\nBody')).toEqual({ frontmatter: '---\n---\n', body: 'Body' });
+		expect(splitFrontmatter('---\n---\nIntro\n\n---\n\nmore')).toEqual({ frontmatter: '---\n---\n', body: 'Intro\n\n---\n\nmore' });
 		expect(splitFrontmatter('---\na: 1\n--- \t\nBody').body).toBe('Body');
 		// An opening line with spaces after the dashes is no block to Obsidian.
 		expect(splitFrontmatter('---  \na: 1\n---\nBody').frontmatter).toBe('');

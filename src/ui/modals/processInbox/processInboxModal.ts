@@ -777,7 +777,7 @@ export class ProcessInboxModal extends Modal {
 				icon: DEFAULT_MATTER_ICON,
 				reviewEvery: null,
 				sphereId: this.context.sphereId,
-			});
+			}, current.file);
 			await setMatterState(this.app, file, 'dormant');
 			matterPath = file.path;
 			this.candidates = loadCandidates(this.app, this.settings);
@@ -794,7 +794,7 @@ export class ProcessInboxModal extends Modal {
 			this.contentEl.querySelector<HTMLInputElement>('.mtm-name-row input')?.focus();
 			return;
 		}
-		const matter = await createMatter(this.app, this.settings, { name, icon: f.icon, reviewEvery: null, sphereId: f.sphereId });
+		const matter = await createMatter(this.app, this.settings, { name, icon: f.icon, reviewEvery: null, sphereId: f.sphereId }, current.file);
 		this.candidates = loadCandidates(this.app, this.settings);
 		const step = this.parseStep(f.firstStep);
 		const status = nextStepStatus(this.settings.statuses);

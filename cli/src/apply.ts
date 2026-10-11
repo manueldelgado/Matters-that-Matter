@@ -103,6 +103,16 @@ interface Staged {
 	mode: number | null;
 }
 
+/** The first note to be changed or renamed that is read-only, or null. A dry run asks too, so it says what a write would. */
+export function readOnlyNote(root: string, outcome: { files: readonly FileWrite[] }, fs: ApplyFs = nodeFs): string | null {
+	for (const file of outcome.files) {
+		if (file.from === null) continue;
+		const mode = fs.stat(join(root, ...file.from.split('/')))?.mode;
+		if (mode !== undefined && !writable(mode)) return file.from;
+	}
+	return null;
+}
+
 export function applyOutcome(root: string, outcome: { files: readonly FileWrite[] }, fs: ApplyFs = nodeFs): ApplyResult {
 	const full = (path: string) => join(root, ...path.split('/'));
 	let realRoot: string;
@@ -158,11 +168,8 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 	if (changed !== null) return { ok: false, reason: 'changed', path: changed };
 
 	// A read-only note is left alone: a rename would replace it all the same, so nothing is written.
-	for (const file of outcome.files) {
-		if (file.from === null) continue;
-		const mode = fs.stat(full(file.from))?.mode;
-		if (mode !== undefined && !writable(mode)) return { ok: false, reason: 'read-only', path: file.from };
-	}
+	const readOnly = readOnlyNote(root, outcome, fs);
+	if (readOnly !== null) return { ok: false, reason: 'read-only', path: readOnly };
 
 	// Stage.
 	const staged: Staged[] = [];

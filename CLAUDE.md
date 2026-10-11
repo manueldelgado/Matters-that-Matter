@@ -65,7 +65,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Don't name a view member `focus`: it shadows `View.focus()`, which Obsidian calls.
 - A hidden tab reads `scrollLeft`/`scrollTop` as 0 and ignores writes: save and restore scroll only when `clientWidth > 0` (see `CollectionView.captureScroll`).
 - Background tabs may be deferred (no view): find a leaf by `getViewState().state`, not by `leaf.view`.
-- File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`. A new Action or Matter also avoids a name any note in the vault has (`nameTaken`), so it can't take over that note's links.
+- File names are case-insensitive on macOS and Windows: check collisions with `pathTaken` (`vault/notes.ts`), not `getAbstractFileByPath`. A new Action or Matter (quick add, a cell's "+", New Matter) also avoids a name any note in the vault has (`nameTaken`), so it can't take over that note's links; a Matter made from an Action in Process Inbox may share that Action's name.
 - Obsidian rejects `\ / :` in file names even where the OS allows them: run every generated name through `sanitiseTitle`.
 - Renaming a folder fires `rename` for the folder and for every file inside it; rules that follow paths must be idempotent across those events.
 - Notes may use CRLF: body edits keep the note's line ending.
