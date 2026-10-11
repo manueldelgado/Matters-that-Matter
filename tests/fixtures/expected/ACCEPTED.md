@@ -19,7 +19,7 @@ Two are style only: the properties read the same and every link reaches the same
 Four are differences in meaning, accepted because Obsidian's own write damages the note or its links and the files layer is deliberately safer:
 
 - **A byte-order mark** (`update-byte-order-mark`, `update-byte-order-mark-properties`): Obsidian's `processFrontMatter` doesn't see the properties after the mark, so it writes a new block in front of the mark with only the properties the write sets; the old block, with `mtm-kind`, stays after it as text and the note stops being an Action.
-- **Fence lines with spaces after the dashes** (`update-fence-whitespace`): Obsidian reads such a block, but `processFrontMatter` doesn't find it and writes a second block in front, with the same result.
+- **A closing fence line with spaces after the dashes** (`update-fence-whitespace`): Obsidian reads such a block (an opening line with spaces it doesn't read as a block at all), but `processFrontMatter` doesn't find it and writes a second block in front, with the same result.
 - **A percent sign in a renamed note's name** (`rename-to-a-title-with-symbols`): Obsidian writes `%` as it is in Markdown links, which then don't read back; the files layer writes `%25`.
 
 Every other case matches Obsidian byte for byte: the renames with links updated and not updated, a name that becomes unique (`rename-name-becomes-unique`: the same links rewritten as Obsidian rewrites them), and a CRLF note (`update-crlf`).
@@ -51,7 +51,7 @@ Every other case matches Obsidian byte for byte: the renames with links updated 
 	{
 		"case": "update-fence-whitespace",
 		"path": "MTM/Sample/Edge cases/Edge - fence with spaces.md",
-		"reason": "A difference in meaning, where the files layer is deliberately safer. Obsidian reads properties between fence lines with spaces or tabs after the dashes, but its processFrontMatter doesn't find them: it writes a second block, with only the properties the write sets, in front of the note, and the old block (with mtm-kind and the old status) stays after it as text, so the note stops being an Action. The files layer edits the block where it is and keeps its fence lines.",
+		"reason": "A difference in meaning, where the files layer is deliberately safer. Obsidian reads properties closed by a fence line with spaces or tabs after the dashes, but its processFrontMatter doesn't find them: it writes a second block, with only the properties the write sets, in front of the note, and the old block (with mtm-kind and the old status) stays after it as text, so the note stops being an Action. The files layer edits the block where it is and keeps its fence lines.",
 		"meaning": true
 	},
 	{

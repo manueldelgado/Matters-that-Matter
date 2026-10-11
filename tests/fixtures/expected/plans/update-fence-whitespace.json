@@ -1,9 +1,9 @@
 {
 	"case": "update-fence-whitespace",
-	"description": "Fence lines with spaces and a tab after the dashes: the block is edited where it is, never a second one added.",
+	"description": "A closing fence line with a space and a tab after the dashes: the block is edited where it is, never a second one added.",
 	"alwaysUpdateLinks": true,
 	"setup": {
-		"MTM/Sample/Edge cases/Edge - fence with spaces.md": "---  \nmtm-kind: action\nmtm-type: write\nmtm-status: next\nmtm-matter: \"[[Kitchen renovation]]\"\n--- \t\nFence lines with spaces after the dashes.\n"
+		"MTM/Sample/Edge cases/Edge - fence with spaces.md": "---\nmtm-kind: action\nmtm-type: write\nmtm-status: next\nmtm-matter: \"[[Kitchen renovation]]\"\n--- \t\nFence lines with spaces after the dashes.\n"
 	},
 	"plan": {
 		"creates": [],

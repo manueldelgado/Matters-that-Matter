@@ -64,9 +64,13 @@ describe('where the properties block is', () => {
 		expect(frontmatterSpan('---\na: 1\n')).toBeNull();
 	});
 
-	it('takes fence lines with spaces or tabs after the dashes, as the index reads them', () => {
-		expect(frontmatterSpan('---  \na: 1\n--- \t\nbody')).toEqual({ from: 6, to: 11, contentStart: 17, eol: '\n' });
-		expect(editFrontmatter('---  \na: 1\n--- \t\nbody', { 'mtm-kind': 'action' })).toBe('---  \na: 1\nmtm-kind: action\n--- \t\nbody');
+	it('takes a closing line with spaces or tabs after the dashes, as the index reads it', () => {
+		expect(frontmatterSpan('---\na: 1\n--- \t\nbody')).toEqual({ from: 4, to: 9, contentStart: 15, eol: '\n' });
+		expect(editFrontmatter('---\na: 1\n--- \t\nbody', { 'mtm-kind': 'action' })).toBe('---\na: 1\nmtm-kind: action\n--- \t\nbody');
+	});
+
+	it('never writes before an opening line with spaces after the dashes, which Obsidian reads as no block', () => {
+		expect(() => editFrontmatter('---  \na: 1\n---\nbody', { 'mtm-status': 'next' }, [], 'x.md')).toThrow(/not closed/);
 	});
 
 	it('never adds a second block before a fence that is never closed', () => {

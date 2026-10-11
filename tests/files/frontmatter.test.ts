@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineAt, parseYaml, readFrontmatter, splitFrontmatter } from '../../src/files/frontmatter';
+import { lineAt, parseYaml, plainFences, readFrontmatter, splitFrontmatter } from '../../src/files/frontmatter';
 
 describe('splitFrontmatter', () => {
 	it('finds the block between the first two --- lines', () => {
@@ -12,6 +12,10 @@ describe('splitFrontmatter', () => {
 		expect(block).toEqual({ yaml: 'a: 1\r\nb: 2', endLine: 3, endOffset: 20, bodyLine: 4 });
 	});
 
+	it('accepts spaces and tabs after the dashes of the closing line, as Obsidian does', () => {
+		expect(splitFrontmatter('---\na: 1\n--- \t\nBody')).toEqual({ yaml: 'a: 1', endLine: 2, endOffset: 14, bodyLine: 3 });
+	});
+
 	it('accepts an empty block and a block at the end of the file', () => {
 		expect(splitFrontmatter('---\n---\nText')).toEqual({ yaml: '', endLine: 1, endOffset: 7, bodyLine: 2 });
 		expect(splitFrontmatter('---\na: 1\n---')).toEqual({ yaml: 'a: 1', endLine: 2, endOffset: 12, bodyLine: 3 });
@@ -22,6 +26,9 @@ describe('splitFrontmatter', () => {
 		expect(splitFrontmatter('---\na: 1\n\nText\n')).toBeNull();
 		expect(splitFrontmatter('--- a\na: 1\n---\n')).toBeNull();
 		expect(splitFrontmatter('----\na: 1\n---\n')).toBeNull();
+		// Obsidian reads no block when the opening line has spaces or tabs after the dashes; the closing line may.
+		expect(splitFrontmatter('---  \na: 1\n---\n')).toBeNull();
+		expect(splitFrontmatter('---\t\na: 1\n---\n')).toBeNull();
 		expect(splitFrontmatter('---')).toBeNull();
 		expect(splitFrontmatter('')).toBeNull();
 	});
@@ -92,5 +99,32 @@ describe('lineAt', () => {
 		expect(lineAt('ab\r\ncd', 0)).toEqual({ end: 2, next: 4 });
 		expect(lineAt('ab\rcd', 0)).toEqual({ end: 2, next: 3 });
 		expect(lineAt('ab', 0)).toEqual({ end: 2, next: -1 });
+	});
+});
+
+describe('plainFences', () => {
+	it('leaves a note alone when its block is plain or it has none', () => {
+		expect(plainFences('---\na: 1\n---\nBody')).toBeNull();
+		expect(plainFences('Just text')).toBeNull();
+		expect(plainFences('\uFEFFJust text')).toBeNull();
+		expect(plainFences('---\nno closing line')).toBeNull();
+		expect(plainFences('--- \na: 1\n---\n')).toBeNull();
+	});
+
+	it('drops a byte-order mark in front of a block', () => {
+		expect(plainFences('\uFEFF---\na: 1\n---\nBody')).toBe('---\na: 1\n---\nBody');
+	});
+
+	it('drops spaces and tabs after the dashes of the closing line, keeping line endings and the body', () => {
+		expect(plainFences('---\na: 1\n--- \t\nBody\n--- \n')).toBe('---\na: 1\n---\nBody\n--- \n');
+		expect(plainFences('---\r\na: 1\r\n--- \r\nBody')).toBe('---\r\na: 1\r\n---\r\nBody');
+		expect(plainFences('\uFEFF---\n--- \n')).toBe('---\n---\n');
+	});
+
+	it('gives a block that reads as before', () => {
+		const note = '\uFEFF---\nmtm-kind: action\nmtm-status: next\n---\t\n\nDetails\n';
+		const plain = plainFences(note) as string;
+		expect(readFrontmatter(plain).frontmatter).toEqual(readFrontmatter(note).frontmatter);
+		expect(plainFences(plain)).toBeNull();
 	});
 });

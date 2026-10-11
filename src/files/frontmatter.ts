@@ -1,20 +1,11 @@
 // A note's properties block, read from its text as Obsidian's metadata cache reads it. Pure.
 
 import { parseDocument } from 'yaml';
+import { splitFrontmatter } from './fences';
+
+export { lineAt, plainFences, splitFrontmatter, stripBom, type FrontmatterBlock } from './fences';
 
 export type Frontmatter = Record<string, unknown>;
-
-/** Where the properties block sits in a note, whether or not its YAML parses. */
-export interface FrontmatterBlock {
-	/** The YAML between the two `---` lines, line breaks as written. */
-	yaml: string;
-	/** The closing `---` line (0-based). */
-	endLine: number;
-	/** The offset just after the closing `---`, before its line break. */
-	endOffset: number;
-	/** The first line after the block: where the body starts. */
-	bodyLine: number;
-}
 
 /** What the cache holds for a note's properties. */
 export interface FrontmatterInfo {
@@ -24,42 +15,6 @@ export interface FrontmatterInfo {
 	end: { line: number; offset: number } | null;
 	/** The first body line: after the block when there is one, even if its YAML doesn't parse. */
 	bodyLine: number;
-}
-
-const FENCE = /^---[ \t]*$/;
-const BOM = '\uFEFF';
-
-/** The text without a leading byte-order mark, as Obsidian reads notes: lines, columns and offsets count from after it. */
-export function stripBom(content: string): string {
-	return content.startsWith(BOM) ? content.slice(1) : content;
-}
-
-/**
- * The properties block: the note's very first line is `---` and a later line is `---`. A blank line
- * before the first `---`, or no closing line, means there is no block. A byte-order mark before the first line
- * is skipped; `endOffset` counts from after it.
- */
-export function splitFrontmatter(text: string): FrontmatterBlock | null {
-	const content = stripBom(text);
-	if (!content.startsWith('---')) return null;
-	let start = 0;
-	let line = 0;
-	let yamlStart = -1;
-	while (start <= content.length) {
-		const { end, next } = lineAt(content, start);
-		const text = content.slice(start, end);
-		if (line === 0) {
-			if (!FENCE.test(text) || next < 0) return null;
-			yamlStart = next;
-		} else if (FENCE.test(text)) {
-			const yaml = start > yamlStart ? content.slice(yamlStart, lineBreakBefore(content, start)) : '';
-			return { yaml, endLine: line, endOffset: end, bodyLine: line + 1 };
-		}
-		if (next < 0) return null;
-		start = next;
-		line++;
-	}
-	return null;
 }
 
 /** The note's properties as the cache gives them: YAML 1.2 core schema, so dates stay strings. A byte-order mark is skipped. */
@@ -89,20 +44,4 @@ export function parseYaml(yaml: string): Frontmatter | null {
 	} catch {
 		return null;
 	}
-}
-
-/** The end of the line starting at `start` (before its break) and the start of the next line, or -1 at the end. */
-export function lineAt(content: string, start: number): { end: number; next: number } {
-	for (let i = start; i < content.length; i++) {
-		const c = content.charCodeAt(i);
-		if (c === 10) return { end: i, next: i + 1 };
-		if (c === 13) return { end: i, next: content.charCodeAt(i + 1) === 10 ? i + 2 : i + 1 };
-	}
-	return { end: content.length, next: -1 };
-}
-
-/** The offset of the line break that ends the line before `start`. */
-function lineBreakBefore(content: string, start: number): number {
-	if (start >= 2 && content.charCodeAt(start - 2) === 13 && content.charCodeAt(start - 1) === 10) return start - 2;
-	return start - 1;
 }
