@@ -2,8 +2,8 @@
 // (comments, order, quoting, blank lines, other keys). New text is written in Obsidian's own style, the style of
 // `FileManager.processFrontMatter`, so a note the plugin wrote reads the same whichever wrote it last. Pure.
 
-import { isMap, isScalar, isSeq, parseDocument, stringify, type Document, type Node } from 'yaml';
-import { lineAt, splitFrontmatter, stripBom } from './frontmatter';
+import { isMap, isNode, isScalar, isSeq, parseDocument, stringify, visit, type Document, type Node } from 'yaml';
+import { lineAt, readFrontmatter, splitFrontmatter, stripBom } from './frontmatter';
 
 /** The options Obsidian writes properties with (`stringifyYaml`). */
 export const OBSIDIAN_YAML = { nullStr: '', lineWidth: 0, aliasDuplicateObjects: false } as const;
@@ -13,15 +13,28 @@ export function obsidianYaml(value: Readonly<Record<string, unknown>>): string {
 	return stringify(value, null, OBSIDIAN_YAML);
 }
 
-/** Why a note's properties can't be edited. */
+/**
+ * Why a note's properties can't be edited: `invalid`, they aren't valid YAML or aren't closed; `unsafe`, they use
+ * YAML an edit in place can't keep as it reads (anchors, aliases or tags in what changes, or a layout the edit would
+ * break), so the edit is refused rather than risk the note's other properties.
+ */
 export class FrontmatterError extends Error {
 	constructor(
 		readonly path: string,
 		message: string,
+		readonly reason: 'invalid' | 'unsafe' = 'invalid',
 	) {
 		super(message);
 		this.name = 'FrontmatterError';
 	}
+}
+
+function unsafe(path: string): FrontmatterError {
+	return new FrontmatterError(
+		path,
+		`The properties of ${path} use YAML (anchors, aliases, tags or an unusual layout) that the command line can't change safely, so nothing was written. Change them in Obsidian instead.`,
+		'unsafe',
+	);
 }
 
 /**
@@ -101,6 +114,7 @@ interface Entry {
 	start: number;
 	/** After the line break of the value's last line (trailing comment lines after a list stay outside). */
 	end: number;
+	keyNode: Node;
 	value: Node | null;
 	/** Where the key starts. */
 	keyAt: number;
@@ -115,7 +129,7 @@ function entriesOf(yaml: string, doc: Document): Entry[] {
 		if (!isScalar(key) || !key.range) continue;
 		const value = (pair.value as Node | null) ?? null;
 		const valueEnd = Math.max(key.range[1], value?.range?.[1] ?? 0);
-		out.push({ key: String(key.value), start: lineStart(yaml, key.range[0]), end: lineEndAfter(yaml, Math.max(valueEnd - 1, key.range[0])), value, keyAt: key.range[0] });
+		out.push({ key: String(key.value), keyNode: key, start: lineStart(yaml, key.range[0]), end: lineEndAfter(yaml, Math.max(valueEnd - 1, key.range[0])), value, keyAt: key.range[0] });
 	}
 	// A value never reaches into the next key's line.
 	for (let i = 0; i < out.length - 1; i++) {
@@ -181,21 +195,30 @@ function editBlock(content: string, set: Readonly<Record<string, unknown>>, remo
 	const root = doc.contents;
 	const plain = (doc.toJS({ maxAliasCount: -1 }) ?? {}) as Record<string, unknown>;
 
+	// What the properties must read as afterwards: every other property exactly as before.
+	const expected: Record<string, unknown> = isMap(root) ? { ...plain } : {};
+	for (const [k, v] of entries) expected[k] = v;
+	for (const k of removed) delete expected[k];
+	const checked = (out: string): string => {
+		if (Object.keys(expected).length > 0 && !sameProperties(readFrontmatter(out).frontmatter, expected)) throw unsafe(path);
+		return out;
+	};
+
 	// Not a block mapping (a flow mapping, a list, a scalar): written whole, as Obsidian writes it.
 	if (root !== null && !(isMap(root) && !root.flow)) {
-		const obj: Record<string, unknown> = isMap(root) ? { ...plain } : {};
-		for (const [k, v] of entries) obj[k] = v;
-		for (const k of removed) delete obj[k];
-		if (Object.keys(obj).length === 0) return content.slice(span.contentStart);
-		return content.slice(0, span.from) + withEol(obsidianYaml(obj), eol) + content.slice(span.to);
+		if (Object.keys(expected).length === 0) return content.slice(span.contentStart);
+		return checked(content.slice(0, span.from) + withEol(obsidianYaml(expected), eol) + content.slice(span.to));
 	}
 
 	const all = entriesOf(yaml, doc);
 	const byKey = new Map(all.map((e) => [e.key, e]));
 	if (entries.length === 0 && ![...removed].some((k) => byKey.has(k))) return content;
+	// A mapping indented as a whole: new lines take the same indentation.
+	const indent = blockIndent(yaml, all);
+	const written = (value: Readonly<Record<string, unknown>>) => withEol(indented(obsidianYaml(value), indent), eol);
 	const splices: Splice[] = [];
 	const inserts: [string, unknown][] = [];
-	let count = all.length;
+	let count = isMap(root) ? root.items.length : 0;
 	for (const [key, value] of entries) {
 		const entry = byKey.get(key);
 		if (!entry) {
@@ -204,15 +227,17 @@ function editBlock(content: string, set: Readonly<Record<string, unknown>>, remo
 			continue;
 		}
 		if (Object.prototype.hasOwnProperty.call(plain, key) && sameValue(plain[key], value)) continue;
-		const text = withEol(obsidianYaml({ [key]: value }), eol);
+		if (marked(entry)) throw unsafe(path);
+		const raw = obsidianYaml({ [key]: value });
 		const inline = inlineScalar(yaml, entry);
-		const oneLine = text.endsWith(eol) && !text.slice(0, -eol.length).includes('\n') && text.startsWith(`${key}: `);
-		if (inline && oneLine) splices.push({ start: inline[0], end: inline[1], text: text.slice(key.length + 2, -eol.length) });
-		else splices.push({ start: entry.start, end: entry.end, text });
+		const oneLine = !raw.slice(0, -1).includes('\n') && raw.startsWith(`${key}: `);
+		if (inline && oneLine) splices.push({ start: inline[0], end: inline[1], text: raw.slice(key.length + 2, -1) });
+		else splices.push({ start: entry.start, end: entry.end, text: written({ [key]: value }) });
 	}
 	for (const key of removed) {
 		const entry = byKey.get(key);
 		if (!entry) continue;
+		if (marked(entry)) throw unsafe(path);
 		splices.push({ start: entry.start, end: entry.end, text: '' });
 		count--;
 	}
@@ -222,15 +247,104 @@ function editBlock(content: string, set: Readonly<Record<string, unknown>>, remo
 		const anchor = at < 0 ? yaml.length : at;
 		const before = yaml.slice(0, anchor);
 		const lead = before !== '' && !before.endsWith('\n') && !before.endsWith('\r') ? eol : '';
-		splices.push({ start: anchor, end: anchor, text: lead + withEol(obsidianYaml(Object.fromEntries(inserts)), eol) });
+		splices.push({ start: anchor, end: anchor, text: lead + written(Object.fromEntries(inserts)) });
 	}
 	if (splices.length === 0) return content;
-	return content.slice(0, span.from) + applySplices(yaml, splices) + content.slice(span.to);
+	return checked(content.slice(0, span.from) + applySplices(yaml, splices) + content.slice(span.to));
 }
 
-/** The node at a property path (`["see", "1"]`: the second item of `see`), or null. */
-function nodeAt(doc: Document, keys: readonly string[]): Node | null {
-	let node: unknown = doc.contents;
+/** Whether an entry's key or value carries an anchor or a tag anywhere (an alias elsewhere may lean on it). */
+function marked(entry: Entry): boolean {
+	let found = false;
+	for (const node of [entry.keyNode, entry.value]) {
+		if (!node) continue;
+		visit(node, (_, n) => {
+			if (isNode(n) && (n.anchor || n.tag)) {
+				found = true;
+				return visit.BREAK;
+			}
+			return undefined;
+		});
+		if (found) return true;
+	}
+	return false;
+}
+
+/** The indentation every top-level key shares ('' when they start at the line's start or don't agree). */
+function blockIndent(yaml: string, all: readonly Entry[]): string {
+	const first = all[0];
+	if (!first) return '';
+	const indent = yaml.slice(first.start, first.keyAt);
+	if (!/^[ \t]+$/.test(indent)) return '';
+	return all.every((e) => yaml.slice(e.start, e.keyAt) === indent) ? indent : '';
+}
+
+/** Text (lines ending with `\n`) with each line indented. */
+function indented(text: string, indent: string): string {
+	if (indent === '') return text;
+	return text
+		.split('\n')
+		.map((line) => (line === '' ? line : indent + line))
+		.join('\n');
+}
+
+/** Whether properties read back as expected: the same keys and values, in any key order. */
+function sameProperties(actual: unknown, expected: unknown): boolean {
+	if (Object.is(actual, expected)) return true;
+	if (Array.isArray(actual) || Array.isArray(expected)) {
+		return Array.isArray(actual) && Array.isArray(expected) && actual.length === expected.length && actual.every((v, i) => sameProperties(v, expected[i]));
+	}
+	if (actual === null || expected === null || typeof actual !== 'object' || typeof expected !== 'object') return false;
+	const a = actual as Record<string, unknown>;
+	const b = expected as Record<string, unknown>;
+	const keys = Object.keys(a);
+	return keys.length === Object.keys(b).length && keys.every((k) => Object.prototype.hasOwnProperty.call(b, k) && sameProperties(a[k], b[k]));
+}
+
+/**
+ * A property path: an array of keys (`["see", "1"]`: the second item of `see`), or the dotted name Obsidian gives
+ * frontmatter links (`see.1`), whose keys may hold dots themselves (`see.also`).
+ */
+export type KeyPath = readonly string[] | string;
+
+/**
+ * The string scalar at a property path, with the keys that reach it, or null. With `current`, only a string holding
+ * that value counts (so of `a.b: x` and `a: {b: y}`, the one meant is found).
+ */
+function stringNodeAt(doc: Document, keys: KeyPath, current?: string): { node: Node; keys: string[] } | null {
+	const fits = (node: unknown): node is Node => isStringScalar(node) && (current === undefined || (node as { value: unknown }).value === current);
+	if (typeof keys !== 'string') {
+		const node = nodeAt(doc.contents, keys);
+		return fits(node) ? { node, keys: [...keys] } : null;
+	}
+	const parts = keys.split('.');
+	// Each key may take one dotted part or several; the first reading that reaches a string wins.
+	const walk = (node: unknown, i: number, path: string[]): { node: Node; keys: string[] } | null => {
+		if (i === parts.length) return fits(node) ? { node, keys: path } : null;
+		if (isSeq(node)) {
+			const part = parts[i] ?? '';
+			const index = /^\d+$/.test(part) ? Number(part) : -1;
+			return index >= 0 && index < node.items.length ? walk(node.items[index], i + 1, [...path, part]) : null;
+		}
+		if (!isMap(node)) return null;
+		for (let j = parts.length; j > i; j--) {
+			const key = parts.slice(i, j).join('.');
+			const pair = node.items.find((p) => isScalar(p.key) && String(p.key.value) === key);
+			const found = pair ? walk(pair.value, j, [...path, key]) : null;
+			if (found) return found;
+		}
+		return null;
+	};
+	return walk(doc.contents, 0, []);
+}
+
+function isStringScalar(node: unknown): node is Node {
+	return isScalar(node) && typeof node.value === 'string' && node.range !== undefined && node.range !== null;
+}
+
+/** The node at a property path given as keys, or null. */
+function nodeAt(root: unknown, keys: readonly string[]): Node | null {
+	let node: unknown = root;
 	for (const key of keys) {
 		if (isMap(node)) {
 			const pair = node.items.find((p) => isScalar(p.key) && String(p.key.value) === key);
@@ -243,42 +357,44 @@ function nodeAt(doc: Document, keys: readonly string[]): Node | null {
 	return (node as Node | null) ?? null;
 }
 
-/** A string value at a property path, with where it is. */
-function stringAt(content: string, keys: readonly string[], path: string): { span: FrontmatterSpan; doc: Document; node: Node & { range: [number, number, number] }; line: number } | null {
+/** A string value at a property path, with where it is and the keys that reach it. */
+function stringAt(content: string, keys: KeyPath, path: string, current?: string): { span: FrontmatterSpan; doc: Document; node: Node & { range: [number, number, number] }; keys: string[]; line: number } | null {
 	const span = frontmatterSpan(content);
 	if (!span) return null;
 	const doc = parseBlock(content.slice(span.from, span.to), path);
-	const node = nodeAt(doc, keys);
-	if (!isScalar(node) || typeof node.value !== 'string' || !node.range) return null;
+	const found = stringNodeAt(doc, keys, current);
+	if (!found) return null;
+	const node = found.node as Node & { range: [number, number, number] };
 	const line = (content.slice(0, span.from + node.range[0]).match(/\r\n|\r|\n/g) ?? []).length;
-	return { span, doc, node: node as Node & { range: [number, number, number] }, line };
+	return { span, doc, node, keys: found.keys, line };
 }
 
-/** The line (0-based, in the note) of a string value at a property path, or null. */
-export function frontmatterValueLine(content: string, keys: readonly string[]): number | null {
+/** The line (0-based, in the note) of a string value at a property path (holding `current`, when given), or null. */
+export function frontmatterValueLine(content: string, keys: KeyPath, current?: string): number | null {
 	try {
-		return stringAt(stripBom(content), keys, '')?.line ?? null;
+		return stringAt(stripBom(content), keys, '', current)?.line ?? null;
 	} catch {
 		return null;
 	}
 }
 
 /**
- * Replaces one string value at a property path (as Obsidian names frontmatter links: `see.1`, split on dots) with
- * another, written as Obsidian quotes it; every other byte stays. Null when the path names no string (nothing to do).
- * Returns the line (0-based, in the note) the value is on.
+ * Replaces one string value at a property path (keys, or the dotted name Obsidian gives frontmatter links: `see.1`)
+ * with another, written as Obsidian quotes it; every other byte stays. Null when the path names no string (nothing
+ * to do). With `current`, only a string holding that value is replaced. Returns the line (0-based, in the note) the
+ * value is on.
  */
-export function setFrontmatterString(text: string, keys: readonly string[], value: string, path = ''): { content: string; line: number } | null {
+export function setFrontmatterString(text: string, keys: KeyPath, value: string, path = '', current?: string): { content: string; line: number } | null {
 	const content = stripBom(text);
 	const bom = text.slice(0, text.length - content.length);
-	const done = setString(content, keys, value, path);
+	const done = setString(content, keys, value, path, current);
 	return done && { content: bom + done.content, line: done.line };
 }
 
-function setString(content: string, keys: readonly string[], value: string, path: string): { content: string; line: number } | null {
-	const found = stringAt(content, keys, path);
+function setString(content: string, keyPath: KeyPath, value: string, path: string, current?: string): { content: string; line: number } | null {
+	const found = stringAt(content, keyPath, path, current);
 	if (!found) return null;
-	const { span, doc, node, line } = found;
+	const { span, doc, node, keys, line } = found;
 	const at = span.from + node.range[0];
 	const text = stringify(value, null, OBSIDIAN_YAML).replace(/\n$/, '');
 	if (!/[\r\n]/.test(text)) return { content: content.slice(0, at) + text + content.slice(span.from + node.range[1]), line };

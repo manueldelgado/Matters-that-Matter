@@ -128,6 +128,8 @@ export const CLI = {
 	exists: (path: string) => `${path} is there already (the vault changed while it was being read). Nothing was written; try again.`,
 	missing: (path: string) => `${path} isn’t there any more (the vault changed while it was being read). Nothing was written; try again.`,
 	unreadableProperties: (path: string) => `The properties of ${path} aren’t valid YAML, so nothing was written. Fix them in Obsidian first.`,
+	unsafeProperties: (path: string) =>
+		`The properties of ${path} use YAML (anchors, aliases, tags or an unusual layout) that the command line can’t change safely, so nothing was written. Change them in Obsidian instead.`,
 	notMtm: (path: string) => `Only mtm- properties are ever written, so nothing was written to ${path}.`,
 	outsideVault: (path: string) => `${path} is outside the vault, so nothing was written.`,
 	readOnly: (path: string) => `${path} is read-only, so nothing was written.`,

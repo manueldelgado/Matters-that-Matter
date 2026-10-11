@@ -54,12 +54,16 @@ export interface WriteOptions {
 
 export type WriteErrorCode = 'exists' | 'missing' | 'invalid-properties' | 'not-mtm' | 'bad-path';
 
-/** Why a plan can't be applied; nothing is written. */
+/**
+ * Why a plan can't be applied; nothing is written. For `invalid-properties`, `reason` says whether the properties
+ * aren't valid YAML (`invalid`) or use YAML an edit in place can't keep as it reads (`unsafe`).
+ */
 export class WriteError extends Error {
 	constructor(
 		readonly code: WriteErrorCode,
 		readonly path: string,
 		message: string,
+		readonly reason?: 'invalid' | 'unsafe',
 	) {
 		super(message);
 		this.name = 'WriteError';
@@ -76,7 +80,7 @@ interface Touched {
  * Applies a plan to the vault's files as text: creates, then frontmatter edits (`mtm-` keys only), then body edits,
  * then renames (with links rewritten when the vault's "Automatically update internal links" is on). Paths in edits
  * and bodies are paths before any rename. Throws a `WriteError`, before anything is computed for paths, when a file
- * to create exists, a file to change is missing, properties to edit aren't valid YAML or aren't closed, an edit names
+ * to create exists, a file to change is missing, properties to edit aren't valid YAML, aren't closed or can't be edited safely, an edit names
  * a key without the `mtm-` prefix, or a new path (a create or a rename target) isn't a note inside the vault.
  */
 export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOptions): FileOutcome {
@@ -131,7 +135,7 @@ export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOpt
 		try {
 			update(edit.path, editFrontmatter(existing(edit.path), edit.set, edit.remove, edit.path));
 		} catch (e) {
-			if (e instanceof FrontmatterError) throw new WriteError('invalid-properties', edit.path, e.message);
+			if (e instanceof FrontmatterError) throw new WriteError('invalid-properties', edit.path, e.message, e.reason);
 			throw e;
 		}
 	}

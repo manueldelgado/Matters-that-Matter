@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { editFrontmatter, frontmatterSpan, newNoteContent, obsidianYaml, setFrontmatterString } from '../../src/files/frontmatterEdit';
+import { contentsAfter, WriteError } from '../../src/files/write';
 
 const SAMPLE = [
 	'---',
@@ -164,5 +165,69 @@ describe('replacing a link in properties', () => {
 	it('does nothing for a path that names no string', () => {
 		expect(setFrontmatterString(NOTE, ['see'], 'x')).toBeNull();
 		expect(setFrontmatterString(NOTE, ['nothing', '0'], 'x')).toBeNull();
+	});
+});
+
+describe('properties an edit in place could break', () => {
+	const refuses = (text: string, set: Record<string, unknown>, remove: string[] = []) =>
+		expect(() => editFrontmatter(text, set, remove, 'x.md')).toThrow(/can't change safely, so nothing was written/);
+
+	it('indents new and rewritten keys in a mapping indented as a whole', () => {
+		const note = '---\n  mtm-kind: action\n  title: x\n---\nbody\n';
+		expect(editFrontmatter(note, { 'mtm-completed': '2026-10-11' })).toBe('---\n  mtm-kind: action\n  mtm-completed: 2026-10-11\n  title: x\n---\nbody\n');
+		expect(editFrontmatter(note, { 'mtm-people': ['[[A]]'] })).toBe('---\n  mtm-kind: action\n  mtm-people:\n    - "[[A]]"\n  title: x\n---\nbody\n');
+		expect(editFrontmatter(note, { 'mtm-kind': 'matter' })).toBe('---\n  mtm-kind: matter\n  title: x\n---\nbody\n');
+		expect(editFrontmatter(note, {}, ['mtm-kind'])).toBe('---\n  title: x\n---\nbody\n');
+		const crlf = note.replace(/\n/g, '\r\n');
+		expect(editFrontmatter(crlf, { 'mtm-people': ['[[A]]'] })).toBe('---\r\n  mtm-kind: action\r\n  mtm-people:\r\n    - "[[A]]"\r\n  title: x\r\n---\r\nbody\r\n');
+	});
+
+	it('refuses an edit that would not read back as asked, rather than lose properties', () => {
+		// A document end marker: a key added after it would start a second document.
+		refuses('---\ntitle: x\n...\n---\n', { 'mtm-kind': 'action' });
+	});
+
+	it('refuses removing or replacing a value an alias points to', () => {
+		const note = '---\nmtm-people: &p\n  - "[[A]]"\nothers: *p\nmtm-status: &s next\nother: *s\n---\n';
+		refuses(note, {}, ['mtm-people']);
+		refuses(note, { 'mtm-people': ['[[B]]'] });
+		refuses(note, { 'mtm-status': 'done' });
+		refuses(note, {}, ['mtm-status']);
+	});
+
+	it('refuses changing a list whose items carry anchors', () => {
+		refuses('---\nmtm-people:\n  - &a "[[A]]"\nlead: *a\n---\n', { 'mtm-people': ['[[B]]'] });
+	});
+
+	it('refuses changing a tagged value', () => {
+		refuses('---\nmtm-priority: !!str 1\n---\n', { 'mtm-priority': 2 });
+		refuses('---\n!!str mtm-status: next\n---\n', { 'mtm-status': 'done' });
+	});
+
+	it('still edits around anchors, aliases and tags it does not touch', () => {
+		const note = '---\nbase: &b "[[A]]"\nmtm-status: next\nmtm-people: *b\ncount: !!str 7\n---\n';
+		expect(editFrontmatter(note, { 'mtm-status': 'done', 'mtm-due': '2026-10-15' })).toBe(
+			'---\nbase: &b "[[A]]"\nmtm-status: done\nmtm-people: *b\nmtm-due: 2026-10-15\ncount: !!str 7\n---\n',
+		);
+		// An alias is a value like any other: replacing it leaves the anchor as it was.
+		expect(editFrontmatter(note, { 'mtm-people': ['[[B]]'] })).toBe('---\nbase: &b "[[A]]"\nmtm-status: next\nmtm-people:\n  - "[[B]]"\ncount: !!str 7\n---\n');
+		expect(editFrontmatter(note, {}, ['mtm-people'])).toBe('---\nbase: &b "[[A]]"\nmtm-status: next\ncount: !!str 7\n---\n');
+	});
+});
+
+describe('a refused edit, through the writer', () => {
+	it('says why: properties that are not valid YAML, or that cannot be changed safely', () => {
+		const files: Record<string, string> = { 'Bad.md': '---\na: [1\n---\n', 'Tagged.md': '---\nmtm-priority: !!str 1\n---\n' };
+		const reader = { list: () => Object.keys(files), read: (p: string) => files[p] ?? null };
+		const refusal = (path: string) => {
+			try {
+				contentsAfter({ creates: [], edits: [{ path, set: { 'mtm-priority': 2 }, remove: [] }], bodies: [], renames: [] }, reader, { configDir: '.obsidian', links: { alwaysUpdateLinks: true, newLinkFormat: 'shortest', useMarkdownLinks: false } });
+			} catch (e) {
+				return e instanceof WriteError ? [e.code, e.reason] : String(e);
+			}
+			return null;
+		};
+		expect(refusal('Bad.md')).toEqual(['invalid-properties', 'invalid']);
+		expect(refusal('Tagged.md')).toEqual(['invalid-properties', 'unsafe']);
 	});
 });

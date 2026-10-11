@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fileToLinktext, linkFormat } from '../../src/files/linkText';
 import { basenameOf, extensionOf, joinPath, parentOf, relativePath, withoutMd } from '../../src/files/paths';
-import { LinkResolver } from '../../src/files/resolve';
+import { FileLookup, LinkResolver } from '../../src/files/resolve';
 
 const FILES = [
 	'Inbox.md',
@@ -59,6 +59,32 @@ describe('LinkResolver', () => {
 		expect(resolver.nameCount('casing.md')).toBe(2);
 		expect(resolver.nameCount('Kitchen.md')).toBe(1);
 		expect(resolver.nameCount('nothing.md')).toBe(0);
+	});
+});
+
+describe('LinkResolver as Obsidian resolves links', () => {
+	// Observed in Obsidian 1.14.4 with `metadataCache.getFirstLinkpathDest` on exactly these files.
+	const observed = new LinkResolver(['QAR/B/Note.md', 'QAR/A/C/Note.md', 'QAR/AB/Thing.md', 'QAR/A/x.md', 'QAR/Z/x.md', 'QAR/A/Solo.md']);
+	const cases: [link: string, from: string, expected: string | null][] = [
+		['Note', 'QAR/A/x.md', 'QAR/A/C/Note.md'],
+		['Note', 'QAR/Z/x.md', 'QAR/B/Note.md'],
+		['/Solo', 'QAR/A/x.md', null],
+		['/QAR/A/Solo', 'QAR/Z/x.md', 'QAR/A/Solo.md'],
+		['B/Thing', 'QAR/Z/x.md', 'QAR/AB/Thing.md'],
+		['AB/Thing', 'QAR/Z/x.md', 'QAR/AB/Thing.md'],
+		['C/Note', 'QAR/Z/x.md', 'QAR/A/C/Note.md'],
+		['Solo', 'QAR/Z/x.md', 'QAR/A/Solo.md'],
+		['A/Solo', 'x.md', 'QAR/A/Solo.md'],
+		['../B/Note', 'QAR/A/x.md', 'QAR/B/Note.md'],
+		['./C/Note', 'QAR/A/x.md', 'QAR/A/C/Note.md'],
+	];
+	it.each(cases)('%s from %s reaches %s', (link, from, expected) => {
+		expect(observed.resolve(link, from)).toBe(expected);
+	});
+
+	it('agrees with the file lookup the renames use', () => {
+		const lookup = new FileLookup(['QAR/B/Note.md', 'QAR/A/C/Note.md', 'QAR/AB/Thing.md', 'QAR/A/x.md', 'QAR/Z/x.md', 'QAR/A/Solo.md']);
+		for (const [link, from, expected] of cases) expect(lookup.destinations(link, from)[0] ?? null).toBe(expected);
 	});
 });
 

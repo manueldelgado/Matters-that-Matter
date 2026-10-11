@@ -105,7 +105,7 @@ function planFailure(e: WriteError): { error: ErrorJson['error']; changed: boole
 		case 'bad-path':
 			return { error: { code: 'unsafe', message: CLI.outsideVault(e.path), path: e.path }, changed: true };
 		case 'invalid-properties':
-			return { error: { code: e.code, message: CLI.unreadableProperties(e.path), path: e.path }, changed: false };
+			return { error: { code: e.code, message: (e.reason === 'unsafe' ? CLI.unsafeProperties : CLI.unreadableProperties)(e.path), path: e.path }, changed: false };
 		case 'not-mtm':
 			return { error: { code: e.code, message: CLI.notMtm(e.path), path: e.path }, changed: false };
 	}
