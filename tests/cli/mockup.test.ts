@@ -12,7 +12,7 @@ afterEach(() => {
 	for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-const HELP = `Matters that Matter, from the command line.            matters-that-matter 0.1.0
+const HELP = `Matters that Matter, from the command line.            matters-that-matter 0.2.0
 
   matters-that-matter <command> [options]
 
@@ -45,7 +45,7 @@ describe('help', () => {
 	});
 
 	it('prints the version', async () => {
-		expect(await mtm(['--version'])).toEqual({ code: 0, stdout: 'matters-that-matter 0.1.0\n', stderr: '' });
+		expect(await mtm(['--version'])).toEqual({ code: 0, stdout: 'matters-that-matter 0.2.0\n', stderr: '' });
 	});
 
 	it('has help for each command', async () => {
