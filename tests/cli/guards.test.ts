@@ -136,20 +136,20 @@ describe('nothing matched, several did, or the input can’t be read: exit 1', (
 
 	it('usage: an unknown command or option, a flag the command doesn’t take, a missing name', async () => {
 		const root = keep(syntheticVault());
-		expect(await mtm(['frobnicate'])).toEqual({ code: 1, stdout: '', stderr: 'There’s no command “frobnicate”. See mtm --help.\n' });
-		expect(await mtm(['today', '--colour'])).toEqual({ code: 1, stdout: '', stderr: 'There’s no option --colour. See mtm --help.\n' });
-		expect(await mtm(['today', '--due', 'fri'])).toEqual({ code: 1, stdout: '', stderr: 'mtm today doesn’t take --due. See mtm today --help.\n' });
+		expect(await mtm(['frobnicate'])).toEqual({ code: 1, stdout: '', stderr: 'There’s no command “frobnicate”. See matters-that-matter --help.\n' });
+		expect(await mtm(['today', '--colour'])).toEqual({ code: 1, stdout: '', stderr: 'There’s no option --colour. See matters-that-matter --help.\n' });
+		expect(await mtm(['today', '--due', 'fri'])).toEqual({ code: 1, stdout: '', stderr: '“today” doesn’t take --due. See matters-that-matter today --help.\n' });
 		expect(await mtm(['done', '--vault', root])).toEqual({ code: 1, stdout: '', stderr: 'Name the Action: its path or its title.\n' });
 		expect(await mtm(['today', '--vault', root, '--now', 'soon'])).toEqual({ code: 1, stdout: '', stderr: '“soon” isn’t a time. Use 2026-10-09 or 2026-10-09T12:00.\n' });
 		expect(JSON.parse((await mtm(['today', '--json', '--vault'])).stdout)).toEqual({ error: { code: 'usage', message: '--vault needs a value.' } });
 	});
 
-	it('mtm help is --help', async () => {
+	it('help is --help', async () => {
 		expect((await mtm(['help'])).stdout).toBe((await mtm(['--help'])).stdout);
 		expect((await mtm(['help', 'list'])).stdout).toBe((await mtm(['list', '--help'])).stdout);
 	});
 
-	it('mtm mcp needs a vault, like every command', async () => {
+	it('mcp needs a vault, like every command', async () => {
 		expect(await mtm(['mcp'])).toEqual({ code: 2, stdout: '', stderr: 'Name the vault with --vault <path>, or set MTM_VAULT.\n' });
 	});
 });

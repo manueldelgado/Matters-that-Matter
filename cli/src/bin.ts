@@ -1,4 +1,4 @@
-// The `mtm` executable: runs the command line with the process's arguments, streams and environment.
+// The `matters-that-matter` executable: runs the command line with the process's arguments, streams and environment.
 
 import { homedir } from 'node:os';
 import { run } from './main';

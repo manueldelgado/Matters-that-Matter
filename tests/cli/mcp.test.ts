@@ -1,4 +1,4 @@
-// The MCP server in-process: a client over the SDK's in-memory transport talks to `mtm mcp` on copies of the fixture
+// The MCP server in-process: a client over the SDK's in-memory transport talks to `matters-that-matter mcp` on copies of the fixture
 // vault. The tools and their hints, every tool's result and the files it writes, narrowing with --read-only and
 // --tools, and the errors an assistant gets (as tool errors, with what would work).
 
@@ -23,7 +23,7 @@ afterEach(async () => {
 
 const NOW = ['--now', '2026-10-09T12:00'];
 
-/** Starts `mtm mcp` with these arguments and connects a client; `done` is its exit code once the client closes. */
+/** Starts `matters-that-matter mcp` with these arguments and connects a client; `done` is its exit code once the client closes. */
 async function connect(argv: string[]): Promise<{ client: Client; done: Promise<number>; stderr: () => string }> {
 	const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
 	let stderr = '';
@@ -44,7 +44,7 @@ async function connect(argv: string[]): Promise<{ client: Client; done: Promise<
 	return { client, done, stderr: () => stderr };
 }
 
-/** Runs `mtm mcp` that should stop before serving. */
+/** Runs `matters-that-matter mcp` that should stop before serving. */
 async function refused(argv: string[]): Promise<{ code: number; stderr: string }> {
 	let stderr = '';
 	const code = await run(['mcp', ...argv, ...NOW], {

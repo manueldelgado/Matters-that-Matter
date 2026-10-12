@@ -5,22 +5,24 @@ import { VERSION, PACKAGE_NAME } from './version';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** The help, as `mtm --help` prints it; `<b>…</b>` marks bold and `<d>…</d>` dim (plain without colour). */
+/** The help, as `matters-that-matter --help` prints it; `<b>…</b>` marks bold and `<d>…</d>` dim (plain without colour). */
 export const HELP = `Matters that Matter, from the command line.            <d>${PACKAGE_NAME} ${VERSION}</d>
 
-  <b>mtm today</b>                    What matters today?
-  <b>mtm add</b> <text> [fields]      Add an Action (quick add’s words work)
-  <b>mtm update</b> <action> [fields] Change an Action
-  <b>mtm done</b> <action>            Mark as done
-  <b>mtm reopen</b> <action>          Reopen a done Action
-  <b>mtm show</b> <action>            Everything about one Action
-  <b>mtm list</b> [filters]           Actions, done hidden
-  <b>mtm add-matter</b> <name>        New Matter
-  <b>mtm matters</b>                  Matters in board order
-  <b>mtm workflow</b>                 Statuses, types and Spheres
-  <b>mtm parse</b> <text>             What quick add would make of it
-  <b>mtm open</b> <action|matter>     Open it in Obsidian
-  <b>mtm mcp</b>                      Run as an MCP server (stdio)
+  <b>matters-that-matter</b> <command> [options]
+
+  <b>today</b>                    What matters today?
+  <b>add</b> <text> [fields]      Add an Action (quick add’s words work)
+  <b>update</b> <action> [fields] Change an Action
+  <b>done</b> <action>            Mark as done
+  <b>reopen</b> <action>          Reopen a done Action
+  <b>show</b> <action>            Everything about one Action
+  <b>list</b> [filters]           Actions, done hidden
+  <b>add-matter</b> <name>        New Matter
+  <b>matters</b>                  Matters in board order
+  <b>workflow</b>                 Statuses, types and Spheres
+  <b>parse</b> <text>             What quick add would make of it
+  <b>open</b> <action|matter>     Open it in Obsidian
+  <b>mcp</b>                      Run as an MCP server (stdio)
 
   --vault <path>   the vault (or MTM_VAULT)      --json      for scripts
   --dry-run        show what would change       --help      this`;
@@ -38,28 +40,28 @@ const ACTION_FIELDS = `  --title <text>        the title (renames the note on up
   --checklist <item>    a checklist item; repeat for more
   --link <note|url>     a note in the vault or a web address, added as a line`;
 
-/** Help for one command: `mtm <command> --help`. */
+/** Help for one command: `matters-that-matter <command> --help`. */
 export const COMMAND_HELP: Record<string, string> = {
-	today: `<b>mtm today</b>
+	today: `<b>matters-that-matter today</b>
 What matters today: Actions due today or late (else the next ones), the Inbox, reviews due and long waits.`,
-	add: `<b>mtm add</b> <text> [fields]
+	add: `<b>matters-that-matter add</b> <text> [fields]
 Adds an Action. The text works as in quick add: /type, #Matter, @person, !1, and dates in words.
 Fields given separately win over the text. Names that match nothing fall back as quick add does, and say so.
 
 ${ACTION_FIELDS}`,
-	update: `<b>mtm update</b> <action> [fields]
+	update: `<b>matters-that-matter update</b> <action> [fields]
 Changes an Action, named by its path or its title. Values that match nothing are refused, and nothing is written.
 --people replaces the people; --checklist adds items. Remove a value with --no-priority, --no-start, --no-due,
 --no-waiting-on or --no-people.
 
 ${ACTION_FIELDS}`,
-	done: `<b>mtm done</b> <action>
+	done: `<b>matters-that-matter done</b> <action>
 Marks an Action as done (its path or its title). Today becomes its completion date.`,
-	reopen: `<b>mtm reopen</b> <action>
+	reopen: `<b>matters-that-matter reopen</b> <action>
 Reopens a done Action: it goes back to the backlog status.`,
-	show: `<b>mtm show</b> <action>
+	show: `<b>matters-that-matter show</b> <action>
 Everything about one Action: its values, details, checklist, people and the names of linked notes.`,
-	list: `<b>mtm list</b> [filters]
+	list: `<b>matters-that-matter list</b> [filters]
 Actions grouped by Matter in board order. Done Actions are hidden unless you ask for them.
 
   --matter <name>       in this Matter
@@ -71,7 +73,7 @@ Actions grouped by Matter in board order. Done Actions are hidden unless you ask
   --due-to <date>       due on or before this day
   --waiting             only Actions waiting on someone
   --done                done Actions too`,
-	'add-matter': `<b>mtm add-matter</b> <name> [fields]
+	'add-matter': `<b>matters-that-matter add-matter</b> <name> [fields]
 Adds a Matter, last on the board.
 
   --icon <name>         a Lucide icon name, such as house
@@ -79,15 +81,15 @@ Adds a Matter, last on the board.
   --state <state>       active (the default), dormant or closed
   --outcome <text>      what done looks like, in one line
   --review-every <n>    a review rhythm: 7d, 2w or 1m`,
-	matters: `<b>mtm matters</b>
+	matters: `<b>matters-that-matter matters</b>
 Every Matter in board order, with its Sphere, state, counts and review.`,
-	workflow: `<b>mtm workflow</b>
+	workflow: `<b>matters-that-matter workflow</b>
 The statuses, Action types and Spheres, with the IDs notes store.`,
-	parse: `<b>mtm parse</b> <text>
+	parse: `<b>matters-that-matter parse</b> <text>
 What quick add would make of the text. Nothing is written.`,
-	open: `<b>mtm open</b> <action|matter>
+	open: `<b>matters-that-matter open</b> <action|matter>
 Opens an Action or a Matter in Obsidian, through a link the plugin handles (Matters that Matter 1.1.0 or later).`,
-	mcp: `<b>mtm mcp</b> --vault <path>
+	mcp: `<b>matters-that-matter mcp</b> --vault <path>
 Runs as an MCP server over stdio, for AI assistants. Each tool reads the vault afresh. Tools that write say what
 they changed, and carry hints so the assistant’s app can ask first. Nothing is deleted and settings are never written.
 
@@ -100,11 +102,11 @@ export const CLI = {
 	version: `${PACKAGE_NAME} ${VERSION}`,
 
 	// Arguments.
-	unknownOption: (flag: string) => `There’s no option ${flag}. See mtm --help.`,
-	unknownCommand: (word: string) => `There’s no command “${word}”. See mtm --help.`,
+	unknownOption: (flag: string) => `There’s no option ${flag}. See matters-that-matter --help.`,
+	unknownCommand: (word: string) => `There’s no command “${word}”. See matters-that-matter --help.`,
 	noValue: (flag: string) => `--${flag} takes no value.`,
 	needsValue: (flag: string) => `--${flag} needs a value.`,
-	notForCommand: (flag: string, command: string) => `mtm ${command} doesn’t take --${flag}. See mtm ${command} --help.`,
+	notForCommand: (flag: string, command: string) => `“${command}” doesn’t take --${flag}. See matters-that-matter ${command} --help.`,
 	badNow: (value: string) => `“${value}” isn’t a time. Use 2026-10-09 or 2026-10-09T12:00.`,
 	nameAction: 'Name the Action: its path or its title.',
 	nameMatter: 'Name the Matter: its name or its path.',

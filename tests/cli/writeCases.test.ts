@@ -1,4 +1,4 @@
-// The write cases through the command line: each case as the `mtm` command a person would type, run in-process on a
+// The write cases through the command line: each case as the `matters-that-matter` command a person would type, run in-process on a
 // copy of the fixture vault. The files on disk afterwards must be Obsidian's results byte for byte (or, for the
 // differences accepted in expected/ACCEPTED.md, exactly what the files layer computes): what the command line
 // writes is what the files layer computed, nothing added and nothing lost.
@@ -65,7 +65,7 @@ function caseVault(c: WriteCase): string {
 	return root;
 }
 
-describe('the write cases, through mtm', () => {
+describe('the write cases, through the command line', () => {
 	it('maps a case to a command line', () => {
 		const c = cases.find((x) => x.name === 'update-priority-remove');
 		expect(c && argvOf(c)).toEqual(['update', 'Confirm the worktop measurements', '--no-priority', '--now', '2026-10-09T12:00']);

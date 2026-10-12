@@ -1,6 +1,6 @@
 {
   "error": {
     "code": "usage",
-    "message": "There’s no option --colour. See mtm --help."
+    "message": "There’s no option --colour. See matters-that-matter --help."
   }
 }

@@ -56,7 +56,7 @@ const rule = '-'.repeat(78);
 writeFileSync(
 	join(here, 'dist', 'THIRD-PARTY-LICENSES.txt'),
 	[
-		'mtm (matters-that-matter) bundles the following packages into dist/mtm.mjs.',
+		'matters-that-matter bundles the following packages into dist/mtm.mjs.',
 		'Each is listed with its version and its licence.',
 		'',
 		...packages.flatMap((p) => [rule, `${p.name} ${p.version}${p.licence ? ` (${p.licence})` : ''}`, rule, '', p.text, '']),

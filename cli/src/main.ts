@@ -64,7 +64,7 @@ export interface CliIo {
 	fs?: ApplyFs;
 	/** Obsidian's own settings folder (where `obsidian.json` lists the vaults); the system's when absent, none when null. */
 	obsidianDir?: string | null;
-	/** Where `mtm mcp` serves; standard input and output when absent. */
+	/** Where `matters-that-matter mcp` serves; standard input and output when absent. */
 	mcpTransport?: Transport;
 }
 
@@ -94,7 +94,7 @@ export function parseNow(value: string): Date | null {
 export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 	const out = style(colourFor(io.stdout.isTTY, io.env));
 	const err = style(colourFor(io.stderr.isTTY, io.env));
-	// `mtm help` and `mtm help <command>` are `--help`.
+	// `help` and `help <command>` are `--help`.
 	const args = argv[0] === 'help' ? [...argv.slice(1), '--help'] : argv;
 	const parsed = parseArgs(args);
 	// Arguments that can't be parsed still answer in JSON when they ask for it.

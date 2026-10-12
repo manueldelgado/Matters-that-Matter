@@ -14,19 +14,21 @@ afterEach(() => {
 
 const HELP = `Matters that Matter, from the command line.            matters-that-matter 0.1.0
 
-  mtm today                    What matters today?
-  mtm add <text> [fields]      Add an Action (quick add’s words work)
-  mtm update <action> [fields] Change an Action
-  mtm done <action>            Mark as done
-  mtm reopen <action>          Reopen a done Action
-  mtm show <action>            Everything about one Action
-  mtm list [filters]           Actions, done hidden
-  mtm add-matter <name>        New Matter
-  mtm matters                  Matters in board order
-  mtm workflow                 Statuses, types and Spheres
-  mtm parse <text>             What quick add would make of it
-  mtm open <action|matter>     Open it in Obsidian
-  mtm mcp                      Run as an MCP server (stdio)
+  matters-that-matter <command> [options]
+
+  today                    What matters today?
+  add <text> [fields]      Add an Action (quick add’s words work)
+  update <action> [fields] Change an Action
+  done <action>            Mark as done
+  reopen <action>          Reopen a done Action
+  show <action>            Everything about one Action
+  list [filters]           Actions, done hidden
+  add-matter <name>        New Matter
+  matters                  Matters in board order
+  workflow                 Statuses, types and Spheres
+  parse <text>             What quick add would make of it
+  open <action|matter>     Open it in Obsidian
+  mcp                      Run as an MCP server (stdio)
 
   --vault <path>   the vault (or MTM_VAULT)      --json      for scripts
   --dry-run        show what would change       --help      this
@@ -49,7 +51,7 @@ describe('help', () => {
 	it('has help for each command', async () => {
 		const r = await mtm(['add', '--help']);
 		expect(r.code).toBe(0);
-		expect(r.stdout).toContain('mtm add <text> [fields]');
+		expect(r.stdout).toContain('matters-that-matter add <text> [fields]');
 		expect(r.stdout).toContain('--waiting-on <name>');
 	});
 });

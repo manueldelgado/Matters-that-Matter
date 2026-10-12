@@ -73,7 +73,7 @@ export interface Ran {
 	stderr: string;
 }
 
-/** Runs `mtm` with these arguments; `--now 2026-10-09T12:00` unless another time is given. */
+/** Runs the command line with these arguments; `--now 2026-10-09T12:00` unless another time is given. */
 export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean } = {}): Promise<Ran> {
 	let stdout = '';
 	let stderr = '';

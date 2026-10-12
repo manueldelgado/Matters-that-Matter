@@ -1,4 +1,4 @@
-// Output to a pipe that closes early, as in `mtm list --json | head -c 10`: the rest of the output is dropped quietly
+// Output to a pipe that closes early, as in `matters-that-matter list --json | head -c 10`: the rest of the output is dropped quietly
 // instead of ending in a stack trace. Writes to the vault always finish before their report is printed, so a closed
 // pipe never leaves one half done; the exit code stays the command's own.
 

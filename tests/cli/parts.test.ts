@@ -50,14 +50,14 @@ describe('arguments', () => {
 	});
 
 	it.each([
-		[['nope'], 'There’s no command “nope”. See mtm --help.'],
-		[['today', '--nope'], 'There’s no option --nope. See mtm --help.'],
-		[['today', '-x'], 'There’s no option -x. See mtm --help.'],
+		[['nope'], 'There’s no command “nope”. See matters-that-matter --help.'],
+		[['today', '--nope'], 'There’s no option --nope. See matters-that-matter --help.'],
+		[['today', '-x'], 'There’s no option -x. See matters-that-matter --help.'],
 		[['add', '--due'], '--due needs a value.'],
 		[['add', '--due', '--json'], '--due needs a value.'],
 		[['today', '--json=yes'], '--json takes no value.'],
-		[['done', 'X', '--due', 'fri'], 'mtm done doesn’t take --due. See mtm done --help.'],
-		[['add', '--no-title'], 'There’s no option --no-title. See mtm --help.'],
+		[['done', 'X', '--due', 'fri'], '“done” doesn’t take --due. See matters-that-matter done --help.'],
+		[['add', '--no-title'], 'There’s no option --no-title. See matters-that-matter --help.'],
 	])('%j is refused', (argv, message) => {
 		expect(parseArgs(argv)).toEqual({ ok: false, message });
 	});
@@ -479,7 +479,7 @@ describe('the package', () => {
 	});
 
 	it('ships one file, with no runtime dependencies', () => {
-		expect(pkg).toMatchObject({ bin: { mtm: 'dist/mtm.mjs' }, type: 'module', files: ['dist'], engines: { node: '>=20' }, license: 'MIT' });
+		expect(pkg).toMatchObject({ bin: { 'matters-that-matter': 'dist/mtm.mjs' }, type: 'module', files: ['dist'], engines: { node: '>=20' }, license: 'MIT' });
 		expect(pkg.dependencies).toBeUndefined();
 	});
 });
