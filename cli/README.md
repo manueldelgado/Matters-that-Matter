@@ -1,6 +1,6 @@
 # Matters that Matter from the command line
 
-`mtm` reads and changes the Actions and Matters of [Matters that Matter](https://matters-that-matter.app/), the Obsidian plugin, straight from the notes in your vault. Obsidian doesn't need to be running; if it is, it picks the changes up like any other edit.
+`matters-that-matter` reads and changes the Actions and Matters of [Matters that Matter](https://matters-that-matter.app/), the Obsidian plugin, straight from the notes in your vault. Obsidian doesn't need to be running; if it is, it picks the changes up like any other edit.
 
 It works only with the data of Matters that Matter (Actions, Matters, the workflow), never deletes anything, and never changes settings. Every write says what it changed, property by property. It can also run as an [MCP server](#mcp-server) for AI assistants.
 
@@ -12,46 +12,59 @@ It needs Node.js 20 or later. Run it without installing:
 npx -y matters-that-matter today --vault ~/Notes
 ```
 
-Or install it once and use `mtm`:
+Or install it once, with npm:
 
 ```bash
 npm install -g matters-that-matter
-mtm today --vault ~/Notes
+```
+
+or with [Homebrew](https://brew.sh/):
+
+```bash
+brew install manueldelgado/tap/matters-that-matter
+```
+
+Then:
+
+```bash
+matters-that-matter today --vault ~/Notes
 ```
 
 The vault must have Matters that Matter installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
 
 ```bash
 export MTM_VAULT=~/Notes
-mtm today
+matters-that-matter today
 ```
 
 ## Commands
 
 ```
-mtm today                    What matters today?
-mtm add <text> [fields]      Add an Action (quick add’s words work)
-mtm update <action> [fields] Change an Action
-mtm done <action>            Mark as done
-mtm reopen <action>          Reopen a done Action
-mtm show <action>            Everything about one Action
-mtm list [filters]           Actions, done hidden
-mtm add-matter <name>        New Matter
-mtm matters                  Matters in board order
-mtm workflow                 Statuses, types and Spheres
-mtm parse <text>             What quick add would make of it
-mtm open <action|matter>     Open it in Obsidian
-mtm mcp                      Run as an MCP server (stdio)
+matters-that-matter <command> [options]
+
+today                    What matters today?
+add <text> [fields]      Add an Action (quick add’s words work)
+update <action> [fields] Change an Action
+done <action>            Mark as done
+reopen <action>          Reopen a done Action
+show <action>            Everything about one Action
+list [filters]           Actions, done hidden
+add-matter <name>        New Matter
+matters                  Matters in board order
+workflow                 Statuses, types and Spheres
+parse <text>             What quick add would make of it
+open <action|matter>     Open it in Obsidian
+mcp                      Run as an MCP server (stdio)
 ```
 
-`mtm <command> --help` (or `mtm help <command>`) shows each command's fields and filters.
+`matters-that-matter <command> --help` (or `matters-that-matter help <command>`) shows each command's fields and filters.
 
-An Action is named by its path (`MTM/Actions/Call Marco.md`, `.md` optional) or its title. When a name matches several Actions, nothing is written and `mtm` lists them. Matters and people are named by name, path or link text; statuses, types and Spheres by label or ID.
+An Action is named by its path (`MTM/Actions/Call Marco.md`, `.md` optional) or its title. When a name matches several Actions, nothing is written and the command lists them. Matters and people are named by name, path or link text; statuses, types and Spheres by label or ID.
 
 ### Adding
 
 ```bash
-mtm add "Call Marco about the quote /call #Kitchen fri 10:00 !1"
+matters-that-matter add "Call Marco about the quote /call #Kitchen fri 10:00 !1"
 ```
 
 ```
@@ -85,7 +98,7 @@ On `update`, remove a value with `--no-priority`, `--no-start`, `--no-due`, `--n
 `update` is strict: a value that matches nothing is refused and nothing is written.
 
 ```
-$ mtm update "Call Marco about the quote" --status Someday
+$ matters-that-matter update "Call Marco about the quote" --status Someday
 No status matches “Someday”. Statuses here: Later, Next, Doing, Waiting, Done.
 Nothing was changed.
 ```
@@ -93,7 +106,7 @@ Nothing was changed.
 A new title renames the note. When Obsidian's "Automatically update internal links" is on in that vault, links to it are updated too, as Obsidian would update them, and each note is listed with its lines:
 
 ```
-$ mtm update "Call Marco about the quote" --title "Call Marco about the revised quote"
+$ matters-that-matter update "Call Marco about the quote" --title "Call Marco about the revised quote"
 Renamed to “Call Marco about the revised quote”
   MTM/Actions/Call Marco about the revised quote.md
   Updated 3 links in 2 notes:
@@ -103,25 +116,25 @@ Renamed to “Call Marco about the revised quote”
 
 When another note in the vault already has the new name, links to that note are given its path (`[[Notes/Kitchen ideas]]`), so they keep reaching it and not the renamed Action, as Obsidian does; they are listed with the others.
 
-When the setting is off, the links are left as they are, as Obsidian would leave them, and `mtm` says how many now point to the old name, and where. With the setting off, a new title that another note in the vault already has is refused, since links to that note could lead to the Action instead. `add` and `add-matter` never take a name another note has: the new note gets " 2". `--dry-run` shows all of this before anything is written.
+When the setting is off, the links are left as they are, as Obsidian would leave them, and the command says how many now point to the old name, and where. With the setting off, a new title that another note in the vault already has is refused, since links to that note could lead to the Action instead. `add` and `add-matter` never take a name another note has: the new note gets " 2". `--dry-run` shows all of this before anything is written.
 
 `done` sets the done status and today's completion date; `reopen` moves a done Action back to the backlog status.
 
 ### Adding a Matter
 
 ```bash
-mtm add-matter "Garden shed" --sphere Home --review-every 1m
+matters-that-matter add-matter "Garden shed" --sphere Home --review-every 1m
 ```
 
 The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, such as `house`), `--sphere`, `--state` (`active`, the default, `dormant` or `closed`), `--outcome` (what done looks like, in one line) and `--review-every` (a review rhythm such as `7d`, `2w` or `1m`).
 
 ### Listing
 
-`mtm list` shows open Actions grouped by Matter, in board order; late ones say "late". Filters: `--matter`, `--status` (a done status shows done Actions), `--type`, `--sphere`, `--person` (with this person, or waiting on them), `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
+`matters-that-matter list` shows open Actions grouped by Matter, in board order; late ones say "late". Filters: `--matter`, `--status` (a done status shows done Actions), `--type`, `--sphere`, `--person` (with this person, or waiting on them), `--due-from <date>`, `--due-to <date>`, `--waiting`, and `--done` to include done Actions.
 
 ### Opening in Obsidian
 
-`mtm open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that the plugin handles (Matters that Matter 1.1.0 or later): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). When the system can't open the link (nothing handles `obsidian://` links, say), `mtm` says so, prints the link to open yourself and exits with code 1. Opening links on Windows hasn't been tried yet.
+`matters-that-matter open` opens an Action or a Matter in Obsidian, through an `obsidian://mtm-open` link that the plugin handles (Matters that Matter 1.1.0 or later): `file=<path>` for an Action, `matter=<path>` for a Matter. The link names the vault by its ID from Obsidian's own list of vaults (`obsidian.json` in `~/Library/Application Support/obsidian` on macOS, `$XDG_CONFIG_HOME/obsidian` or `~/.config/obsidian` on Linux, `%APPDATA%\obsidian` on Windows), so two vaults whose folders share a name can't be confused; when the list doesn't know the folder, by the folder's name. With `--json` it prints `{ "url", "opened": true, "file" }` (or `"matter"`). With `--dry-run` it only prints the link it would open (`"opened": false`). When the system can't open the link (nothing handles `obsidian://` links, say), `mtm` says so, prints the link to open yourself and exits with code 1. Opening links on Windows hasn't been tried yet.
 
 ## Options
 
@@ -139,7 +152,7 @@ The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, suc
 `--json` prints JSON on standard output. Reads give the values as they are, with both the raw properties and the values the plugin shows (so scripts never re-implement its rules):
 
 ```bash
-mtm list --matter Kitchen --status next --json | jq '.[0]'
+matters-that-matter list --matter Kitchen --status next --json | jq '.[0]'
 ```
 
 ```json
@@ -169,7 +182,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | Code | Meaning |
 |---|---|
 | 0 | Done |
-| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML, or use YAML the command line can't change safely (anchors, aliases, tags), so they can't be changed; change those in Obsidian. Nothing was written. Also when `mtm open` couldn't open the link. |
+| 1 | Nothing matched, several things did, a value can't be read, or a note's properties aren't valid YAML, or use YAML the command line can't change safely (anchors, aliases, tags), so they can't be changed; change those in Obsidian. Nothing was written. Also when `matters-that-matter open` couldn't open the link. |
 | 2 | The vault isn't ready: no vault named, no settings of Matters that Matter, setup not done, or settings from a newer version of the plugin (reads still work then, with a warning; writes are refused) |
 | 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when tried a second time), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. If the vault changed, try again; make a read-only note writable first. In the rare case that something couldn't be put back, the message names those files. |
 
@@ -183,7 +196,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 
 ## MCP server
 
-`mtm mcp` runs Matters that Matter as an MCP server for AI assistants such as Claude, Codex and others. The assistant's app starts it and talks to it over standard input and output; it opens no network port. Each tool reads the vault afresh, so the assistant sees the notes as they are now, and writes go through the same all-or-nothing writer as the commands above.
+`matters-that-matter mcp` runs Matters that Matter as an MCP server for AI assistants such as Claude, Codex and others. The assistant's app starts it and talks to it over standard input and output; it opens no network port. Each tool reads the vault afresh, so the assistant sees the notes as they are now, and writes go through the same all-or-nothing writer as the commands above.
 
 ### Setup
 
@@ -224,16 +237,18 @@ args = ["-y", "matters-that-matter", "mcp", "--vault", "~/Notes"]
 
 Other assistants that run local MCP servers take the same command and arguments.
 
+If you [installed](#install) the command line, the command can be `matters-that-matter` itself, with the arguments `mcp --vault ~/Notes`.
+
 ### Tools
 
 | Tool | What it does | Hints |
 |---|---|---|
 | `add_action` | Adds an Action; `text` works as in quick add | writes, not destructive |
-| `update_action` | Changes an Action; strict, as `mtm update` | writes, not destructive |
+| `update_action` | Changes an Action; strict, as `matters-that-matter update` | writes, not destructive |
 | `mark_as_done` | Marks an Action as done | writes, not destructive, idempotent |
 | `reopen_action` | Reopens a done Action | writes, not destructive, idempotent |
 | `get_action` | Everything about one Action | read only |
-| `list_actions` | Actions, with the filters of `mtm list`; every match, not a page of them | read only |
+| `list_actions` | Actions, with the filters of `matters-that-matter list`; every match, not a page of them | read only |
 | `get_today` | What matters today? | read only |
 | `add_matter` | Adds a Matter | writes, not destructive |
 | `list_matters` | Matters in board order | read only |
