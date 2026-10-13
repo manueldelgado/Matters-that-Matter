@@ -79,6 +79,7 @@ export type WarningCode =
 	| 'unmatched-status'
 	| 'unmatched-person'
 	| 'unmatched-sphere'
+	| 'unreadable-date'
 	| 'start-after-due'
 	| 'newer-settings';
 

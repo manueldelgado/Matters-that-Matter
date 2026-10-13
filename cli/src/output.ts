@@ -293,7 +293,7 @@ export function formatParse(p: ParsedQuickAdd, warnings: readonly Warning[], tod
 	if (p.people.length) out.push(`  ${CLI.people}: ${p.people.map((x) => x.name).join(', ')}`);
 	out.push(
 		p.chips.length
-			? `  ${CLI.read}: ${p.chips.map((c) => (c.valid ? c.text : `${c.text} (${CLI.noMatch})`)).join(', ')}`
+			? `  ${CLI.read}: ${p.chips.map((c) => (c.valid ? c.text : `${c.text} (${c.kind === 'date' ? CLI.notADate : CLI.noMatch})`)).join(', ')}`
 			: `  ${st.d(CLI.nothingRead)}`,
 	);
 	for (const w of warnings) out.push(`  ${st.y(w.message)}`);

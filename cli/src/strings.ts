@@ -193,6 +193,7 @@ export const CLI = {
 	defaultMark: 'default',
 	read: 'Read',
 	noMatch: 'matched nothing',
+	notADate: 'not read as a date',
 	nothingRead: 'No words quick add reads; it’s all title.',
 
 	// Opening.

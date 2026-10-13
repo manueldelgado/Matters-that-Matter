@@ -1,7 +1,7 @@
 // Reading the fields other tools pass: priorities, dates, links, and names matched against the workflow and the vault.
 
 import type { Priority } from '../model/actions';
-import { formatMtmDate, parseMtmDate } from '../model/dates';
+import { formatMtmDate, parseMtmDate, readFigureDate } from '../model/dates';
 import { backlogStatus, checkFlags, defaultType } from '../model/workflow';
 import { linkText } from '../services/effective';
 import { matchDefined, matchNote, type Defined, type Match, type NamedNote } from '../services/match';
@@ -61,16 +61,20 @@ const LOOKS_STORED = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
 /**
  * A date in a stored form (seconds and a space allowed) or in words, as quick add reads them; null or '' removes it.
  * Anything else that starts like a date in figures is refused rather than guessed: a time zone (`Z`, `+02:00`) or a
- * month or day out of range would otherwise be read as other words, and a different date would be stored.
+ * month or day out of range would otherwise be read as other words, and a different date would be stored. A time zone
+ * in words ("fri 10am EST") is refused too: dates are local.
  */
 export function readDate(key: string, value: string | null, s: Snapshot): Read<string | null> {
 	const field = publicField(key);
 	if (value === null || value.trim() === '') return done(null);
 	const stored = parseMtmDate(value);
 	if (stored) return done(formatMtmDate(stored));
+	const figure = readFigureDate(value);
+	if (figure && 'problem' in figure && figure.problem === 'time-zone') return fail({ code: 'invalid', field, value, message: T.zonedDate(value) });
 	if (LOOKS_STORED.test(value)) return fail({ code: 'invalid', field, value, message: T.badStoredDate(value) });
 	const words = parseDateText(value, s.now, s.settings.dateLanguages);
 	if (!words) return fail({ code: 'invalid', field, value, message: T.badDate(value) });
+	if ('problem' in words) return fail({ code: 'invalid', field, value, message: words.problem === 'time-zone' ? T.zonedDate(value) : T.badDate(value) });
 	if (words.start) return fail({ code: 'invalid', field, value, message: T.dateRange(value) });
 	return done(words.due);
 }

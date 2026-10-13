@@ -89,7 +89,10 @@ export function parseEmbedQuery(source: string, ctx: QuickAddContext, note: Embe
 			else if (chip.kind === 'type') chip.id ? q.types.push(chip.id) : (open = q.invalid.push(chip.text) - 1);
 			else if (chip.kind === 'person') chip.path ? q.people.push(chip.path) : (open = q.invalid.push(chip.text) - 1);
 			else if (chip.kind === 'priority') q.priorities.push(chip.priority);
-			else q.due = { start: chip.startDate ? day(chip.startDate) : null, end: day(chip.due) };
+			else if (chip.kind === 'invalid-date') {
+				q.invalid.push(chip.text);
+				continue;
+			} else q.due = { start: chip.startDate ? day(chip.startDate) : null, end: day(chip.due) };
 			if (open === null) valid.push(chip.text);
 			continue;
 		}

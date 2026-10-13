@@ -34,6 +34,50 @@ export function parseMtmDate(raw: unknown): MtmDate | null {
 	return { date, time: `${h}:${mi}` };
 }
 
+/** Why a date as typed isn't read: it names no real day or time, or it carries a time zone (dates are local). */
+export type DateProblem = 'not-a-day' | 'time-zone';
+
+const FIGURE_RE = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(z|[+-]\d{2}(?::?\d{2})?)?$/i;
+
+/**
+ * A date written in figures, year first ('2026-10-16', '2026/10/16', '2026-1-5', with an optional time): the date it
+ * names, or why it can't be read. Null when the text isn't one. Quick add and the operations share this rule; the
+ * operations' fields further require a stored form (`parseMtmDate`).
+ */
+export function readFigureDate(text: string): { date: MtmDate } | { problem: DateProblem } | null {
+	const m = FIGURE_RE.exec(text.trim());
+	if (!m) return null;
+	const [, y, mo, d, h, mi, s, zone] = m;
+	if (zone) return { problem: 'time-zone' };
+	const year = Number(y), month = Number(mo), day = Number(d);
+	if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return { problem: 'not-a-day' };
+	const date = `${y}-${pad(month)}-${pad(day)}`;
+	if (h === undefined || mi === undefined) return { date: { date } };
+	if (Number(h) > 23 || Number(mi) > 59 || Number(s ?? 0) > 59) return { problem: 'not-a-day' };
+	return { date: { date, time: `${pad(Number(h))}:${mi}` } };
+}
+
+/**
+ * The wall-clock time in a time zone (an IANA name), as a Date whose local fields show it; `now` itself without one.
+ * Date rules read the local fields, so a zone given here makes "today" and "now" that zone's, whatever the host's.
+ */
+export function wallClock(now: Date, timeZone?: string): Date {
+	if (!timeZone) return now;
+	const parts: Record<string, number> = {};
+	for (const p of zoneFormat(timeZone).formatToParts(now)) if (p.type !== 'literal') parts[p.type] = Number(p.value);
+	return new Date(parts.year ?? 0, (parts.month ?? 1) - 1, parts.day ?? 1, parts.hour ?? 0, parts.minute ?? 0, parts.second ?? 0, now.getMilliseconds());
+}
+
+const zoneFormats = new Map<string, Intl.DateTimeFormat>();
+function zoneFormat(timeZone: string): Intl.DateTimeFormat {
+	let f = zoneFormats.get(timeZone);
+	if (!f) {
+		f = new Intl.DateTimeFormat('en-GB', { timeZone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+		zoneFormats.set(timeZone, f);
+	}
+	return f;
+}
+
 /** The exact form the plugin writes. */
 export function formatMtmDate(d: MtmDate): string {
 	return d.time ? `${d.date}T${d.time}` : d.date;

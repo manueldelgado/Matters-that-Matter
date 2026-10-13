@@ -11,7 +11,9 @@ import {
 	formatMtmDate,
 	isOverdue,
 	parseMtmDate,
+	readFigureDate,
 	startsAfterDue,
+	wallClock,
 	weekday,
 } from '../../src/model/dates';
 
@@ -163,5 +165,57 @@ describe('shortDate', () => {
 		expect(shortDate('2026-09-23', '2026-10-10')).toBe('23 Sep');
 		expect(shortDate('2026-10-09', '2026-10-10')).toBe('9 Oct');
 		expect(shortDate('2025-12-30', '2026-01-02')).toBe('30 Dec 2025');
+	});
+});
+
+describe('readFigureDate', () => {
+	it.each([
+		['2026-10-16', { date: '2026-10-16' }],
+		['2026/10/16', { date: '2026-10-16' }],
+		['2026-1-5', { date: '2026-01-05' }],
+		['2026-10-16T10:00', { date: '2026-10-16', time: '10:00' }],
+		['2026-10-16 9:05', { date: '2026-10-16', time: '09:05' }],
+		['2026-10-16T10:00:59.5', { date: '2026-10-16', time: '10:00' }],
+		['2028-02-29', { date: '2028-02-29' }],
+	])('%j names a real day', (text, date) => {
+		expect(readFigureDate(text)).toEqual({ date });
+	});
+
+	it.each(['2026-13-12', '2026-00-10', '2026-10-32', '2026-02-29', '2026-10-16T24:00', '2026-10-16T10:60', '2026-10-16T10:00:60'])('%j names no real day or time', (text) => {
+		expect(readFigureDate(text)).toEqual({ problem: 'not-a-day' });
+	});
+
+	it.each(['2026-10-16T10:00Z', '2026-10-16T10:00z', '2026-10-16T10:00+05:00', '2026-10-16T10:00-0800', '2026-10-16T10:00+02', '2026-13-12T10:00Z'])('%j has a time zone', (text) => {
+		expect(readFigureDate(text)).toEqual({ problem: 'time-zone' });
+	});
+
+	it.each(['', 'friday', '16/10/2026', '2026-10', '26-10-16', '2026-10-16 at 10', '2026-10-16T10'])('%j is not a date in figures', (text) => {
+		expect(readFigureDate(text)).toBeNull();
+	});
+});
+
+describe('wallClock', () => {
+	const fields = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()];
+	// 23:30 UTC on 13 October 2026.
+	const instant = new Date(Date.UTC(2026, 9, 13, 23, 30));
+
+	it('without a zone, the same moment', () => {
+		expect(wallClock(instant)).toBe(instant);
+	});
+
+	it.each([
+		['UTC', [2026, 10, 13, 23, 30]],
+		['Europe/Madrid', [2026, 10, 14, 1, 30]],
+		['America/New_York', [2026, 10, 13, 19, 30]],
+		['Asia/Kolkata', [2026, 10, 14, 5, 0]],
+	])('%s: the local fields show that zone’s wall clock', (zone, expected) => {
+		expect(fields(wallClock(instant, zone))).toEqual(expected);
+	});
+
+	it('across a daylight-saving change', () => {
+		// Madrid goes back from 03:00 to 02:00 on 25 October 2026 (01:00 UTC).
+		expect(fields(wallClock(new Date(Date.UTC(2026, 9, 25, 0, 30)), 'Europe/Madrid'))).toEqual([2026, 10, 25, 2, 30]);
+		expect(fields(wallClock(new Date(Date.UTC(2026, 9, 25, 1, 30)), 'Europe/Madrid'))).toEqual([2026, 10, 25, 2, 30]);
+		expect(fields(wallClock(new Date(Date.UTC(2026, 9, 25, 2, 30)), 'Europe/Madrid'))).toEqual([2026, 10, 25, 3, 30]);
 	});
 });

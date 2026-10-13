@@ -318,6 +318,8 @@ export const STRINGS = {
 		noType: (query: string, fallback: string) => `No type called “${query}”, so it uses the default type, ${fallback}`,
 		noMatter: (query: string) => `No Matter called “${query}”`,
 		noPerson: (query: string) => `No note called “${query}”`,
+		notADay: (text: string) => `“${text}” isn’t a real date, so no date is set`,
+		timeZone: (text: string) => `“${text}” has a time zone, so no date is set. Dates are in local time: leave the zone out`,
 		newMatterToken: 'New Matter, created when you add the Action',
 		newPersonToken: (folder: string) => `New person, created in ${folder} when you add the Action`,
 		newMatter: (name: string) => `New Matter “${name}”`,
@@ -929,6 +931,11 @@ export const STRINGS = {
 		noPerson: (query: string, added = true) => `No note matches “${query}”, so it ${added ? 'was' : 'is'} left out.`,
 		noSphere: (query: string) => `No Sphere matches “${query}”, so the Matter has no Sphere.`,
 		leftOut: (query: string, added = true) => `“${query}” matched nothing, so it ${added ? 'was' : 'is'} left out.`,
+		/** A date in the quick add text that isn't read; `zone` when it has a time zone. */
+		unreadDate: (text: string, zone: boolean, added = true) =>
+			zone
+				? `“${text}” has a time zone, so no date ${added ? 'was' : 'is'} set and it stays in the title. Dates are in local time: leave the zone out.`
+				: `“${text}” isn’t a real date, so no date ${added ? 'was' : 'is'} set and it stays in the title.`,
 		startAfterDue: 'It starts after it’s due; it keeps both dates and is placed by the due date.',
 		newerSettings: 'These settings come from a newer version of Matters that Matter; what you read may miss something new.',
 		// Changing is strict: nothing is written.
@@ -949,6 +956,8 @@ export const STRINGS = {
 		badPriority: (value: string) => `“${value}” isn’t a priority. Use 1, 2 or 3, or high, medium or low.`,
 		badDate: (value: string) => `“${value}” isn’t a date Matters that Matter can read. Use 2026-10-16, 2026-10-16T10:00 or words such as “fri 10:00”.`,
 		badStoredDate: (value: string) => `“${value}” isn’t a date Matters that Matter can read. Write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, in local time with no time zone, such as 2026-10-16 or 2026-10-16T10:00.`,
+		zonedDate: (value: string) =>
+			`“${value}” has a time zone. Dates are in local time, with no time zone: write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, such as 2026-10-16T10:00, or in words such as “fri 10:00”.`,
 		dateRange: (value: string) => `“${value}” is a range. Give the start and the due date separately.`,
 		badLink: (value: string) => `“${value}” isn’t a note in this vault or a web address (http or https).`,
 		noTitle: 'An Action needs a title.',

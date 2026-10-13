@@ -119,6 +119,14 @@ describe('tokens and words', () => {
 		expect(r.titles).toContain('Find a sailing school');
 	});
 
+	it('a date that isn’t read shows among them and filters nothing', () => {
+		const r = run('#Kitchen renovation 2026-13-12');
+		expect(r.q.invalid).toEqual(['2026-13-12']);
+		expect(r.q.due).toBeNull();
+		expect(r.head).toBe('Open Actions · Kitchen renovation');
+		expect(run('fri 10am EST').q.invalid).toEqual(['fri 10am EST']);
+	});
+
 	it('keeps the valid tokens for quick add', () => {
 		expect(run('#Kitchen renovation /call today').q.prefill).toBe('#Kitchen renovation /call');
 	});

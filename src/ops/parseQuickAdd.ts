@@ -29,9 +29,10 @@ export function parseQuickAdd(text: string, s: Snapshot): OpResult<ParsedQuickAd
 		start: draft.start,
 		due: draft.due,
 		chips: result.chips.map((c) => ({
-			kind: c.kind,
+			// A date that isn't read is a date chip that isn't valid.
+			kind: c.kind === 'invalid-date' ? 'date' : c.kind,
 			text: c.text,
-			valid: c.kind === 'type' ? c.id !== null : c.kind === 'matter' || c.kind === 'person' ? c.path !== null : true,
+			valid: c.kind === 'type' ? c.id !== null : c.kind === 'matter' || c.kind === 'person' ? c.path !== null : c.kind !== 'invalid-date',
 		})),
 	};
 	const warnings = [...ready.warnings, ...tokenWarnings(result, { type: false, matter: false, people: false }, fallbackType.label, false)];

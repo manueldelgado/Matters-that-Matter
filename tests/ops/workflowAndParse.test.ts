@@ -68,4 +68,12 @@ describe('parseQuickAdd', () => {
 			'No Matter matches “Gym”, so it goes to the Inbox.',
 		]);
 	});
+
+	it('a date that isn’t read is a date chip that isn’t valid', () => {
+		const r = ok(parseQuickAdd('Call the bank 2026-10-16T10:00Z', s));
+		expect(r.value).toMatchObject({ title: 'Call the bank 2026-10-16T10:00Z', due: null, chips: [{ kind: 'date', text: '2026-10-16T10:00Z', valid: false }] });
+		expect(r.warnings.map((w) => [w.code, w.message])).toEqual([
+			['unreadable-date', '“2026-10-16T10:00Z” has a time zone, so no date is set and it stays in the title. Dates are in local time: leave the zone out.'],
+		]);
+	});
 });

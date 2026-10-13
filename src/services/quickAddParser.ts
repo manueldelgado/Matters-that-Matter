@@ -4,12 +4,12 @@
 import { GB as chronoEn } from 'chrono-node/en';
 import { casual as chronoEs } from 'chrono-node/es';
 import type { ParsedResult } from 'chrono-node/en';
-import { addDays, formatMtmDate, toHm, toYmd, type MtmDate } from '../model/dates';
+import { addDays, formatMtmDate, readFigureDate, toHm, toYmd, wallClock, type DateProblem, type MtmDate } from '../model/dates';
 import type { Priority } from '../model/actions';
 import { DATE_LANGUAGES, type DateLanguage } from '../settings';
 import { bestStrong, normalise, type Candidate } from './fuzzy';
 
-export type { DateLanguage };
+export type { DateLanguage, DateProblem };
 
 export interface TypeCandidate extends Candidate {
 	id: string;
@@ -28,6 +28,8 @@ export interface QuickAddContext {
 	languages?: readonly DateLanguage[];
 	/** Texts of date chips the user removed; they stay in the title. */
 	ignoredDates?: readonly string[];
+	/** An IANA time zone whose "today" and "now" dates are read in; the host's own when absent. */
+	timeZone?: string;
 }
 
 interface Span {
@@ -42,7 +44,9 @@ export type Chip =
 	| (Span & { kind: 'matter'; query: string; path: string | null })
 	| (Span & { kind: 'person'; query: string; path: string | null })
 	| (Span & { kind: 'priority'; priority: Priority })
-	| (Span & { kind: 'date'; startDate: string | null; due: string });
+	| (Span & { kind: 'date'; startDate: string | null; due: string })
+	/** A date as typed that isn't read: no date is set from it, and its text stays in the title. */
+	| (Span & { kind: 'invalid-date'; problem: DateProblem });
 
 export interface QuickAddResult {
 	title: string;
@@ -183,6 +187,8 @@ interface DateSpan {
 	end: number;
 	from: MtmDate;
 	to: MtmDate | null;
+	/** Set when the date carries a time zone: it isn't read. */
+	problem?: DateProblem;
 }
 
 /**
@@ -230,7 +236,7 @@ const DATE_LEAD = /(?:^|\s)(on|by|before|el|para)\s+$/i;
  */
 function toMtmDate(c: ParsedComponents, now: Date): MtmDate {
 	const today = toYmd(now);
-	let date = toYmd(c.date());
+	let date = ymdOf(c);
 	const timed = c.isCertain('hour');
 	let hour = c.get('hour') ?? 0;
 	const minute = c.get('minute') ?? 0;
@@ -246,6 +252,28 @@ function toMtmDate(c: ParsedComponents, now: Date): MtmDate {
 	return time ? { date, time } : { date };
 }
 
+/** The day chrono read, from its components: the day as written, never shifted by a time zone or the host's. */
+function ymdOf(c: ParsedComponents): string {
+	const year = c.get('year'), month = c.get('month'), day = c.get('day');
+	if (year === null || month === null || day === null) return toYmd(c.date());
+	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** What chrono read as a time zone at the end of a result: "EST", "(CET)", "GMT+2", "+02:00", "art". */
+const ZONE_TAIL = /\s*,?\s*\(?((?:(?:gmt|utc)\s?)?[+-]\d{1,2}(?::?\d{2})?|[a-z]{2,5})\)?$/i;
+
+/**
+ * A time zone after a time. Written as one (capitals, or an offset with a sign) it is a time zone, and the date isn't
+ * read; any other word chrono took for one ("5pm art class", "3pm cat") goes back to the title (`cut`, its length).
+ */
+function zoneOf(r: ParsedResult): { cut: number; zone: boolean } | null {
+	if (!r.start.isCertain('timezoneOffset') && !r.end?.isCertain('timezoneOffset')) return null;
+	const m = ZONE_TAIL.exec(r.text);
+	const word = m?.[1];
+	if (!m || !word) return { cut: 0, zone: true };
+	return { cut: m[0].length, zone: /[+-]/.test(word) || /^[A-Z]+$/.test(word) };
+}
+
 /** Joins two results separated by a range word ("del lunes al miércoles"), and keeps a range's end after its start. */
 function toSpans(text: string, results: readonly ParsedResult[], now: Date): DateSpan[] {
 	const out: DateSpan[] = [];
@@ -254,11 +282,15 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date): Dat
 		const b = results[i + 1];
 		if (!a) continue;
 		let start = a.index;
-		let end = a.index + a.text.length;
+		const zoneA = zoneOf(a);
+		let end = a.index + a.text.length - (zoneA?.zone ? 0 : (zoneA?.cut ?? 0));
+		let zone = !!zoneA?.zone;
 		const fromC = a.start;
 		let toC = a.end ?? null;
-		if (b && !a.end && !b.end && RANGE_JOIN.test(text.slice(end, b.index))) {
-			end = b.index + b.text.length;
+		if (b && !a.end && !b.end && !zoneA && RANGE_JOIN.test(text.slice(end, b.index))) {
+			const zoneB = zoneOf(b);
+			end = b.index + b.text.length - (zoneB?.zone ? 0 : (zoneB?.cut ?? 0));
+			zone = !!zoneB?.zone;
 			toC = b.start;
 			i++;
 		}
@@ -270,7 +302,7 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date): Dat
 			const lead = RANGE_LEAD.exec(text.slice(0, start));
 			if (lead) start -= lead[0].trimStart().length;
 		}
-		out.push({ text: text.slice(start, end), start, end, from, to });
+		out.push({ text: text.slice(start, end), start, end, from, to, ...(zone ? { problem: 'time-zone' as const } : {}) });
 	}
 	return out;
 }
@@ -345,8 +377,9 @@ function dayOfMonthSpans(text: string, now: Date, lang: DateLanguage): DateSpan[
 		const time = joins && next.start.isCertain('hour') && !next.start.isCertain('day') && !next.start.isCertain('weekday')
 			? toMtmDate(next.start, now).time
 			: undefined;
-		if (next && time) end += next.index + next.text.length;
-		out.push({ text: text.slice(start, end), start, end, from: time ? { date, time } : { date }, to: null });
+		const zone = next && time ? zoneOf(next) : null;
+		if (next && time) end += next.index + next.text.length - (zone?.zone ? 0 : (zone?.cut ?? 0));
+		out.push({ text: text.slice(start, end), start, end, from: time ? { date, time } : { date }, to: null, ...(zone?.zone ? { problem: 'time-zone' as const } : {}) });
 	}
 	return out;
 }
@@ -364,13 +397,15 @@ function trimWeakLead(span: DateSpan): DateSpan {
 
 function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	const languages = ctx.languages ?? DATE_LANGUAGES;
+	// Every date rule below reads "today" and "now" from this, never from the host's zone directly.
+	const now = wallClock(ctx.now, ctx.timeZone);
 	const spans: DateSpan[] = [];
 	for (const lang of languages) {
 		const parser = lang === 'en' ? chronoEnDayFirst : chronoEs;
-		spans.push(...toSpans(text, parser.parse(text, ctx.now, { forwardDate: true }), ctx.now));
-		spans.push(...dayOfMonthSpans(text, ctx.now, lang));
+		spans.push(...toSpans(text, parser.parse(text, now, { forwardDate: true }), now));
+		spans.push(...dayOfMonthSpans(text, now, lang));
 	}
-	if (languages.includes('es')) spans.push(...spanishSpans(text, ctx.now));
+	if (languages.includes('es')) spans.push(...spanishSpans(text, now));
 	// A removed chip ignores its text, and any smaller date inside it ("10am" inside "friday 10am").
 	const ignoredRanges: [number, number][] = [];
 	const lower = text.toLowerCase();
@@ -393,21 +428,50 @@ function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
  * A date written on its own ("fri 10:00", "by the 21st", "del 20 al 22 de octubre"), as quick add reads dates:
  * a range gives a start and a due date. Null unless the whole text is one date (a lead word such as "by" allowed).
  */
-export function parseDateText(text: string, now: Date, languages?: readonly DateLanguage[]): { start: string | null; due: string } | null {
+export function parseDateText(
+	text: string,
+	now: Date,
+	languages?: readonly DateLanguage[],
+	timeZone?: string,
+): { start: string | null; due: string } | { problem: DateProblem } | null {
 	const clean = text.replace(/\s+/g, ' ').trim();
 	if (!clean) return null;
-	const date = findDate(clean, { now, types: [], matters: [], people: [], languages });
+	const figure = readFigureDate(clean);
+	if (figure && 'problem' in figure) return figure;
+	const date = findDate(clean, { now, types: [], matters: [], people: [], languages, timeZone });
 	if (!date) return null;
 	const lead = DATE_LEAD.exec(clean.slice(0, date.start));
 	const from = lead ? date.start - lead[0].trimStart().length : date.start;
 	if (from !== 0 || clean.slice(date.end).replace(/[,.;!?]+$/, '') !== '') return null;
+	if (date.problem) return { problem: date.problem };
 	return { start: date.to ? formatMtmDate(date.from) : null, due: formatMtmDate(date.to ?? date.from) };
+}
+
+/** A date in figures, year first, standing on its own in the text (not inside a word, a version or a path). */
+const FIGURE_IN_TEXT = /(?<![\p{L}\p{N}_./:-])\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:z|[+-]\d{2}(?::?\d{2})?)?(?![\p{L}\p{N}_/:-])/giu;
+
+/**
+ * Dates in figures that can't be read: no such day or time ("2026-13-12"), or a time zone ("2026-10-16T10:00Z").
+ * They become invalid chips before chrono runs, so chrono can't read them as another day or time.
+ * Real days are left to chrono, which reads them with what follows ("2026-10-16 at 10am").
+ */
+function figureProblems(input: string, tokens: readonly Chip[]): Chip[] {
+	const out: Chip[] = [];
+	for (const m of input.matchAll(FIGURE_IN_TEXT)) {
+		const start = m.index ?? 0;
+		const end = start + m[0].length;
+		if (tokens.some((c) => start < c.end && end > c.start)) continue;
+		const figure = readFigureDate(m[0]);
+		if (figure && 'problem' in figure) out.push({ kind: 'invalid-date', text: m[0], start, end, problem: figure.problem });
+	}
+	return out;
 }
 
 // ——— Parse ———
 
 export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResult {
-	const chips = findTokens(input, ctx);
+	const tokens = findTokens(input, ctx);
+	const chips = [...tokens, ...figureProblems(input, tokens)];
 
 	// Dates are read on the text without its tokens, so "tomorrow #Kitchen 5pm" is one date and no date runs into a token.
 	// `at[i]` is the input index of character i of the compact text.
@@ -419,11 +483,15 @@ export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResu
 		compact += input[i];
 		at.push(i);
 	}
+	// A date that isn't read keeps its text in the title, so nothing typed is lost.
 	const removed = new Array<boolean>(input.length).fill(false);
-	for (const c of chips) for (let i = c.start; i < c.end; i++) removed[i] = true;
+	for (const c of chips) if (c.kind !== 'invalid-date') for (let i = c.start; i < c.end; i++) removed[i] = true;
 
 	const date = findDate(compact, ctx);
-	if (date) {
+	if (date?.problem) {
+		const start = at[date.start] ?? 0, end = (at[date.end - 1] ?? 0) + 1;
+		chips.push({ kind: 'invalid-date', text: input.slice(start, end), start, end, problem: date.problem });
+	} else if (date) {
 		let from = date.start;
 		const lead = DATE_LEAD.exec(compact.slice(0, from));
 		if (lead) from -= lead[0].trimStart().length;

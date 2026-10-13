@@ -30,7 +30,8 @@ export interface Overrides {
 }
 
 /**
- * Warnings for tokens that matched nothing: the fallback when nothing else set the value, otherwise "left out".
+ * Warnings for tokens that matched nothing (the fallback when nothing else set the value, otherwise "left out") and for
+ * dates that weren't read.
  * `defaultType` is the default type's label; `added` says whether the Action was added or only parsed.
  */
 export function tokenWarnings(result: QuickAddResult, overrides: Overrides, defaultType: string, added = true): Warning[] {
@@ -43,6 +44,8 @@ export function tokenWarnings(result: QuickAddResult, overrides: Overrides, defa
 			out.push({ code: 'unmatched-matter', field: 'text', value: chip.query, message: result.matterPath ? T.leftOut(chip.query, added) : T.noMatter(chip.query, added) });
 		} else if (chip.kind === 'person' && chip.path === null && !overrides.people) {
 			out.push({ code: 'unmatched-person', field: 'text', value: chip.query, message: T.noPerson(chip.query, added) });
+		} else if (chip.kind === 'invalid-date') {
+			out.push({ code: 'unreadable-date', field: 'text', value: chip.text, message: T.unreadDate(chip.text, chip.problem === 'time-zone', added) });
 		}
 	}
 	return out;

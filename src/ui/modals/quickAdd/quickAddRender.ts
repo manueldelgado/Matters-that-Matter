@@ -129,6 +129,8 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 			const el = token(row, ['mod-priority', `mod-${c.priority}`]);
 			priorityEl(el, c.priority);
 			el.appendText(STRINGS.card.priority[c.priority]);
+		} else if (c.kind === 'invalid-date') {
+			invalid(row, 'calendar-x', c.text, c.problem === 'time-zone' ? q.timeZone(c.text) : q.notADay(c.text));
 		} else {
 			const el = token(row, ['mod-date']);
 			appendIcon(el, c.due.includes('T') ? 'clock' : 'calendar');

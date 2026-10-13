@@ -90,6 +90,17 @@ describe('addAction: fields', () => {
 		['a time ahead of UTC', '2026-10-16T10:00+05:00'],
 		['a time behind UTC', '2026-10-16T10:00-08:00'],
 		['a time zone without a colon', '2026-10-16T10:00+0200'],
+		['a time zone in words', 'fri 10am EST'],
+		['an offset in words', 'fri 10:00 GMT+2'],
+	])('a date with a time zone is refused, and says so: %s', (_, due) => {
+		for (const field of ['due', 'start'] as const) {
+			const r = addAction({ title: 'D', [field]: due }, s);
+			expect(r).toMatchObject({ ok: false, error: { code: 'invalid', field, value: due } });
+			expect(r.ok ? '' : r.error.message).toBe(`“${due}” has a time zone. Dates are in local time, with no time zone: write it as YYYY-MM-DD or YYYY-MM-DDTHH:mm, such as 2026-10-16T10:00, or in words such as “fri 10:00”.`);
+		}
+	});
+
+	it.each([
 		['month 13', '2026-13-12'],
 		['month 14', '2026-14-02'],
 		['day 32', '2026-10-32'],
@@ -244,6 +255,20 @@ describe('addAction: values that match nothing fall back, with a warning each', 
 			['unmatched-type', 'No type matches “fax”, so it uses the default type, Write.'],
 			['unmatched-matter', 'No Matter matches “Gym”, so it went to the Inbox.'],
 			['unmatched-person', 'No note matches “Nobody”, so it was left out.'],
+		]);
+	});
+
+	it('a date in the text that isn’t read: no date, kept in the title, a warning', () => {
+		const { fm, r, create } = created({ text: 'Order the tiles 2026-13-12 #Kitchen' });
+		expect(create.path).toBe('MTM/Actions/Order the tiles 2026-13-12.md');
+		expect(fm['mtm-due']).toBeUndefined();
+		expect(r.warnings.map((w) => [w.code, w.field, w.value, w.message])).toEqual([
+			['unreadable-date', 'text', '2026-13-12', '“2026-13-12” isn’t a real date, so no date was set and it stays in the title.'],
+		]);
+		const zoned = created({ text: 'Call the bank fri 10am EST' });
+		expect(zoned.fm['mtm-due']).toBeUndefined();
+		expect(zoned.r.warnings.map((w) => w.message)).toEqual([
+			'“fri 10am EST” has a time zone, so no date was set and it stays in the title. Dates are in local time: leave the zone out.',
 		]);
 	});
 

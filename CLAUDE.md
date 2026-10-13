@@ -70,6 +70,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Renaming a folder fires `rename` for the folder and for every file inside it; rules that follow paths must be idempotent across those events.
 - Notes may use CRLF: body edits keep the note's line ending.
 - Quick add parses dates on the text with tokens removed (mapped back by index), never masked with spaces, so chrono can't join across a token.
+- chrono reads any short word after a time as a time zone, in any case ("5pm art", "3pm cat"). Quick add counts one only in capitals or with a sign (`zoneOf` in `services/quickAddParser.ts`); other words go back to the title. A date with a zone, and a date in figures that names no real day, is an `invalid-date` chip: no date set, its text kept in the title. Read chrono's day from its components (`ymdOf`), never through `c.date()` and the host's zone; "today" and "now" come from `wallClock(now, timeZone)`.
 - Matter notes open as their overview through a guarded `setViewState` wrapper (`vault/internal.ts`). To open a Matter as a note on purpose, call `plugin.openMatterNote(file, leaf)`; a plain `openFile` shows the overview.
 - The new tab panel lives in Obsidian's empty view, which has no API: it is added and removed in `views/today/` like the note banners, guarded, and Obsidian's own commands run through `runCommand` (`vault/internal.ts`).
 - `workspace.iterateRootLeaves` stops at the first callback that returns a truthy value: collect leaves with `(leaf) => void list.push(leaf)`.
