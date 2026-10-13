@@ -49,7 +49,7 @@ When the MCP tools of Matters that Matter are available (`add_action`, `get_toda
 - `add_action` falls back like quick add (an unknown Matter gives the Inbox, an unknown type the default type) and warns: pass the warnings on. `update_action` refuses unknown values and changes nothing: show the user the valid values instead of guessing.
 - Every write reports what it changed, property by property. Tell the user in a line or two (where the Action went, its status, its date).
 - The host usually asks before each write. The server may run read-only (`--read-only`) or offer only some tools (`--tools`); if a tool is missing, say what you'd have done and don't work around it by editing files.
-- Dates take the stored forms (`2026-10-16`, `2026-10-16T10:00`) or words as quick add reads them ("fri 10:00", "tomorrow").
+- Dates take the stored forms (`2026-10-16`, `2026-10-16T10:00`) or words as quick add reads them ("fri 10:00", "tomorrow"). They are in the user's local time: never pass a time zone (`Z`, `+02:00`, "EST"). A date with one is refused, and in quick add text it gets no date and stays in the title; convert it to the user's local time first.
 - `get_today` returns the vault's today in `date`. Use that as today, for what is due or late and for relative dates, even if your own clock says otherwise; prefer passing dates in words ("next tue") and let the tools resolve them.
 
 ## With the command line
