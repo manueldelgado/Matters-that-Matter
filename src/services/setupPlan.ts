@@ -31,6 +31,8 @@ export interface PlannedNote {
 	frontmatter: Record<string, PlannedValue>;
 	body: string;
 	sample?: boolean;
+	/** A Matter typed in setup under a name another note has: the name typed (the path has " 2", " 3"…). */
+	typed?: string;
 }
 
 export interface PlannedChange {
@@ -71,6 +73,8 @@ export interface VaultSnapshot {
 	isMatter(path: string): boolean;
 	/** Whether the note at the path is another MTM note (an Action): it is never adopted as a Matter. */
 	isOtherKind?(path: string): boolean;
+	/** Paths of the Markdown notes anywhere in the vault with this name, ignoring case. */
+	notesNamed(name: string): string[];
 	/** The highest mtm-lane-order among existing Matters, or null. */
 	maxLaneOrder: number | null;
 }
@@ -91,6 +95,7 @@ function missingFolders(paths: readonly string[], vault: VaultSnapshot): string[
 }
 
 const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
+const nameOf = (path: string) => path.slice(path.lastIndexOf('/') + 1).replace(/\.md$/i, '');
 
 /** Matter names from the text box: sanitised, without blanks or duplicates. */
 export function matterNames(text: string): string[] {
@@ -129,19 +134,43 @@ export function planSetup(choices: SetupChoices, vault: VaultSnapshot): SetupPla
 
 	let laneOrder = vault.maxLaneOrder === null ? 0 : Math.floor(vault.maxLaneOrder);
 	const adopt = new Set(choices.adopt);
-	for (const typed of matterNames(choices.newMatters)) {
-		let path = joinPath(folders.matters, `${typed}.md`);
-		// An Action with that name (Matters and Actions share a folder) keeps its note; the Matter gets "Name 2".
-		if (vault.isOtherKind?.(path)) path = joinPath(folders.matters, `${uniqueTitle(typed, (t) => vault.exists(joinPath(folders.matters, `${t}.md`)))}.md`);
-		if (path === inboxPath || vault.isMatter(path)) reuse.push(path);
-		else if (vault.exists(path)) adopt.add(path);
-		else
-			create.push({
-				path,
-				kind: 'matter',
-				frontmatter: { 'mtm-kind': 'matter', 'mtm-state': 'active', 'mtm-lane-order': ++laneOrder },
-				body: '',
-			});
+	const typedNames = matterNames(choices.newMatters);
+	const key = (name: string) => name.toLowerCase();
+	// Names of the notes this plan creates, and of the typed Matters still to come: a new Matter skips them too.
+	const claimed = new Set(create.filter((n) => n.kind === 'inbox').map((n) => key(nameOf(n.path))));
+	const pending = new Set(typedNames.map(key));
+	// As everywhere a note is created: a name no note in the vault has, so it doesn't receive another note's links.
+	const taken = (name: string) =>
+		claimed.has(key(name)) || pending.has(key(name)) || vault.exists(joinPath(folders.matters, `${name}.md`)) || vault.notesNamed(name).length > 0;
+	for (const typed of typedNames) {
+		pending.delete(key(typed));
+		if (claimed.has(key(typed))) continue;
+		const path = joinPath(folders.matters, `${typed}.md`);
+		// Notes with that name, those in the Matters folder first.
+		const named = [...new Set([...(vault.exists(path) ? [path] : []), ...vault.notesNamed(typed)])].sort(
+			(a, b) => Number(parentOf(a) !== folders.matters) - Number(parentOf(b) !== folders.matters),
+		);
+		// A Matter with that name is that Matter, wherever it is; a plain note in the Matters folder is adopted.
+		const matter = named.find((p) => p === inboxPath || vault.isMatter(p) || (adopt.has(p) && !vault.isOtherKind?.(p)));
+		if (matter) {
+			if (!adopt.has(matter) && !reuse.includes(matter)) reuse.push(matter);
+			continue;
+		}
+		const here = named.find((p) => parentOf(p) === folders.matters && !vault.isOtherKind?.(p));
+		if (here) {
+			adopt.add(here);
+			continue;
+		}
+		// Any other note with that name (an Action, a note elsewhere) keeps it; the new Matter gets "Name 2".
+		const title = uniqueTitle(typed, taken);
+		claimed.add(key(title));
+		create.push({
+			path: joinPath(folders.matters, `${title}.md`),
+			kind: 'matter',
+			frontmatter: { 'mtm-kind': 'matter', 'mtm-state': 'active', 'mtm-lane-order': ++laneOrder },
+			body: '',
+			...(title !== typed ? { typed } : {}),
+		});
 	}
 	for (const path of adopt) {
 		if (path === inboxPath || vault.isMatter(path) || vault.isOtherKind?.(path)) continue;

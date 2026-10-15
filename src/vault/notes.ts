@@ -45,8 +45,13 @@ export function pathTaken(app: App, path: string, except?: TAbstractFile): boole
  * would receive every link written to the other one by name. `except` is a note whose name may be shared.
  */
 export function nameTaken(app: App, name: string, except?: TAbstractFile): boolean {
+	return notesNamed(app, name, except).length > 0;
+}
+
+/** The Markdown notes anywhere in the vault with this name, ignoring case (see `nameTaken`). */
+export function notesNamed(app: App, name: string, except?: TAbstractFile): TFile[] {
 	const lower = name.toLowerCase();
-	return app.vault.getMarkdownFiles().some((f) => f !== except && f.basename.toLowerCase() === lower);
+	return app.vault.getMarkdownFiles().filter((f) => f !== except && f.basename.toLowerCase() === lower);
 }
 
 /**
