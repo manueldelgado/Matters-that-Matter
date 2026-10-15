@@ -12,6 +12,28 @@ export function iconEl(parent: HTMLElement, name: string, cls?: string): HTMLEle
 	return el;
 }
 
+/**
+ * An inline warning for a field (triangle, bold lead-in, text), placed after `anchor` while shown. Returns the switch:
+ * true shows it (once), false removes it.
+ */
+export function fieldWarning(anchor: HTMLElement, lead: string, text: string): (show: boolean) => void {
+	let el: HTMLElement | null = null;
+	return (show) => {
+		if (!show) {
+			el?.detach();
+			el = null;
+			return;
+		}
+		if (el) return;
+		el = createDiv({ cls: 'mtm-field-warning' });
+		appendIcon(el, 'triangle-alert');
+		const span = el.createSpan();
+		span.createEl('b', { text: lead });
+		span.appendText(` ${text}`);
+		anchor.after(el);
+	};
+}
+
 /** Appends a Lucide icon directly (for buttons and rows whose CSS targets `> .svg-icon`). */
 export function appendIcon(parent: HTMLElement, name: string): void {
 	const holder = createSpan();

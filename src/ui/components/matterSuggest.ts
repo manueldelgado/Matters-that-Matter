@@ -1,10 +1,10 @@
-// A Matter field: fuzzy suggestions under a text input, with "New Matter …" when nothing matches exactly.
+// A Matter field: fuzzy suggestions under a text input, with "New Matter …" when nothing matches exactly (and the
+// name can be created).
 
 import { AbstractInputSuggest, type App } from 'obsidian';
 import { appendIcon } from './dom';
 import { STRINGS } from '../../strings';
-import { sanitiseTitle } from '../../model/titles';
-import { normalise, rank } from '../../services/fuzzy';
+import { rank } from '../../services/fuzzy';
 import type { MatterCandidate } from '../modals/quickAdd/quickAddRender';
 
 export type MatterChoice = { kind: 'matter'; item: MatterCandidate } | { kind: 'new'; name: string };
@@ -17,6 +17,8 @@ export class MatterSuggest extends AbstractInputSuggest<MatterChoice> {
 		private input: HTMLInputElement,
 		private candidates: readonly MatterCandidate[],
 		private onPick: (choice: MatterChoice) => void,
+		/** The name "New Matter …" offers for what was typed, or null for none. */
+		private newName: (typed: string) => string | null,
 	) {
 		super(app, input);
 		this.limit = LIMIT + 1;
@@ -27,8 +29,8 @@ export class MatterSuggest extends AbstractInputSuggest<MatterChoice> {
 		const found: MatterChoice[] = (q ? rank(q, this.candidates).map((r) => r.item) : [...this.candidates])
 			.slice(0, LIMIT)
 			.map((item) => ({ kind: 'matter', item }));
-		const name = sanitiseTitle(q);
-		if (name && !this.candidates.some((c) => normalise(c.name) === normalise(name))) found.push({ kind: 'new', name });
+		const name = this.newName(q);
+		if (name) found.push({ kind: 'new', name });
 		return found;
 	}
 

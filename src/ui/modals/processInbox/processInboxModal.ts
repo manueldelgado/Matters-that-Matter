@@ -22,7 +22,8 @@ import {
 	type Decision,
 	type TallyEntry,
 } from '../../../services/processInbox';
-import { dateChipLabel } from '../../../services/quickAdd';
+import { isInboxLikeName } from '../../../services/inboxGuard';
+import { dateChipLabel, newMatterName } from '../../../services/quickAdd';
 import { parseQuickAdd } from '../../../services/quickAddParser';
 import { editAction, renameAction } from '../../../vault/actionWrites';
 import { loadCandidates, type Candidates } from '../../../vault/candidates';
@@ -32,7 +33,7 @@ import { createMatter, setMatterState } from '../../../vault/matterWrites';
 import { frontmatterOf, linkTo } from '../../../vault/notes';
 import { defaultNoteFolder, keepAsNote, restoreTrashed, trashForUndo } from '../../../vault/processWrites';
 import { avatarEl } from '../../components/card';
-import { appendIcon, statusChip, swapClasses, tileEl, typeClasses } from '../../components/dom';
+import { appendIcon, fieldWarning, statusChip, swapClasses, tileEl, typeClasses } from '../../components/dom';
 import { MatterSuggest } from '../../components/matterSuggest';
 import { IconPickerModal } from '../iconPickerModal';
 import { PersonPicker } from '../personPicker';
@@ -472,6 +473,7 @@ export class ProcessInboxModal extends Modal {
 				this.render();
 			});
 			if (!f.somedayNew) this.matterField(body);
+			else if (this.isInboxName(current.file.basename)) fieldWarning(options, STRINGS.newMatter.inboxName, p.dormantInboxName)(true);
 			body.createSpan({ cls: 'mtm-field-hint', text: p.somedayText(backlog?.label ?? STRINGS.editors.backlog) });
 			return { label: p.saveNext, run: save(() => this.someday(current)) };
 		}
@@ -535,11 +537,37 @@ export class ProcessInboxModal extends Modal {
 		const known = this.candidates.matters.find((m) => normalise(m.name) === normalise(f.matter));
 		const input = iconInput(el, known?.icon ?? 'layers', f.matter, p.matter, p.matterPlaceholder);
 		input.addClass('mtm-process-matter');
-		input.addEventListener('input', () => (f.matter = input.value));
-		const choices = this.candidates.matters.filter((m) => m.path !== this.settings.inboxPath);
-		new MatterSuggest(this.app, input, choices, (choice) => {
-			f.matter = choice.kind === 'new' ? choice.name : choice.item.name;
+		// Processed means leaving the Inbox: a name like its own can neither find it nor make a copy of it.
+		const warning = fieldWarning(input.parentElement ?? input, STRINGS.newMatter.inboxName, STRINGS.newMatter.inboxNameText);
+		const check = () => warning(!this.knownMatter(f.matter) && this.isInboxName(f.matter));
+		input.addEventListener('input', () => {
+			f.matter = input.value;
+			check();
 		});
+		check();
+		const choices = this.candidates.matters.filter((m) => m.path !== this.settings.inboxPath);
+		const s = this.settings;
+		new MatterSuggest(
+			this.app,
+			input,
+			choices,
+			(choice) => {
+				f.matter = choice.kind === 'new' ? choice.name : choice.item.name;
+				check();
+			},
+			(typed) => newMatterName(typed, choices, s.folders.matters, s.inboxPath),
+		);
+	}
+
+	/** The Matter, other than the Inbox, with exactly this name. */
+	private knownMatter(name: string): string | null {
+		const n = normalise(name.trim());
+		return this.candidates.matters.find((m) => m.path !== this.settings.inboxPath && normalise(m.name) === n)?.path ?? null;
+	}
+
+	/** Whether a name would read as the Inbox, so it can't name a new Matter. */
+	private isInboxName(name: string): boolean {
+		return isInboxLikeName(name, this.settings.folders.matters, this.settings.inboxPath);
 	}
 
 	private typeField(parent: HTMLElement): void {
@@ -606,7 +634,13 @@ export class ProcessInboxModal extends Modal {
 			}).open(),
 		);
 		const input = row.createEl('input', { type: 'text', value: f.name, attr: { 'aria-label': p.name } });
-		input.addEventListener('input', () => (f.name = input.value));
+		const warning = fieldWarning(row, STRINGS.newMatter.inboxName, STRINGS.newMatter.inboxNameText);
+		const check = () => warning(this.isInboxName(f.name));
+		input.addEventListener('input', () => {
+			f.name = input.value;
+			check();
+		});
+		check();
 	}
 
 	private sphereField(parent: HTMLElement): void {
@@ -656,13 +690,13 @@ export class ProcessInboxModal extends Modal {
 	/** The Matter the field names: an existing one (exact name), or a new one created now. Null when empty. */
 	private async resolveMatter(): Promise<string | null> {
 		const name = this.form.matter.trim();
-		if (!name) {
+		// Processed means leaving the Inbox: its name never resolves to it, nor makes a copy of it.
+		const known = this.knownMatter(name);
+		if (known) return known;
+		if (!name || this.isInboxName(name)) {
 			this.contentEl.querySelector<HTMLInputElement>('input.mtm-process-matter')?.focus();
 			return null;
 		}
-		// Processed means leaving the Inbox: its name never resolves to it.
-		const known = this.candidates.matters.find((m) => m.path !== this.settings.inboxPath && normalise(m.name) === normalise(name));
-		if (known) return known.path;
 		const file = await createMatter(this.app, this.settings, { name, icon: DEFAULT_MATTER_ICON, reviewEvery: null, sphereId: this.context.sphereId });
 		this.candidates = loadCandidates(this.app, this.settings);
 		return file.path;
@@ -772,6 +806,8 @@ export class ProcessInboxModal extends Modal {
 		if (!backlog) return;
 		let matterPath: string | null;
 		if (this.form.somedayNew) {
+			// The warning under the choice says why; nothing is written.
+			if (this.isInboxName(current.file.basename)) return;
 			const file = await createMatter(this.app, this.settings, {
 				name: current.file.basename,
 				icon: DEFAULT_MATTER_ICON,
@@ -790,7 +826,7 @@ export class ProcessInboxModal extends Modal {
 	private async makeMatter(current: Current): Promise<void> {
 		const f = this.form;
 		const name = f.name.trim();
-		if (!name) {
+		if (!name || this.isInboxName(name)) {
 			this.contentEl.querySelector<HTMLInputElement>('.mtm-name-row input')?.focus();
 			return;
 		}

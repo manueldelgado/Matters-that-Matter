@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inboxRepairs, isInboxDuplicate, renamedInbox } from '../../src/services/inboxGuard';
+import { inboxRepairs, isInboxDuplicate, isInboxLikeName, renamedInbox } from '../../src/services/inboxGuard';
 
 describe('inboxRepairs', () => {
 	it('needs nothing for a healthy Inbox', () => {
@@ -36,5 +36,35 @@ describe('Inbox paths', () => {
 		expect(isInboxDuplicate('MTM/Matters/Inbox zero.md', inbox)).toBe(false);
 		expect(isInboxDuplicate('Elsewhere/Inbox 1.md', inbox)).toBe(false);
 		expect(isInboxDuplicate('Inbox (1) 1.md', 'Inbox (1).md')).toBe(true);
+	});
+});
+
+describe('isInboxLikeName', () => {
+	const inbox = 'MTM/Matters/Inbox.md';
+	const folder = 'MTM/Matters';
+
+	it.each(['Inbox', 'inbox', '  INBOX ', 'Inbox?', 'Inbox 2', 'inbox 12'])('refuses %j beside the Inbox', (name) => {
+		expect(isInboxLikeName(name, folder, inbox)).toBe(true);
+	});
+
+	it.each(['Inbox zero', 'My inbox', 'Inbox 2 b', 'Inbox2', '', '   '])('accepts %j', (name) => {
+		expect(isInboxLikeName(name, folder, inbox)).toBe(false);
+	});
+
+	it('refuses the Inbox’s own name in any folder, a numbered copy only beside it', () => {
+		expect(isInboxLikeName('Inbox', 'Elsewhere', inbox)).toBe(true);
+		expect(isInboxLikeName('Inbox 2', 'Elsewhere', inbox)).toBe(false);
+	});
+
+	it('follows a renamed Inbox', () => {
+		expect(isInboxLikeName('Inbox', folder, 'MTM/Matters/Capture.md')).toBe(false);
+		expect(isInboxLikeName('capture', folder, 'MTM/Matters/Capture.md')).toBe(true);
+		expect(isInboxLikeName('Capture 3', folder, 'MTM/Matters/Capture.md')).toBe(true);
+	});
+
+	it('reads the folder as Obsidian writes it, the vault’s root too', () => {
+		expect(isInboxLikeName('Inbox 2', '/MTM/Matters/', inbox)).toBe(true);
+		expect(isInboxLikeName('Inbox 2', '/', 'Inbox.md')).toBe(true);
+		expect(isInboxLikeName('Inbox 2', '', 'Inbox.md')).toBe(true);
 	});
 });

@@ -13,6 +13,7 @@ import {
 	draftOf,
 	isNameLike,
 	isNewPath,
+	newMatterName,
 	newName,
 	newPath,
 	replaceSpan,
@@ -248,10 +249,11 @@ export class QuickAddModal extends Modal {
 				? ranked.slice(0, MATTER_LIMIT).map((r) => r.item)
 				: [...this.matters].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0) || a.name.localeCompare(b.name)).slice(0, MATTER_LIMIT);
 			const rows: SuggestRow[] = found.map((item) => ({ kind: 'matter', item }));
-			if (isNew(this.matters)) {
+			const created = newMatterName(q, this.matters, this.settings.folders.matters, this.settings.inboxPath);
+			if (created) {
 				// Without a strong match, creating what was typed is the likely intent, so it comes first.
-				if (hasStrong(ranked)) rows.push({ kind: 'new-matter', name });
-				else rows.unshift({ kind: 'new-matter', name });
+				if (hasStrong(ranked)) rows.push({ kind: 'new-matter', name: created });
+				else rows.unshift({ kind: 'new-matter', name: created });
 			}
 			return rows;
 		}

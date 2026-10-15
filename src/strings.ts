@@ -213,6 +213,8 @@ export const STRINGS = {
 		somedayHint: 'Out of sight until a review',
 		inExisting: 'In an existing Matter',
 		asDormant: 'As a new dormant Matter',
+		/** The Action's name would read as the Inbox, so it can't name a new Matter. */
+		dormantInboxName: 'Choose an existing Matter for it instead.',
 		dormantMeta: (name: string) => `“${name}”, collapsed`,
 		somedayText: (backlog: string) =>
 			`It waits in the Matter’s ${backlog} column. For an idea big enough to be a Matter of its own, a dormant Matter keeps it out of sight until you wake it up from the overview.`,
@@ -538,6 +540,9 @@ export const STRINGS = {
 		outcomePlaceholder: 'What does done look like?',
 		outcomeHint: 'One line. For a Matter that never ends, the standard you want to keep.',
 		create: 'Create Matter',
+		/** A name that would read as the Inbox ("Inbox", "Inbox 2"). */
+		inboxName: 'The Inbox exists already.',
+		inboxNameText: 'Give the new Matter another name.',
 	},
 
 	cadence: {
