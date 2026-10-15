@@ -30,7 +30,7 @@ Then:
 matters-that-matter today --vault ~/Notes
 ```
 
-The vault must have Matters that Matter installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
+The vault must have Matters that Matter installed and set up (its settings are in `.obsidian/plugins/matters-that-matter/data.json`, or in the vault's other configuration folder if it has another name). Before setup, reads work and say so; writes are refused. Name the vault with `--vault`, or set `MTM_VAULT` once:
 
 ```bash
 export MTM_VAULT=~/Notes
@@ -141,7 +141,7 @@ The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, suc
 | Option | |
 |---|---|
 | `--vault <path>` | The vault (or `MTM_VAULT`) |
-| `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` (one folder in the vault's root) |
+| `--config-dir <folder>` | The vault's configuration folder (one folder in the vault's root). Only needed when the vault has several configuration folders with the plugin's settings, or to choose one: without it, the command line finds the folder by itself, `.obsidian` or another name |
 | `--json` | Output for scripts |
 | `--dry-run` | Show what would change, without writing (warnings say what would happen) |
 | `--help`, `-h` | Help |
@@ -266,7 +266,7 @@ The tools carry MCP's hints, so an assistant's app can let reads run freely and 
 | `--read-only` | Offer only the tools that read: `get_action`, `list_actions`, `get_today`, `list_matters`, `get_workflow` |
 | `--tools <a,b>` | Offer only these tools, such as `--tools get_today,list_actions`. A name that isn't a tool stops the server before it starts (exit code 2) |
 | `--dry-run` | Tools that write say what they would change, and write nothing |
-| `--config-dir <folder>` | The vault's configuration folder, if it isn't `.obsidian` |
+| `--config-dir <folder>` | The vault's configuration folder. Only needed when the vault has several configuration folders with the plugin's settings, or to choose one |
 
 ```bash
 npx -y matters-that-matter mcp --vault ~/Notes --read-only --tools get_today,list_actions
