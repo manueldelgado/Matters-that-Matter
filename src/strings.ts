@@ -833,6 +833,7 @@ export const STRINGS = {
 			modify: (n: number) => `Modify · ${plural(n, 'item', 'items')}`,
 			reuse: (n: number) => `Keep as they are · ${plural(n, 'file', 'files')}`,
 			newNote: 'new',
+			newNameTaken: (name: string) => `new · another note is called “${name}”`,
 			newFolder: 'new folder',
 			addsKind: 'adds mtm-kind and mtm-state',
 			exists: 'exists',

@@ -19,9 +19,13 @@ const choices = (over: Partial<SetupChoices> = {}): SetupChoices => ({
 	...over,
 });
 
+const named = (files: string[]) => (name: string) =>
+	files.filter((f) => f.endsWith('.md') && f.slice(f.lastIndexOf('/') + 1, -3).toLowerCase() === name.toLowerCase());
+
 const vault = (files: string[] = [], matters: string[] = [], maxLaneOrder: number | null = null): VaultSnapshot => ({
 	exists: (p) => files.includes(p) || files.some((f) => f.startsWith(`${p}/`)),
 	isMatter: (p) => matters.includes(p),
+	notesNamed: named(files),
 	maxLaneOrder,
 });
 
@@ -168,10 +172,77 @@ describe('planSetup and existing Actions', () => {
 			exists: (p) => p === 'MTM/Matters/Call Bob.md',
 			isMatter: () => false,
 			isOtherKind: (p) => p === 'MTM/Matters/Call Bob.md',
+			notesNamed: named(['MTM/Matters/Call Bob.md']),
 			maxLaneOrder: null,
 		};
 		const plan = planSetup(choices({ newMatters: 'Call Bob', adopt: ['MTM/Matters/Call Bob.md'] }), snapshot);
 		expect(plan.modify).toEqual([]);
 		expect(plan.create.some((n) => n.path === 'MTM/Matters/Call Bob 2.md')).toBe(true);
+	});
+});
+
+describe('planSetup and names other notes have', () => {
+	const created = (plan: ReturnType<typeof planSetup>) => plan.create.filter((n) => n.kind === 'matter').map((n) => n.path);
+
+	it('gives a typed Matter another name when a note elsewhere has it', () => {
+		const plan = planSetup(choices({ newMatters: 'Kitchen\nGarden' }), vault(['Notes/Kitchen.md']));
+		expect(created(plan)).toEqual(['MTM/Matters/Kitchen 2.md', 'MTM/Matters/Garden.md']);
+		expect(plan.create.find((n) => n.path === 'MTM/Matters/Kitchen 2.md')?.typed).toBe('Kitchen');
+		expect(plan.create.find((n) => n.path === 'MTM/Matters/Garden.md')?.typed).toBeUndefined();
+		expect(plan.modify).toEqual([]);
+	});
+
+	it('ignores case when comparing names', () => {
+		const plan = planSetup(choices({ newMatters: 'kitchen' }), vault(['Notes/KITCHEN.md', 'Notes/kitchen 2.md']));
+		expect(created(plan)).toEqual(['MTM/Matters/kitchen 3.md']);
+	});
+
+	it('takes a Matter with that name as the typed Matter, wherever it is', () => {
+		const plan = planSetup(choices({ newMatters: 'kitchen' }), vault(['Notes/Kitchen.md', 'Projects/Kitchen.md'], ['Projects/Kitchen.md']));
+		expect(created(plan)).toEqual([]);
+		expect(plan.reuse).toContain('Projects/Kitchen.md');
+		expect(plan.modify).toEqual([]);
+	});
+
+	it('takes a note being adopted as the typed Matter', () => {
+		const plan = planSetup(choices({ newMatters: 'Kitchen', adopt: ['Notes/Kitchen.md'] }), vault(['Notes/Kitchen.md']));
+		expect(created(plan)).toEqual([]);
+		expect(plan.modify).toEqual([{ path: 'Notes/Kitchen.md', add: { 'mtm-kind': 'matter', 'mtm-state': 'active' } }]);
+	});
+
+	it('still adopts a plain note with that name in the Matters folder', () => {
+		const plan = planSetup(choices({ newMatters: 'Garden' }), vault(['Notes/Garden.md', 'MTM/Matters/Garden.md']));
+		expect(created(plan)).toEqual([]);
+		expect(plan.modify.map((m) => m.path)).toEqual(['MTM/Matters/Garden.md']);
+	});
+
+	it('keeps duplicate lines to one Matter and skips names typed on later lines', () => {
+		const plan = planSetup(choices({ newMatters: 'Kitchen\nkitchen\nKitchen 2' }), vault(['Notes/Kitchen.md']));
+		expect(created(plan)).toEqual(['MTM/Matters/Kitchen 3.md', 'MTM/Matters/Kitchen 2.md']);
+	});
+
+	it('never names a typed Matter after the Inbox it creates', () => {
+		const plan = planSetup(choices({ newMatters: 'Inbox\nGarden' }), vault());
+		expect(plan.create.map((n) => n.path)).toEqual(['MTM/Matters/Inbox.md', 'MTM/Boards/Matters.base', 'MTM/Matters/Garden.md']);
+		expect(plan.reuse).toEqual([]);
+	});
+
+	it('reconnecting, creates only the Matters that are missing', () => {
+		const files = ['Work/Matters/Capture.md', 'Work/Matters/Kitchen.md', 'Work/Board.base', 'Notes/Garden.md'];
+		const plan = planSetup(
+			choices({
+				folders: { matters: 'Work/Matters', actions: 'Work/Actions', boards: 'Work', people: 'People' },
+				inboxPath: 'Work/Matters/Capture.md',
+				boardPath: 'Work/Board.base',
+				newMatters: 'Kitchen\nGarden\nTravel',
+			}),
+			vault(files, ['Work/Matters/Capture.md', 'Work/Matters/Kitchen.md'], 2),
+		);
+		expect(plan.reuse).toEqual(['Work/Matters/Capture.md', 'Work/Board.base', 'Work/Matters/Kitchen.md']);
+		expect(plan.create.map((n) => [n.path, n.frontmatter['mtm-lane-order']])).toEqual([
+			['Work/Matters/Garden 2.md', 3],
+			['Work/Matters/Travel.md', 4],
+		]);
+		expect(plan.modify).toEqual([]);
 	});
 });

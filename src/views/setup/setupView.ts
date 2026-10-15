@@ -12,7 +12,7 @@ import { SAMPLE_SPHERES, withSampleSpheres } from '../../services/samplePackage'
 import { appendIcon, tileEl } from '../../ui/components/dom';
 import { companionThemeActive, renderThemeOffer } from '../../ui/components/themeOffer';
 import { alwaysUpdateLinks, ensureDateTimeTypes, openSettingsTab } from '../../vault/internal';
-import { exists, frontmatterOf, maxLaneOrder, notesOfKind } from '../../vault/notes';
+import { exists, frontmatterOf, maxLaneOrder, notesNamed, notesOfKind } from '../../vault/notes';
 import { scanVault } from '../../vault/reconnectScan';
 import { executePlan } from '../../vault/setupRunner';
 import { renderLocation, renderMatters, renderSummary, renderWorkflow, ruleMatches, type SetupState } from './setupSteps';
@@ -172,6 +172,7 @@ export class SetupView extends ItemView {
 					const kind = file ? frontmatterOf(app, file)?.['mtm-kind'] : undefined;
 					return kind !== undefined && kind !== 'matter';
 				},
+				notesNamed: (name) => notesNamed(app, name).map((f) => f.path),
 				maxLaneOrder: maxLaneOrder(app),
 			},
 		);

@@ -492,7 +492,8 @@ export async function writeFixtureVault({ dir, now = FIXTURE_NOW, edgeCases: wit
 			baseContent: mtm.boardBaseContent(mtm.STRINGS.views),
 			now: date,
 		},
-		{ exists: (p) => existsSync(join(dir, p)), isMatter: () => false, maxLaneOrder: null },
+		// No typed Matters: nothing asks for names.
+		{ exists: (p) => existsSync(join(dir, p)), isMatter: () => false, notesNamed: () => [], maxLaneOrder: null },
 	);
 	const notes = [...plan.create];
 	const raw = withEdgeCases ? edgeCases(mtm, notes, date) : [];

@@ -258,6 +258,7 @@ describe('notes the plugin writes', () => {
 		const plan = planSetup(choices({ statuses: presetStatuses(id), types: presetTypes(id) }), {
 			exists: (p) => p === 'Notes/Running.md' || p === 'Notes',
 			isMatter: () => false,
+			notesNamed: (name) => (name.toLowerCase() === 'running' ? ['Notes/Running.md'] : []),
 			maxLaneOrder: null,
 		});
 		const notes = plan.create.filter((n) => n.kind === 'action' || n.kind === 'matter' || n.kind === 'inbox');

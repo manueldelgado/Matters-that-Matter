@@ -414,7 +414,7 @@ export function renderSummary(body: HTMLElement, state: SetupState, plan: SetupP
 		group.createDiv({ cls: 'mtm-summary-group-title', text: t.create(createCount) });
 		const list = group.createDiv({ cls: 'mtm-summary-list' });
 		for (const folder of folders) summaryItem(list, 'mod-create', 'folder-plus', `${folder}/`, t.newFolder);
-		for (const note of plan.create) if (!note.sample) summaryItem(list, 'mod-create', 'file-plus', note.path, t.newNote);
+		for (const note of plan.create) if (!note.sample) summaryItem(list, 'mod-create', 'file-plus', note.path, note.typed ? t.newNameTaken(note.typed) : t.newNote);
 		if (hasSample) summaryItem(list, 'mod-create', 'package-plus', `${SAMPLE_FOLDER}/`, t.sampleContents(SAMPLE_COUNTS));
 	}
 	const spheres = state.sample ? warnings.newSpheres : [];
