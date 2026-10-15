@@ -1,6 +1,6 @@
 // The slim toolbar every MTM collection view shows above its content.
 
-import { setIcon, setTooltip } from 'obsidian';
+import { getIcon, setIcon, setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../settings';
 import type { CardOrder } from '../../model/actions';
 import { closedStatuses } from '../../model/workflow';
@@ -31,6 +31,8 @@ export interface ToolbarInput {
 	openCount: number | null;
 	/** Boards and lists: the card order, with its switch beside Show done; absent elsewhere. */
 	cardOrder?: CardOrder;
+	/** The view's page in the docs, opened by the help icon before the "+", and its tooltip. */
+	help: { url: string; label: string };
 }
 
 export interface ToolbarHandlers {
@@ -63,7 +65,10 @@ function toggleNote(bar: HTMLElement, icon: string, label: string, title: string
 /** A show/hide toggle's icon: what a click does. */
 const eye = (shown: boolean) => (shown ? 'eye-off' : 'eye');
 
-/** Type chips (all on by default; each one switched off hides its type), Sphere chips, the open count, Show done and "+". */
+/** Lucide's name for the help icon; older icon sets call it help-circle. */
+const helpIcon = () => (getIcon('circle-help') ? 'circle-help' : 'help-circle');
+
+/** Type chips (all on by default; each one switched off hides its type), Sphere chips, the open count, Show done, help and "+". */
 export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: ToolbarHandlers): void {
 	const bar = view.createDiv({ cls: 'mtm-toolbar' });
 	const filters = bar.createDiv({ cls: 'mtm-filters' });
@@ -110,6 +115,9 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 	const closed = closedStatuses(input.statuses).map((s) => s.label);
 	const done = closed[0] ?? '';
 	toggleNote(bar, eye(input.showDone), input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
+	const help = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': input.help.label } }), () => void window.open(input.help.url));
+	setIcon(help, helpIcon());
+	setTooltip(help, input.help.label);
 	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
 }

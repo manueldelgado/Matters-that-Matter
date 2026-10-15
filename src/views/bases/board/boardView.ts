@@ -148,7 +148,14 @@ export class BoardView extends CollectionView {
 		};
 		renderToolbar(
 			view,
-			{ ...input, statuses: this.plugin.settings.statuses, spheres: this.chips, openCount: model.empty ? null : model.openCount, cardOrder: options.cardOrder },
+			{
+				...input,
+				statuses: this.plugin.settings.statuses,
+				spheres: this.chips,
+				openCount: model.empty ? null : model.openCount,
+				cardOrder: options.cardOrder,
+				help: { url: STRINGS.docs.views.board, label: STRINGS.docs.viewHelp.board },
+			},
 			this.handlers,
 		);
 		if (this.noActionsYet(model.empty)) {

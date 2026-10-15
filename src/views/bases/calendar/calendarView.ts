@@ -12,6 +12,7 @@ import { editAction } from '../../../vault/actionWrites';
 import { allMatters } from '../../../vault/index';
 import { renderEmpty } from '../board/boardRender';
 import { CollectionView } from '../collectionView';
+import { STRINGS } from '../../../strings';
 import { renderToolbar } from '../toolbar';
 import { renderCalendar, type CalendarHandlers } from './calendarRender';
 
@@ -85,6 +86,7 @@ export class CalendarView extends CollectionView {
 				spheres: this.sphereChips(matters, all, options.spheresOff),
 				showDone: options.showDone,
 				statuses: settings.statuses,
+				help: { url: STRINGS.docs.views.calendar, label: STRINGS.docs.viewHelp.calendar },
 				openCount: all.length ? openCount : null,
 			},
 			{

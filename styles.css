@@ -1403,3 +1403,11 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* Phones: a round dashed "+" after the last Matter pill. */
 .mtm-matter-pill.mod-new{justify-content:center;width:32px;padding:0;border:1px dashed var(--mtm-dash);background:transparent;color:var(--text-faint)}
 .mtm-matter-pill.mod-new:hover,.mtm-matter-pill.mod-new:focus-visible{border-color:var(--background-modifier-border-hover);background:var(--background-modifier-hover);color:var(--text-normal)}
+/* ——— Links to the docs ——— */
+/* Settings: a quiet link to the docs in the hero, before "Run setup again". */
+.mtm-settings-hero-link{flex:none;font-size:13px;color:var(--text-accent);text-decoration:none;white-space:nowrap}
+.mtm-settings-hero-link:hover,.mtm-settings-hero-link:focus-visible{text-decoration:underline}
+/* Narrow settings: the name and its line keep the row, the link and the button go under it. */
+.is-phone .mtm-settings .setting-item > .mtm-settings-hero{flex-wrap:wrap;row-gap:10px}
+.is-phone .mtm-settings-hero > div:first-child{flex:1 1 100%}
+.is-phone .mtm-settings-hero > .mtm-spacer{display:none}

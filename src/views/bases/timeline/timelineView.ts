@@ -112,6 +112,7 @@ export class TimelineView extends CollectionView {
 				spheres: this.sphereChips(allMatterInfo, all, options.spheresOff),
 				showDone: options.showDone,
 				statuses: settings.statuses,
+				help: { url: STRINGS.docs.views.timeline, label: STRINGS.docs.viewHelp.timeline },
 				openCount: all.length ? openCount : null,
 			},
 			{

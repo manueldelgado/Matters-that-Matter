@@ -51,7 +51,7 @@ export class MattersSettingTab extends PluginSettingTab {
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		const s = STRINGS.settings;
 		return [
-			{ name: STRINGS.pluginName, searchable: false, render: (setting) => this.renderHero(setting) },
+			{ name: STRINGS.docs.settingsName, aliases: [...STRINGS.docs.settingsAliases], render: (setting) => this.renderHero(setting) },
 			{
 				name: STRINGS.companionTheme.settingsName,
 				aliases: [...STRINGS.companionTheme.settingsAliases],
@@ -210,7 +210,7 @@ export class MattersSettingTab extends PluginSettingTab {
 		setting.setName('').setDesc(
 			createFragment((f) => {
 				f.appendText(`${s.otherToolsNote} `);
-				f.createEl('a', { text: s.otherToolsDocs, href: s.otherToolsDocsUrl });
+				f.createEl('a', { text: s.otherToolsDocs, href: STRINGS.docs.connect });
 			}),
 		);
 	}
@@ -222,6 +222,7 @@ export class MattersSettingTab extends PluginSettingTab {
 		heroText.createDiv({ cls: 'mtm-settings-hero-title', text: STRINGS.pluginName });
 		heroText.createDiv({ cls: 'mtm-settings-hero-sub', text: STRINGS.settings.heroSub });
 		hero.createSpan({ cls: 'mtm-spacer' });
+		hero.createEl('a', { cls: 'mtm-settings-hero-link', text: STRINGS.docs.link, href: STRINGS.docs.home });
 		hero.createEl('button', { text: STRINGS.settings.runSetupAgain }).addEventListener('click', () => void this.plugin.openSetup());
 	}
 

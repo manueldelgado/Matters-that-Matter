@@ -16,6 +16,7 @@ import { setMatterState } from '../../../vault/matterWrites';
 import { renderEmpty } from '../board/boardRender';
 import { CollectionView, OPTION_KEYS } from '../collectionView';
 import { backlogStatus } from '../../../model/workflow';
+import { STRINGS } from '../../../strings';
 import { renderToolbar } from '../toolbar';
 import { renderList, type ListHandlers } from './listRender';
 
@@ -81,6 +82,7 @@ export class ListView extends CollectionView {
 				spheres: this.sphereChips(matters, actions, options.spheresOff),
 				showDone: options.showDone,
 				statuses: settings.statuses,
+				help: { url: STRINGS.docs.views.list, label: STRINGS.docs.viewHelp.list },
 				backlog: backlog ? { label: backlog.label, shown: showBacklog } : undefined,
 				openCount: board.empty ? null : board.openCount,
 				cardOrder,

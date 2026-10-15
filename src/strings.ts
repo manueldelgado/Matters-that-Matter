@@ -5,6 +5,12 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 /** "Done", "Done and Cancelled", "Done, Cancelled and Dropped". */
 const andList = (items: readonly string[]) => (items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
 
+/**
+ * The documentation site. Every path here ships in a release and keeps working for as long as people run it: a page
+ * that moves on the site leaves a redirect behind.
+ */
+const DOCS_BASE = 'https://matters-that-matter.app/docs/';
+
 export const STRINGS = {
 	pluginName: 'Matters that Matter',
 
@@ -72,6 +78,7 @@ export const STRINGS = {
 		removeSample: 'Remove sample content',
 		processInbox: 'Process Inbox',
 		reviewMatters: 'Review Matters',
+		openDocs: 'Open documentation',
 	},
 	ribbon: 'Open board',
 
@@ -743,7 +750,30 @@ export const STRINGS = {
 		linksAddActionsAliases: ['links', 'URI', 'obsidian://', 'Shortcuts', 'automation'],
 		otherToolsNote: 'Scripts and AI assistants can work with your Matters too, through the command line and an MCP server.',
 		otherToolsDocs: 'Connect other tools ↗',
-		otherToolsDocsUrl: 'https://matters-that-matter.app/docs/connect/',
+	},
+
+	/** The documentation's pages the plugin opens, and the words that open them. */
+	docs: {
+		base: DOCS_BASE,
+		home: DOCS_BASE,
+		connect: `${DOCS_BASE}connect/`,
+		views: {
+			board: `${DOCS_BASE}views/board.html`,
+			list: `${DOCS_BASE}views/list.html`,
+			calendar: `${DOCS_BASE}views/calendar.html`,
+			timeline: `${DOCS_BASE}views/timeline.html`,
+		},
+		/** The toolbar's help icon: its tooltip and label. */
+		viewHelp: {
+			board: 'How the board works ↗',
+			list: 'How the list works ↗',
+			calendar: 'How the calendar works ↗',
+			timeline: 'How the timeline works ↗',
+		},
+		/** The link in the settings hero, and what settings search finds it by. */
+		link: 'Documentation ↗',
+		settingsName: 'Documentation',
+		settingsAliases: ['help', 'docs', 'guide', 'manual'],
 	},
 
 	/** obsidian://mtm-add, mtm-quick-add and mtm-open. */

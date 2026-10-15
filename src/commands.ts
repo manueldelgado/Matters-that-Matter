@@ -120,6 +120,12 @@ export function registerCommands(plugin: MattersPlugin): void {
 		name: STRINGS.commands.removeSample,
 		callback: () => removeSampleContent(plugin),
 	});
+
+	plugin.addCommand({
+		id: 'open-documentation',
+		name: STRINGS.commands.openDocs,
+		callback: () => void window.open(STRINGS.docs.home),
+	});
 }
 
 function removeSampleContent(plugin: MattersPlugin): void {
