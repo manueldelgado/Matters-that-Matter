@@ -389,8 +389,9 @@ body .mtm-fab:not(.clickable-icon){position:absolute;right:18px;bottom:calc(18px
 .mtm-fab .svg-icon{width:26px;height:26px;stroke-width:2.2}
 .is-mobile .mtm-card{padding:11px 12px;gap:10px}
 .is-mobile .mtm-card-title{font-size:15px;padding-top:3px}
-.is-mobile .mtm-tile{width:30px;height:30px}
-.is-mobile .mtm-tile .svg-icon{width:17px;height:17px}
+/* Only unsized tiles grow: size modifiers and tiles sized by their context keep their own size. */
+.is-mobile :where(.mtm-tile){width:30px;height:30px}
+.is-mobile :where(.mtm-tile) .svg-icon{width:17px;height:17px}
 .is-mobile .mtm-cell-add{opacity:1}
 .is-phone .mtm-toolbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
 /* Its chip groups don't wrap inside the strip, or they stack into columns. */
