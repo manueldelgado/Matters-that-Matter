@@ -1390,3 +1390,15 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* The added notice says where an Action came from when it wasn't you typing: a quiet line above the title. */
 .mtm-added-source{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;opacity:.75}
 .mtm-added-source .svg-icon{width:12px;height:12px}
+/* ——— New Matter lane ——— */
+/* One row after the last Matter lane: the next-step ghost, saying "New Matter", in the Matters column only. */
+.mtm-new-matter-lane{grid-column:1/-1;display:flex;padding:10px 10px 16px}
+.mtm-new-matter-lane>.mtm-next-ghost{position:sticky;left:10px;flex:none;width:calc(var(--mtm-lane-width) - 20px);min-height:38px;padding:6px 10px}
+/* With Spheres it lines up with the lanes of the band above it; after a separator it stands outside the bands. */
+.mtm-board.has-spheres .mtm-new-matter-lane{padding-left:28px}
+.mtm-board.has-spheres .mtm-new-matter-lane>.mtm-next-ghost{left:28px}
+.mtm-board.has-spheres .mtm-lane-sep+.mtm-new-matter-lane{padding-left:10px}
+.mtm-board.has-spheres .mtm-lane-sep+.mtm-new-matter-lane>.mtm-next-ghost{left:10px}
+/* Phones: a round dashed "+" after the last Matter pill. */
+.mtm-matter-pill.mod-new{justify-content:center;width:32px;padding:0;border:1px dashed var(--mtm-dash);background:transparent;color:var(--text-faint)}
+.mtm-matter-pill.mod-new:hover,.mtm-matter-pill.mod-new:focus-visible{border-color:var(--background-modifier-border-hover);background:var(--background-modifier-hover);color:var(--text-normal)}

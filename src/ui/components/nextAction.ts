@@ -18,13 +18,13 @@ export function noNextActionHint(parent: HTMLElement, onPress: (el: HTMLElement)
 	return hint;
 }
 
-/** A dashed card inviting the next step; it opens quick add where the step belongs. */
-export function nextStepGhost(parent: HTMLElement, onPress: () => void, mod?: string): HTMLElement {
+/** A dashed card inviting the next step; it opens quick add where the step belongs. The board's New Matter lane gives it its own words. */
+export function nextStepGhost(parent: HTMLElement, onPress: () => void, mod?: string, text: string = STRINGS.nextAction.ghost): HTMLElement {
 	const ghost = pressable(parent.createDiv({ cls: ['mtm-next-ghost', ...(mod ? [mod] : [])] }), (e) => {
 		e.stopPropagation();
 		onPress();
 	});
 	appendIcon(ghost, 'plus');
-	ghost.createSpan({ cls: 'mtm-next-ghost-text', text: STRINGS.nextAction.ghost });
+	ghost.createSpan({ cls: 'mtm-next-ghost-text', text });
 	return ghost;
 }

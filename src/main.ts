@@ -247,13 +247,13 @@ export default class MattersPlugin extends Plugin {
 		new ReviewModal(this, context).open();
 	}
 
-	/** The New Matter dialog; from a board focused on one Sphere it starts in that Sphere. */
-	newMatter(sphereId: string | null = null): void {
+	/** The New Matter dialog; from a board focused on one Sphere it starts in that Sphere. `onCreated` gets the new note. */
+	newMatter(sphereId: string | null = null, onCreated?: (file: TFile) => void): void {
 		new NewMatterModal(
 			this.app,
 			async (result) => {
 				try {
-					await createMatter(this.app, this.settings, result);
+					onCreated?.(await createMatter(this.app, this.settings, result));
 				} catch (e) {
 					new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
 				}

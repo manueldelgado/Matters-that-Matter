@@ -11,7 +11,7 @@ import { nextStepGhost } from '../../../ui/components/nextAction';
 import { NO_SPHERE_ICON } from '../collectionView';
 import { processButton, renderLaneMeta, type BoardHandlers } from './boardRender';
 
-export interface SwipeHandlers extends Pick<BoardHandlers, 'openMatter' | 'noNextActionMenu' | 'dismissSphere' | 'processInbox' | 'newAction' | 'select' | 'open' | 'dismiss'> {
+export interface SwipeHandlers extends Pick<BoardHandlers, 'openMatter' | 'noNextActionMenu' | 'dismissSphere' | 'processInbox' | 'newAction' | 'newMatter' | 'select' | 'open' | 'dismiss'> {
 	/** Shows another Matter. */
 	choose(path: string): void;
 	/** The board's lane menu, under the header's "⋯". */
@@ -26,6 +26,8 @@ export interface SwipeInput {
 	nextStepId: string | null;
 	selected: string | null;
 	now: Date;
+	/** What the "+" after the pills says to screen readers: New Matter, or New Matter in the focused Sphere. */
+	newMatterLabel: string;
 }
 
 export interface SwipeElements {
@@ -47,7 +49,14 @@ export function renderSwipe(view: HTMLElement, input: SwipeInput, h: SwipeHandle
 function renderPills(view: HTMLElement, input: SwipeInput, h: SwipeHandlers): HTMLElement {
 	const s = STRINGS.swipe;
 	const strip = view.createDiv({ cls: 'mtm-matter-pills', attr: { role: 'tablist', 'aria-label': s.matters } });
-	for (const p of input.pills) {
+	// After the last Matter's pill, as the board's New Matter lane comes after its last lane: above an Inbox at the end.
+	const addNew = () => {
+		const add = pressable(strip.createSpan({ cls: ['mtm-matter-pill', 'mod-new'], attr: { 'aria-label': input.newMatterLabel } }), () => h.newMatter());
+		appendIcon(add, 'plus');
+	};
+	const inboxLast = input.pills.length > 1 && !!input.pills[input.pills.length - 1]?.lane.matter.isInbox;
+	input.pills.forEach((p, i) => {
+		if (inboxLast && i === input.pills.length - 1) addNew();
 		const m = p.lane.matter;
 		if (p.group !== undefined) {
 			const label = strip.createSpan({ cls: 'mtm-matter-pills-label' });
@@ -70,7 +79,8 @@ function renderPills(view: HTMLElement, input: SwipeInput, h: SwipeHandlers): HT
 		pressable(pill, () => {
 			if (!active) h.choose(m.path);
 		});
-	}
+	});
+	if (!inboxLast) addNew();
 	return strip;
 }
 

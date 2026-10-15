@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 import { toActionItem, initials } from '../../src/services/actionItems';
-import { buildBoard, isLaneCollapsed, typeShown, type BoardOptions, type MatterInfo } from '../../src/services/boardModel';
+import { buildBoard, isLaneCollapsed, newMatterNeedsSeparator, typeShown, type BoardOptions, type MatterInfo } from '../../src/services/boardModel';
+import { NO_SPHERE } from '../../src/services/spheres';
 import type { ResolveLink } from '../../src/services/effective';
 import { buildList, buildListLayout, buildTypeGroups } from '../../src/services/listModel';
 
@@ -273,6 +274,22 @@ describe('Sphere bands', () => {
 		const b = build({ spheresCollapsed: new Set(['work']) });
 		expect(b.bands?.find((band) => band.sphere?.id === 'work')?.collapsed).toBe(true);
 		expect(b.columnCounts.get('next')).toBe(2);
+	});
+
+	it('lines the New Matter lane up with the last band only when a new Matter lands there', () => {
+		const bands = build().bands ?? [];
+		// No Sphere is last: a Matter with no Sphere lands in it.
+		expect(newMatterNeedsSeparator(bands, NO_SPHERE)).toBe(false);
+		expect(newMatterNeedsSeparator(bands, 'work')).toBe(true);
+		// Every Matter in a Sphere: the last band is Work, so a Matter with no Sphere stands apart.
+		const allSphered = buildBoard(actions, sphered.map((m) => (m.isInbox ? m : { ...m, sphere: m.sphere ?? 'home' })), settings.statuses, options({ spheres }), today, now).bands ?? [];
+		expect(allSphered.map((b) => b.sphere?.id)).toEqual(['home', 'work']);
+		expect(newMatterNeedsSeparator(allSphered, NO_SPHERE)).toBe(true);
+		// Focused on Work: Work is the only band and where the new Matter goes.
+		const focused = build({ spheresOff: new Set(['home', NO_SPHERE]) }).bands ?? [];
+		expect(newMatterNeedsSeparator(focused, 'work')).toBe(false);
+		// No band shown at all: nothing to stand apart from.
+		expect(newMatterNeedsSeparator([], NO_SPHERE)).toBe(false);
 	});
 
 	it('gives the list Sphere sections and keeps the Inbox outside them', () => {

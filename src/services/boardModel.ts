@@ -173,6 +173,16 @@ export function buildBoard(
 	return { columns, lanes, bands, sphereKeys: keys, columnCounts, openCount, empty: actions.length === 0 };
 }
 
+/**
+ * Whether the New Matter lane after the last band needs a separator first. It lines up with that band when the band
+ * is where a new Matter lands (`landing`: the Sphere the board is focused on, else NO_SPHERE); after any other band it
+ * would read as one of that band's Matters.
+ */
+export function newMatterNeedsSeparator(bands: readonly BoardBand[], landing: string): boolean {
+	const last = bands[bands.length - 1];
+	return !!last && (last.sphere?.id ?? NO_SPHERE) !== landing;
+}
+
 /** The Sphere chips for these Matters: every Sphere, plus "No Sphere" when some Matter other than the Inbox has none. */
 export function sphereKeysFor(matters: readonly MatterInfo[], spheres: readonly SphereDef[]): string[] {
 	if (!spheres.length) return [];

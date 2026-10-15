@@ -17,7 +17,7 @@ import { dropWrites, moveWithin, type CellCard, type MoveWithin, type OrderWrite
 import type { ActionItem } from '../../../services/actionItems';
 import { markReviewed, setMatterSphere, setMatterState, writeLaneOrders } from '../../../vault/matterWrites';
 import { CollectionView, OPTION_KEYS, SPHERES_COLLAPSED_KEY, SPHERES_OFF_KEY } from '../collectionView';
-import { revealPlan } from '../../../services/reveal';
+import { REVEAL_WAIT_MS, revealPlan } from '../../../services/reveal';
 import { attachDrag } from './boardDrag';
 import { renderToolbar, type SphereChip } from '../toolbar';
 import { renderBoard, renderEmpty, type BoardHandlers } from './boardRender';
@@ -45,6 +45,8 @@ export class BoardView extends CollectionView {
 	/** Where the swipe board was scrolled, for the Matter it showed. */
 	private swipeScroll: { path: string; left: number } | null = null;
 	private visibleWaiter: ResizeObserver | null = null;
+	/** A Matter made from this board, revealed once its note has been read (dropped after REVEAL_WAIT_MS). */
+	private created: { path: string; expires: number } | null = null;
 	/** A Matter whose lane header lights up after the next render (Show on board). */
 	private spotlightPath: string | null = null;
 	private spotlightTimer: number | null = null;
@@ -124,7 +126,7 @@ export class BoardView extends CollectionView {
 		this.chips = this.sphereChips(this.matters, actions, options.spheresOff);
 		this.render(this.model, options, now);
 
-		const reveal = this.takeReveal();
+		const reveal = this.takeReveal() ?? this.takeCreated();
 		if (reveal) this.reveal(reveal, actions, options, today, now);
 		else this.spotlight();
 	}
@@ -134,7 +136,16 @@ export class BoardView extends CollectionView {
 
 		this.containerEl.empty();
 		const view = this.containerEl.createDiv({ cls: 'mtm-view' });
-		const input = { model, types: this.plugin.settings.types, typesOff: options.typesOff, showDone: options.showDone, selected: this.plugin.selection.path, now, nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null };
+		const input = {
+			model,
+			types: this.plugin.settings.types,
+			typesOff: options.typesOff,
+			showDone: options.showDone,
+			selected: this.plugin.selection.path,
+			now,
+			nextStepId: nextStepStatus(this.plugin.settings.statuses)?.id ?? null,
+			newMatter: this.newMatterLane(),
+		};
 		renderToolbar(
 			view,
 			{ ...input, statuses: this.plugin.settings.statuses, spheres: this.chips, openCount: model.empty ? null : model.openCount, cardOrder: options.cardOrder },
@@ -210,6 +221,35 @@ export class BoardView extends CollectionView {
 	}
 
 	// ——— Show on board ———
+
+	/** The New Matter dialog from this board; the new Matter's lane is then revealed as Show on board does. */
+	private newMatterHere(sphereId: string | null): void {
+		this.plugin.newMatter(sphereId, (file) => {
+			this.created = { path: file.path, expires: Date.now() + REVEAL_WAIT_MS };
+			// The note may already have been read; otherwise the render it causes takes the reveal.
+			this.refresh(true);
+		});
+	}
+
+	/** The Matter made from this board, once the board knows it; null while its note waits to be read. */
+	private takeCreated(): string | null {
+		const created = this.created;
+		if (!created) return null;
+		if (Date.now() > created.expires) {
+			this.created = null;
+			return null;
+		}
+		if (!this.matters.some((m) => m.path === created.path)) return null;
+		this.created = null;
+		return created.path;
+	}
+
+	/** What the New Matter lane (and the phone's "+") says, and the band a new Matter from it lands in. */
+	private newMatterLane(): { label: string; landing: string } {
+		const focus = this.sphereFocus();
+		const sphere = focus ? this.plugin.settings.spheres.find((s) => s.id === focus) : undefined;
+		return { label: sphere ? STRINGS.spheres.newMatterIn(sphere.label) : STRINGS.board.newMatter, landing: sphere?.id ?? NO_SPHERE };
+	}
 
 	/** Renders now, so a reveal waiting for this board is taken (the board was already open). */
 	revealNow(): void {
@@ -335,7 +375,7 @@ export class BoardView extends CollectionView {
 		const nextStepId = nextStepStatus(settings.statuses)?.id ?? null;
 		const els = renderSwipe(
 			view,
-			{ pills, lane, columns: model.columns, nextStepId, selected: this.plugin.selection.path, now },
+			{ pills, lane, columns: model.columns, nextStepId, selected: this.plugin.selection.path, now, newMatterLabel: this.newMatterLane().label },
 			this.swipeHandlers,
 		);
 		// No drag on the swipe board: holding a card opens the move menu instead.
@@ -442,6 +482,7 @@ export class BoardView extends CollectionView {
 		dismissSphere: (path) => this.handlers.dismissSphere(path),
 		processInbox: () => this.handlers.processInbox(),
 		newAction: (statusId, matterPath) => this.handlers.newAction(statusId, matterPath),
+		newMatter: () => this.handlers.newMatter(),
 		select: (path) => this.select(path),
 		open: (path, e) => this.open(path, e),
 		dismiss: (item) => this.dismiss(item),
@@ -601,7 +642,7 @@ export class BoardView extends CollectionView {
 			i
 				.setTitle(sphere ? sp.newMatterIn(sphere.label) : b.newMatter)
 				.setIcon('folder-plus')
-				.onClick(() => this.plugin.newMatter(sphere?.id ?? null)),
+				.onClick(() => this.newMatterHere(sphere?.id ?? null)),
 		);
 		button.addClass('is-active');
 		menu.onHide(() => button.removeClass('is-active'));
@@ -623,7 +664,7 @@ export class BoardView extends CollectionView {
 			this.refresh(true);
 		},
 		newAction: (statusId, matterPath) => this.plugin.quickAdd({ statusId, matterPath, sphereId: this.sphereFocus() }),
-		newMatter: () => this.plugin.newMatter(this.sphereFocus()),
+		newMatter: () => this.newMatterHere(this.sphereFocus()),
 		openMatter: (path) => void this.plugin.openMatter(path),
 		laneMenu: (lane, e, button) => this.openLaneMenu(lane, e, button),
 		processInbox: () => this.plugin.processInbox(this.sphereFocus()),

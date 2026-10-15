@@ -4,7 +4,7 @@ import { setIcon, setTooltip } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
 import type { ActionItem } from '../../../services/actionItems';
-import type { BoardBand, BoardLane, BoardModel } from '../../../services/boardModel';
+import { newMatterNeedsSeparator, type BoardBand, type BoardLane, type BoardModel } from '../../../services/boardModel';
 import { NO_SPHERE } from '../../../services/spheres';
 import { appendIcon, pressable, statusClasses, tileEl, typeClasses } from '../../../ui/components/dom';
 import { bindCardActions, orphanBadge, renderCard } from '../../../ui/components/card';
@@ -45,6 +45,8 @@ export interface RenderInput {
 	now: Date;
 	/** The column for a lane's next step (first open status after the backlog), or null. */
 	nextStepId: string | null;
+	/** The New Matter lane's words, and the band a new Matter lands in (the focused Sphere, else NO_SPHERE). */
+	newMatter: { label: string; landing: string };
 }
 
 export function renderEmpty(view: HTMLElement, h: Pick<BoardHandlers, 'newAction' | 'newMatter'>): void {
@@ -199,19 +201,30 @@ export function renderBoard(view: HTMLElement, input: RenderInput, h: BoardHandl
 		renderLaneHeader(board, lane, h);
 		for (const column of model.columns) renderCell(board, lane, column, input, h);
 	};
+	const inbox = model.lanes.find((l) => l.matter.isInbox);
+	const inboxFirst = !!inbox && model.lanes[0] === inbox;
+	// The New Matter lane comes after the last Matter lane, above an Inbox at the bottom.
+	const newMatterLane = (separate: boolean) => {
+		if (separate) board.createDiv({ cls: 'mtm-lane-sep' });
+		const row = board.createDiv({ cls: 'mtm-new-matter-lane' });
+		nextStepGhost(row, () => h.newMatter(), undefined, input.newMatter.label);
+	};
 	if (!model.bands) {
-		model.lanes.forEach((lane, i) => {
-			const inbox = lane.matter.isInbox;
-			if (inbox && i > 0) board.createDiv({ cls: 'mtm-lane-sep' });
-			renderLane(lane);
-			if (inbox && i === 0 && model.lanes.length > 1) board.createDiv({ cls: 'mtm-lane-sep' });
-		});
+		const rest = model.lanes.filter((l) => l !== inbox);
+		if (inbox && inboxFirst) {
+			renderLane(inbox);
+			if (rest.length) board.createDiv({ cls: 'mtm-lane-sep' });
+		}
+		rest.forEach(renderLane);
+		newMatterLane(inboxFirst && !rest.length);
+		if (inbox && !inboxFirst) {
+			board.createDiv({ cls: 'mtm-lane-sep' });
+			renderLane(inbox);
+		}
 		return scroll;
 	}
 
 	board.addClass('has-spheres');
-	const inbox = model.lanes.find((l) => l.matter.isInbox);
-	const inboxFirst = !!inbox && model.lanes[0] === inbox;
 	if (inbox && inboxFirst) {
 		renderLane(inbox);
 		if (model.bands.length) board.createDiv({ cls: 'mtm-lane-sep' });
@@ -220,8 +233,9 @@ export function renderBoard(view: HTMLElement, input: RenderInput, h: BoardHandl
 		renderBand(board, band, model, h);
 		if (!band.collapsed) band.lanes.forEach(renderLane);
 	}
+	newMatterLane(model.bands.length ? newMatterNeedsSeparator(model.bands, input.newMatter.landing) : inboxFirst);
 	if (inbox && !inboxFirst) {
-		if (model.bands.length) board.createDiv({ cls: 'mtm-lane-sep' });
+		board.createDiv({ cls: 'mtm-lane-sep' });
 		renderLane(inbox);
 	}
 	return scroll;
