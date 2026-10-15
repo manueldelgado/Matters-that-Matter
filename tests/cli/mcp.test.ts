@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import Ajv from 'ajv';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -351,6 +351,39 @@ describe('errors are tool errors', () => {
 		const gone = await call(client, 'get_today');
 		expect(gone.isError).toBe(true);
 		expect(text(gone)).toMatch(/^Matters that Matter isn’t installed in .*: there’s no \.obsidian\/plugins\/matters-that-matter\/data\.json\./);
+	});
+});
+
+describe('the configuration folder, found by itself', () => {
+	it('another configuration folder works without --config-dir, read afresh on every call', async () => {
+		const root = keep(fixtureCopy());
+		renameSync(join(root, '.obsidian'), join(root, '.obsidian-mobile'));
+		const { client, stderr } = await connect(['--vault', root]);
+		expect(stderr()).toBe('');
+		const today = await call(client, 'get_today');
+		expect(today.isError).toBeFalsy();
+		expect(JSON.stringify(today)).not.toContain('.obsidian-mobile');
+		const added = await call(client, 'add_action', { title: 'Ring the plumber' });
+		expect(data(added)).toMatchObject({ action: { path: 'MTM/Actions/Ring the plumber.md' } });
+		expect(read(root, 'MTM/Actions/Ring the plumber.md')).toContain('mtm-kind: action');
+
+		// A second device's settings arrive meanwhile: the next call is refused, naming both.
+		cpSync(join(root, '.obsidian-mobile'), join(root, '.obsidian-laptop'), { recursive: true });
+		const several = await call(client, 'get_today');
+		expect(several.isError).toBe(true);
+		expect(text(several)).toBe('Found the settings of Matters that Matter in .obsidian-laptop and .obsidian-mobile. Name the one to use with --config-dir.');
+	});
+
+	it('several at the start: refused before serving; --config-dir picks one', async () => {
+		const root = keep(fixtureCopy());
+		cpSync(join(root, '.obsidian'), join(root, '.obsidian-mobile'), { recursive: true });
+		renameSync(join(root, '.obsidian'), join(root, '.obsidian-laptop'));
+		expect(await refused(['--vault', root])).toEqual({
+			code: 2,
+			stderr: 'Found the settings of Matters that Matter in .obsidian-laptop and .obsidian-mobile. Name the one to use with --config-dir.\n',
+		});
+		const { client } = await connect(['--vault', root, '--config-dir', '.obsidian-mobile']);
+		expect((await call(client, 'get_today')).isError).toBeFalsy();
 	});
 });
 

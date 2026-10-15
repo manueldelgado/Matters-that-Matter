@@ -4,6 +4,8 @@
 import { VERSION, PACKAGE_NAME } from './version';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** “a”, “a and b”, “a, b and c”. */
+const listOf = (items: readonly string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
 
 /** The help, as `matters-that-matter --help` prints it; `<b>…</b>` marks bold and `<d>…</d>` dim (plain without colour). */
 export const HELP = `Matters that Matter, from the command line.            <d>${PACKAGE_NAME} ${VERSION}</d>
@@ -118,6 +120,11 @@ export const CLI = {
 	badConfigDir: (dir: string) => `--config-dir names one folder in the vault, such as .obsidian; “${dir}” isn’t one.`,
 	noFolder: (path: string) => `There’s no folder at ${path}.`,
 	notAVault: (path: string, configDir: string) => `${path} isn’t an Obsidian vault: it has no ${configDir} folder.`,
+	configDirHint: 'If its configuration folder isn’t .obsidian, name it with --config-dir.',
+	severalConfigDirs: (folders: readonly string[]) =>
+		`Found the settings of Matters that Matter in ${listOf(folders)}. Name the one to use with --config-dir.`,
+	noSettingsIn: (path: string, folders: readonly string[], file: string) =>
+		`Matters that Matter isn’t installed in ${path}: none of its configuration folders (${folders.join(', ')}) has ${file}. Install the plugin and run setup in Obsidian first.`,
 	noSettings: (path: string, file: string) => `Matters that Matter isn’t installed in ${path}: there’s no ${file}. Install the plugin and run setup in Obsidian first.`,
 	badSettings: (file: string) => `The settings of Matters that Matter in ${file} can’t be read. Open the vault in Obsidian to repair them.`,
 

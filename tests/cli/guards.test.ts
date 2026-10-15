@@ -1,11 +1,12 @@
 // When the vault isn't ready, bad input, colour, and the exit codes that say which.
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { nodeFs, type ApplyFs } from '../../cli/src/apply';
 import { WriteError } from '../../cli/src/filesLayer';
 import { parseNow } from '../../cli/src/main';
+import { chooseConfigDir, type DotFolder } from '../../cli/src/vault';
 import { CONFIG, hashes, mtm, SETTINGS_FILE, syntheticVault, tempDir, writeFiles } from './helpers';
 import { contentsAfter } from '../../cli/src/filesLayer';
 
@@ -35,7 +36,9 @@ describe('the vault isn’t ready: exit 2', () => {
 	it('a folder that isn’t a vault', async () => {
 		const root = keep(join(tempDir(), 'Plain'));
 		mkdirSync(root);
-		expect((await mtm(['today', '--vault', root])).stderr).toBe(`${root} isn’t an Obsidian vault: it has no .obsidian folder.\n`);
+		expect((await mtm(['today', '--vault', root])).stderr).toBe(
+			`${root} isn’t an Obsidian vault: it has no .obsidian folder. If its configuration folder isn’t .obsidian, name it with --config-dir.\n`,
+		);
 	});
 
 	it('a vault without the plugin’s settings', async () => {
@@ -89,6 +92,135 @@ describe('the vault isn’t ready: exit 2', () => {
 		const write = await mtm(['done', 'Send the invoice', '--vault', root], writer);
 		expect(write).toEqual({ code: 2, stdout: '', stderr: 'These settings come from a newer version of Matters that Matter, so nothing is written. Update Matters that Matter first.\n' });
 		expect(hashes(root)).toEqual(before);
+	});
+});
+
+describe('finding the configuration folder without --config-dir', () => {
+	const folder = (name: string, hasSettings = false, looksLikeConfig = hasSettings): DotFolder => ({ name, hasSettings, looksLikeConfig });
+	/** The synthetic vault with its configuration folder renamed. */
+	const vaultWith = (configDir: string) => {
+		const root = keep(syntheticVault());
+		renameSync(join(root, CONFIG), join(root, configDir));
+		return root;
+	};
+	const settingsIn = (configDir: string) => ({ [`${configDir}/plugins/matters-that-matter/data.json`]: JSON.stringify({ setupDone: true }) });
+
+	it('the choice, from the root’s dot-folders', () => {
+		expect(chooseConfigDir([folder('.obsidian', true), folder('.obsidian-mobile', true)])).toEqual({ ok: true, configDir: '.obsidian' });
+		expect(chooseConfigDir([folder('.obsidian', false, true), folder('.obsidian-mobile', true)])).toEqual({ ok: true, configDir: '.obsidian-mobile' });
+		expect(chooseConfigDir([folder('.b', true), folder('.a', true)])).toEqual({ ok: false, reason: 'several', folders: ['.a', '.b'] });
+		expect(chooseConfigDir([folder('.obsidian', false, true), folder('.config', false, true)])).toEqual({ ok: false, reason: 'no-settings', folders: ['.obsidian'] });
+		expect(chooseConfigDir([folder('.obsidian', false, false)])).toEqual({ ok: false, reason: 'no-settings', folders: ['.obsidian'] });
+		expect(chooseConfigDir([folder('.config', false, true), folder('.cache')])).toEqual({ ok: false, reason: 'no-settings', folders: ['.config'] });
+		expect(chooseConfigDir([folder('.cache'), folder('.vscode')])).toEqual({ ok: false, reason: 'not-a-vault' });
+		expect(chooseConfigDir([])).toEqual({ ok: false, reason: 'not-a-vault' });
+		expect(chooseConfigDir([folder('.trash', true), folder('.git', true), folder('.obsidian-mobile', true)])).toEqual({ ok: true, configDir: '.obsidian-mobile' });
+		expect(chooseConfigDir([folder('.trash', true), folder('.git', true)])).toEqual({ ok: false, reason: 'not-a-vault' });
+	});
+
+	it('.obsidian with the plugin’s settings, even beside another folder with them', async () => {
+		const root = keep(syntheticVault());
+		writeFiles(root, settingsIn('.obsidian-mobile'));
+		const r = await mtm(['workflow', '--vault', root]);
+		expect(r.code).toBe(0);
+		expect(r.stderr).toBe('');
+		expect(r.stdout).not.toContain('.obsidian');
+	});
+
+	it('one other folder with them: that one, never named in the output', async () => {
+		const root = vaultWith('.obsidian-mobile');
+		const other = keep(syntheticVault());
+		const before = await mtm(['today', '--vault', other]);
+		const r = await mtm(['today', '--vault', root]);
+		expect(r).toEqual({ ...before, stdout: before.stdout.replaceAll(other, root) });
+		expect(r.code).toBe(0);
+		expect(r.stdout + r.stderr).not.toContain('.obsidian-mobile');
+		const json = await mtm(['today', '--json', '--vault', root]);
+		expect(json.code).toBe(0);
+		expect(json.stdout).not.toContain('.obsidian-mobile');
+	});
+
+	it('…also beside an .obsidian without them, and writes there', async () => {
+		const root = vaultWith('.obsidian-mobile');
+		mkdirSync(join(root, CONFIG));
+		writeFiles(root, { [`${CONFIG}/app.json`]: '{}' });
+		const r = await mtm(['add', 'Call the plumber', '--vault', root]);
+		expect(r.code).toBe(0);
+		expect(readFileSync(join(root, 'MTM/Actions/Call the plumber.md'), 'utf8')).toContain('mtm-kind: action');
+	});
+
+	it('two folders with them: refused, naming both', async () => {
+		const root = vaultWith('.obsidian-mobile');
+		writeFiles(root, settingsIn('.obsidian-laptop'));
+		const before = hashes(root);
+		const r = await mtm(['add', 'Too soon', '--vault', root]);
+		expect(r).toEqual({
+			code: 2,
+			stdout: '',
+			stderr: 'Found the settings of Matters that Matter in .obsidian-laptop and .obsidian-mobile. Name the one to use with --config-dir.\n',
+		});
+		expect(hashes(root)).toEqual(before);
+		const json = await mtm(['today', '--json', '--vault', root]);
+		expect(JSON.parse(json.stdout)).toMatchObject({ error: { code: 'not-ready' } });
+		expect(await mtm(['add', 'Now', '--config-dir', '.obsidian-laptop', '--vault', root])).toMatchObject({ code: 0 });
+	});
+
+	it('none, with .obsidian: no settings there', async () => {
+		const root = keep(join(tempDir(), 'Bare'));
+		writeFiles(root, { '.obsidian/app.json': '{}', '.config/plugins/other/data.json': '{}' });
+		expect((await mtm(['today', '--vault', root])).stderr).toBe(
+			`Matters that Matter isn’t installed in ${root}: there’s no .obsidian/plugins/matters-that-matter/data.json. Install the plugin and run setup in Obsidian first.\n`,
+		);
+	});
+
+	it('none, without .obsidian: the folder that looks like Obsidian’s, else not a vault', async () => {
+		const root = keep(join(tempDir(), 'Other'));
+		writeFiles(root, { '.obsidian-mobile/workspace.json': '{}', '.cache/x.txt': '' });
+		expect((await mtm(['today', '--vault', root])).stderr).toBe(
+			`Matters that Matter isn’t installed in ${root}: there’s no .obsidian-mobile/plugins/matters-that-matter/data.json. Install the plugin and run setup in Obsidian first.\n`,
+		);
+		writeFiles(root, { '.obsidian-laptop/plugins/other/main.js': '' });
+		expect((await mtm(['today', '--vault', root])).stderr).toBe(
+			`Matters that Matter isn’t installed in ${root}: none of its configuration folders (.obsidian-laptop, .obsidian-mobile) has plugins/matters-that-matter/data.json. Install the plugin and run setup in Obsidian first.\n`,
+		);
+		const plain = keep(join(tempDir(), 'Plain'));
+		writeFiles(plain, { '.cache/x.txt': '', 'Note.md': '' });
+		expect(await mtm(['today', '--vault', plain])).toEqual({
+			code: 2,
+			stdout: '',
+			stderr: `${plain} isn’t an Obsidian vault: it has no .obsidian folder. If its configuration folder isn’t .obsidian, name it with --config-dir.\n`,
+		});
+	});
+
+	it('--config-dir wins over what would be found', async () => {
+		const root = keep(syntheticVault());
+		writeFiles(root, { '.config/app.json': '{}' });
+		expect((await mtm(['workflow', '--config-dir', '.config', '--vault', root])).stderr).toBe(
+			`Matters that Matter isn’t installed in ${root}: there’s no .config/plugins/matters-that-matter/data.json. Install the plugin and run setup in Obsidian first.\n`,
+		);
+		expect((await mtm(['workflow', '--config-dir', '.nothing', '--vault', root])).stderr).toBe(`${root} isn’t an Obsidian vault: it has no .nothing folder.\n`);
+		const two = vaultWith('.obsidian-mobile');
+		writeFiles(two, settingsIn('.obsidian-laptop'));
+		expect((await mtm(['workflow', '--config-dir', '.obsidian-mobile', '--vault', two])).code).toBe(0);
+	});
+
+	it('.trash and .git are never configuration folders', async () => {
+		const root = vaultWith('.obsidian-mobile');
+		writeFiles(root, { ...settingsIn('.trash'), ...settingsIn('.git') });
+		expect((await mtm(['workflow', '--vault', root])).code).toBe(0);
+		const bare = keep(join(tempDir(), 'Trash'));
+		writeFiles(bare, { ...settingsIn('.trash'), '.git/HEAD': '', '.git/plugins/x': '' });
+		expect((await mtm(['today', '--vault', bare])).stderr).toBe(
+			`${bare} isn’t an Obsidian vault: it has no .obsidian folder. If its configuration folder isn’t .obsidian, name it with --config-dir.\n`,
+		);
+	});
+
+	it('one level only: settings deeper down aren’t looked for', async () => {
+		const root = keep(join(tempDir(), 'Deep'));
+		writeFiles(root, settingsIn('.sync/.obsidian'));
+		expect((await mtm(['today', '--vault', root])).stderr).toBe(
+			`${root} isn’t an Obsidian vault: it has no .obsidian folder. If its configuration folder isn’t .obsidian, name it with --config-dir.\n`,
+		);
 	});
 });
 
