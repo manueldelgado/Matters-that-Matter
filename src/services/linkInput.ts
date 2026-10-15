@@ -118,7 +118,9 @@ function defuseMarkdownLinks(text: string): string {
  * nothing turns them into links, wherever they are: inside a web address too, since renderers end web addresses in
  * different places. A renderer may start the scheme anywhere in the run of scheme characters before the colon
  * (`1obsidian://`, `a1javascript:`, `x:obsidian://`), so the whole run is weighed: a colon followed by `//`, or by
- * text after a run that ends in an acting scheme, is escaped unless the run is just http or https.
+ * text after a run that ends in an acting scheme, is escaped unless the run is just http or https. Renderers that
+ * read a scheme backwards from the colon stop at a digit, `+`, `-` or `.`, never at a letter, so an acting scheme
+ * counts only where no letter comes right before it: `metadata:y`, `profile:x` and `hotel:5` stay as typed.
  */
 function defuseBareSchemes(text: string): string {
 	// Runs of scheme characters are matched whole: a match can only start where a run starts.
@@ -126,10 +128,14 @@ function defuseBareSchemes(text: string): string {
 		const lower = run.toLowerCase();
 		if (!/[a-z]/.test(lower) || lower === 'http' || lower === 'https') return whole;
 		const after = all.slice(offset + whole.length);
-		const acting = [...BARE_SCHEMES].some((scheme) => lower.endsWith(scheme));
-		const live = after.startsWith('//') || (acting && /^\S/u.test(after));
+		const live = after.startsWith('//') || (endsInActingScheme(lower) && /^\S/u.test(after));
 		return live ? `${run}\\:` : whole;
 	});
+}
+
+/** Whether a run of scheme characters (lower case) ends in an acting scheme with no letter right before it. */
+function endsInActingScheme(run: string): boolean {
+	return [...BARE_SCHEMES].some((scheme) => run.endsWith(scheme) && !/[a-z]/.test(run.charAt(run.length - scheme.length - 1)));
 }
 
 // ——— Text written into a note ———

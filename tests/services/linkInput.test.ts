@@ -27,7 +27,9 @@ function written(params: LinkParams) {
 }
 
 /** Schemes that act without `//`, as renderers and the OS know them. */
-const ACTING_SCHEMES = new Set(['javascript', 'vbscript', 'data', 'file', 'obsidian', 'mailto', 'tel', 'blob', 'about']);
+const ACTING_SCHEMES = ['javascript', 'vbscript', 'data', 'file', 'obsidian', 'mailto', 'tel', 'blob', 'about'];
+/** One at the end of a scheme, unless a letter comes right before it (a renderer reading back never stops at a letter). */
+const ENDS_ACTING = new RegExp(`(?<![a-z])(?:${ACTING_SCHEMES.join('|')})$`, 'i');
 
 /**
  * Anything in a body that a renderer or another plugin could act on, checked on its own terms (not with the code
@@ -57,7 +59,7 @@ function liveMarkup(body: string): string[] {
 		const scheme = (m[1] ?? '').toLowerCase();
 		const after = text.slice((m.index ?? 0) + m[0].length);
 		if (scheme.endsWith('http') || scheme.endsWith('https')) continue;
-		if (after.startsWith('//') || ([...ACTING_SCHEMES].some((s) => scheme.endsWith(s)) && /^\S/u.test(after))) found.push(`${scheme}:`);
+		if (after.startsWith('//') || (ENDS_ACTING.test(scheme) && /^\S/u.test(after))) found.push(`${scheme}:`);
 	}
 	for (const m of text.matchAll(/\]([(:])/g)) {
 		if (escaped(m.index ?? 0)) continue;
@@ -138,6 +140,22 @@ const HOSTILE: [string, LinkParams, string | null, string | null, string[]][] = 
 	['a scheme right after another colon', { title: 'A', details: 'x:obsidian://evil and see:javascript:y' }, 'MTM/Actions/A.md', 'x:obsidian\\://evil and see:javascript\\:y\n', []],
 	['a scheme glued to a digit in a checklist', { title: 'A', checklist: '1obsidian://x' }, 'MTM/Actions/A.md', '- [ ] 1obsidian\\://x\n', []],
 	['a percent-encoded scheme in a destination', { title: 'A', details: '[x](obsidian%3A%2F%2Fe)' }, 'MTM/Actions/A.md', '\\[x\\](obsidian%3A%2F%2Fe)\n', []],
+	[
+		'acting schemes after brackets, quotes, emphasis and an underscore',
+		{ title: 'A', details: `(javascript:alert(1)) "data:text/html,x" 'vbscript:y' *file:x* _about:blank` },
+		'MTM/Actions/A.md',
+		`(javascript\\:alert(1)) "data\\:text/html,x" 'vbscript\\:y' *file\\:x* _about\\:blank\n`,
+		[],
+	],
+	['acting schemes in capitals', { title: 'A', details: 'JavaScript:alert(1) DATA:x Obsidian:open' }, 'MTM/Actions/A.md', 'JavaScript\\:alert(1) DATA\\:x Obsidian\\:open\n', []],
+	['an acting scheme glued to +, - or .', { title: 'A', details: 'x+javascript:y a-data:x b.file:z' }, 'MTM/Actions/A.md', 'x+javascript\\:y a-data\\:x b.file\\:z\n', []],
+	['an acting scheme after a lookalike letter or a joiner', { title: 'A', details: 'аdata:x meta‍data:y' }, 'MTM/Actions/A.md', 'аdata\\:x meta‍data\\:y\n', []],
+	['a zero-width space before a scheme', { title: 'A', details: 'see ​javascript:alert(1)' }, 'MTM/Actions/A.md', 'see javascript\\:alert(1)\n', []],
+	['an entity standing for a scheme’s first letter', { title: 'A', details: '&#106;avascript:alert(1)' }, 'MTM/Actions/A.md', '&amp;#106;avascript:alert(1)\n', []],
+	['words ending in a scheme before //', { title: 'A', details: 'metadata://x and xobsidian://y' }, 'MTM/Actions/A.md', 'metadata\\://x and xobsidian\\://y\n', []],
+	['Markdown links to words ending in a scheme', { title: 'A', details: '[x](metadata:y) [z](xjavascript:alert(1))' }, 'MTM/Actions/A.md', '\\[x\\](metadata:y) \\[z\\](xjavascript:alert(1))\n', []],
+	['autolinks to a scheme and to a word ending in one', { title: 'A', details: '<javascript:alert(1)> <metadata:y>' }, 'MTM/Actions/A.md', '&lt;javascript\\:alert(1)> &lt;metadata:y>\n', []],
+	['a scheme at the start of a line', { title: 'A', details: 'notes\ndata:text/html,x' }, 'MTM/Actions/A.md', 'notes\ndata\\:text/html,x\n', []],
 	// Invisible characters and comments
 	[
 		'zero-width, invisible and tag characters (joiners kept)',
@@ -201,8 +219,23 @@ describe('links: hostile input written inert', () => {
 			'a1javascript:x',
 			'x:obsidian://y',
 			'<https://x.com/%%a>',
+			'DATA:y',
+			'x-javascript:y',
+			'x.data:y',
+			'_data:y',
+			'аdata:y',
+			'metadata://y',
 		];
 		for (const r of raw) expect(liveMarkup(r), r).not.toEqual([]);
+		for (const word of ['metadata:y', 'Profile:x', 'hotel:5']) expect(liveMarkup(word), word).toEqual([]);
+	});
+
+	it('leaves words that only end in a scheme name as typed', () => {
+		const text = 'metadata:y, bigdata:1, Profile:x, hotel:5, METADATA:Y, roundabout:here and userdata:{a}';
+		const w = written({ title: 'A', details: text, checklist: 'metadata:y\nhotel:5' });
+		expect(w.body).toBe(`${text}\n\n- [ ] metadata:y\n- [ ] hotel:5\n`);
+		expect(liveMarkup(w.body ?? '')).toEqual([]);
+		expect(inertMarkdown('profile:x and data:y')).toBe('profile:x and data\\:y');
 	});
 
 	it('never puts anything but the Matter and the people from a link into the frontmatter', () => {
