@@ -6,7 +6,7 @@ import { formatCadence, parseCadence, parseOutcome } from '../../model/matters';
 import { STRINGS } from '../../strings';
 import { DEFAULT_MATTER_ICON } from '../../services/notesModel';
 import { cadenceFields, type CadenceFields } from '../components/cadenceFields';
-import { appendIcon, tileEl } from '../components/dom';
+import { appendIcon, fieldWarning, tileEl } from '../components/dom';
 import { IconPickerModal } from './iconPickerModal';
 
 export interface NewMatterResult {
@@ -21,6 +21,8 @@ export interface NewMatterContext {
 	spheres: readonly SphereDef[];
 	/** The Sphere it starts in (from a board focused on one), or none. */
 	sphereId: string | null;
+	/** Whether a name would read as the Inbox; such a name can't be created. */
+	isInboxName?: (name: string) => boolean;
 }
 
 export class NewMatterModal extends Modal {
@@ -94,11 +96,22 @@ export class NewMatterModal extends Modal {
 		const footer = contentEl.createDiv({ cls: 'mtm-modal-footer' });
 		footer.createEl('button', { text: STRINGS.modals.cancel }).addEventListener('click', () => this.close());
 		const create = footer.createEl('button', { cls: 'mod-cta', text: t.create });
+		// A name like the Inbox's would make a copy of it: say so under the name, and Create waits for another.
+		const inboxWarning = fieldWarning(row, t.inboxName, t.inboxNameText);
+		const isInboxName = () => this.context.isInboxName?.(input.value) ?? false;
+		let creating = false;
+		const checkName = () => {
+			const refused = isInboxName();
+			inboxWarning(refused);
+			create.disabled = creating || refused;
+		};
+		input.addEventListener('input', checkName);
+		checkName();
 		const submit = () => {
 			// A repeated Enter must not create the Matter twice.
-			if (create.disabled) return;
+			if (creating) return;
 			const name = input.value.trim();
-			if (!name) {
+			if (!name || isInboxName()) {
 				input.focus();
 				return;
 			}
@@ -111,6 +124,7 @@ export class NewMatterModal extends Modal {
 				}
 				reviewEvery = formatCadence(cadence);
 			}
+			creating = true;
 			create.disabled = true;
 			void Promise.resolve(this.onCreate({ name, icon: this.icon, reviewEvery, sphereId: this.sphereId, outcome: parseOutcome(outcome.value) })).finally(() => this.close());
 		};

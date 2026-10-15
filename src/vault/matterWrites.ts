@@ -6,6 +6,7 @@ import { appendReviewNote, replaceReviewNote, reviewNoteLine } from '../model/bo
 import { toYmd, type Ymd } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { formatCadence, nextLaneOrder, parseOutcome, type Cadence, type LaneOrderWrite, type MatterState } from '../model/matters';
+import { isInboxLikeName } from '../services/inboxGuard';
 import { laneOf, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { now } from './clock';
@@ -85,12 +86,14 @@ export interface NewMatter {
 
 /**
  * Creates an active Matter in the Matters folder, after the last lane, under a name no other note has. `from` is
- * the Action the Matter is made from (Process Inbox): it may keep the same name.
+ * the Action the Matter is made from (Process Inbox): it may keep the same name. A name that would read as the Inbox
+ * is refused (callers check first, with `isInboxLikeName`).
  */
 export async function createMatter(app: App, settings: MattersSettings, init: NewMatter, from?: TFile): Promise<TFile> {
 	const folder = normalizePath(settings.folders.matters);
-	await ensureFolder(app, folder);
 	const base = sanitiseTitle(init.name) || STRINGS.untitledMatter;
+	if (isInboxLikeName(base, folder, settings.inboxPath)) throw new Error(STRINGS.ops.inboxName);
+	await ensureFolder(app, folder);
 	const title = uniqueTitle(base, (t) => pathTaken(app, `${folder}/${t}.md`) || nameTaken(app, t, from));
 	// The Inbox's lane order doesn't count: it has its own place on the board.
 	const lanes = notesOfKind(app, 'matter').map((f) => laneOf(noteData(app, f), settings.inboxPath));

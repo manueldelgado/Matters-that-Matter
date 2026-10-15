@@ -5,6 +5,7 @@ import {
 	isNameLike,
 	draftOf,
 	isNewPath,
+	newMatterName,
 	newName,
 	newPath,
 	replaceSpan,
@@ -175,5 +176,32 @@ describe('isNameLike', () => {
 		expect(isNameLike('Ana y Marco')).toBe(false);
 		expect(isNameLike('Ana Monday')).toBe(false);
 		expect(isNameLike('Ana Mañana')).toBe(false);
+	});
+});
+
+describe('newMatterName', () => {
+	const matters = [{ name: 'Inbox' }, { name: 'Kitchen renovation' }];
+	const offer = (typed: string) => newMatterName(typed, matters, 'MTM/Matters', 'MTM/Matters/Inbox.md');
+
+	it('offers what was typed, as a title', () => {
+		expect(offer('Garden')).toBe('Garden');
+		expect(offer('Tax: 2026')).toBe('Tax 2026');
+	});
+
+	it('offers nothing for an empty name or an existing Matter', () => {
+		expect(offer('  ')).toBeNull();
+		expect(offer('kitchen renovation')).toBeNull();
+	});
+
+	it.each(['Inbox 2', 'inbox 3', 'INBOX'])('offers nothing for a name like the Inbox’s: %j', (typed) => {
+		expect(offer(typed)).toBeNull();
+	});
+
+	it('offers a name like the Inbox’s once the Inbox has another name', () => {
+		expect(newMatterName('Inbox 2', [{ name: 'Capture' }], 'MTM/Matters', 'MTM/Matters/Capture.md')).toBe('Inbox 2');
+	});
+
+	it('the Inbox left out of the list (Process Inbox) still isn’t offered', () => {
+		expect(newMatterName('Inbox', [{ name: 'Kitchen renovation' }], 'MTM/Matters', 'MTM/Matters/Inbox.md')).toBeNull();
 	});
 });

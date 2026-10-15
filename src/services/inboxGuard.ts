@@ -1,5 +1,7 @@
 // Pure rules behind the Inbox protection. The event wiring lives with the plugin.
 
+import { sanitiseTitle } from '../model/titles';
+
 export interface InboxRepair {
 	'mtm-kind'?: 'matter';
 	'mtm-state'?: 'active';
@@ -31,4 +33,17 @@ export function isInboxDuplicate(path: string, inboxPath: string): boolean {
 	const folder = inboxPath.slice(0, slash + 1);
 	const name = inboxPath.slice(slash + 1).replace(/\.md$/i, '');
 	return new RegExp(`^${escape(folder)}${escape(name)} \\d+\\.md$`, 'i').test(path);
+}
+
+/**
+ * Whether a new Matter given this name, in this folder, would read as the Inbox: the Inbox's own name, in any case, or
+ * a numbered copy beside it ("Inbox 2"), which is warned about as a duplicate on every start.
+ */
+export function isInboxLikeName(name: string, folder: string, inboxPath: string): boolean {
+	const title = sanitiseTitle(name);
+	if (!title) return false;
+	const inboxName = inboxPath.slice(inboxPath.lastIndexOf('/') + 1).replace(/\.md$/i, '');
+	if (title.toLowerCase() === inboxName.toLowerCase()) return true;
+	const clean = folder.split('/').filter(Boolean).join('/');
+	return isInboxDuplicate(clean ? `${clean}/${title}.md` : `${title}.md`, inboxPath);
 }

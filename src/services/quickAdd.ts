@@ -3,7 +3,10 @@
 
 import { dayLabel, daysBetween, parseMtmDate, weekday, type MtmDate, type Ymd } from '../model/dates';
 import type { Priority } from '../model/actions';
+import { sanitiseTitle } from '../model/titles';
 import { STRINGS } from '../strings';
+import { normalise } from './fuzzy';
+import { isInboxLikeName } from './inboxGuard';
 import { continuesName, type Chip, type QuickAddResult } from './quickAddParser';
 
 const MAX_TOKEN_WORDS = 6;
@@ -15,6 +18,16 @@ const NEW_PREFIX = 'mtm-new:';
 export const newPath = (name: string): string => NEW_PREFIX + name;
 export const isNewPath = (path: string): boolean => path.startsWith(NEW_PREFIX);
 export const newName = (path: string): string => path.slice(NEW_PREFIX.length);
+
+/**
+ * The name a "New Matter …" suggestion offers for what was typed, or null when there is none to offer: nothing typed,
+ * a Matter of that name exists, or the name would read as the Inbox.
+ */
+export function newMatterName(typed: string, matters: readonly { name: string }[], folder: string, inboxPath: string): string | null {
+	const name = sanitiseTitle(typed);
+	if (!name || matters.some((m) => normalise(m.name) === normalise(name))) return null;
+	return isInboxLikeName(name, folder, inboxPath) ? null : name;
+}
 
 // ——— The token being typed ———
 

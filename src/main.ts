@@ -29,6 +29,7 @@ import { resolverFor } from './vault/index';
 import { createMatter } from './vault/matterWrites';
 import { Watchers } from './vault/watchers';
 import { pathSettingsAfterRename } from './services/renames';
+import { isInboxLikeName } from './services/inboxGuard';
 import { NoteDecorations } from './views/notes/noteDecorations';
 import { TodayPanels } from './views/today/todayPanels';
 import { LinkHandlers } from './links';
@@ -259,7 +260,11 @@ export default class MattersPlugin extends Plugin {
 				}
 			},
 			'',
-			{ spheres: this.settings.spheres, sphereId },
+			{
+				spheres: this.settings.spheres,
+				sphereId,
+				isInboxName: (name) => isInboxLikeName(name, this.settings.folders.matters, this.settings.inboxPath),
+			},
 		).open();
 	}
 
