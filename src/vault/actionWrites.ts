@@ -132,7 +132,7 @@ export async function addChecklistItem(app: App, file: TFile, text: string): Pro
 }
 
 /**
- * Renames an Action after its title (links update through the file manager).
+ * Renames an Action after its title (links update through the file manager), giving it the `mtm-id` it lacks.
  * Returns false when the title is empty or unchanged once sanitised.
  */
 export async function renameAction(app: App, file: TFile, rawTitle: string): Promise<boolean> {
@@ -143,5 +143,6 @@ export async function renameAction(app: App, file: TFile, rawTitle: string): Pro
 	// The same name in another case is the same file: renaming "call bob" to "Call Bob" changes its case only.
 	const title = uniqueTitle(base, (t) => pathTaken(app, pathFor(t), file));
 	await app.fileManager.renameFile(file, pathFor(title));
+	await ensureNoteId(app, file);
 	return true;
 }

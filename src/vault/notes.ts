@@ -84,7 +84,8 @@ export async function ensureNoteId(app: App, file: TFile): Promise<void> {
 	const fm = frontmatterOf(app, file);
 	if (!fm || !IDENTIFIED_KINDS.includes(fm['mtm-kind']) || hasNoteId(fm)) return;
 	await processFrontMatter(app, file, (data: Frontmatter) => {
-		if (!hasNoteId(data)) data['mtm-id'] = newNoteId();
+		// The properties as written, since the cache can lag: a note kept as a plain note meanwhile gets none.
+		if (IDENTIFIED_KINDS.includes(data['mtm-kind']) && !hasNoteId(data)) data['mtm-id'] = newNoteId();
 	});
 }
 
