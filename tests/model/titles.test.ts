@@ -7,6 +7,14 @@ describe('sanitiseTitle', () => {
 		expect(sanitiseTitle('What? *Now* <ok> | "x" ^y \\z')).toBe('What Now ok x y z');
 	});
 
+	it('writes a time with a full stop instead of its colon', () => {
+		expect(sanitiseTitle('Dentist fri 10:00')).toBe('Dentist fri 10.00');
+		expect(sanitiseTitle('Call at 9:30, then 23:59')).toBe('Call at 9.30, then 23.59');
+		expect(sanitiseTitle('2026-10-16T10:00')).toBe('2026-10-16T10.00');
+		// Not a time: the colon goes as any other.
+		expect(sanitiseTitle('Ratio 16:9 and 3:2, 24:00, 10:00:00')).toBe('Ratio 16 9 and 3 2, 24 00, 10 00 00');
+	});
+
 	it('collapses whitespace and trims', () => {
 		expect(sanitiseTitle('  Buy   paint \n now ')).toBe('Buy paint now');
 	});

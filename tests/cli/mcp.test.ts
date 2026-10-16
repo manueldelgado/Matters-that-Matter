@@ -182,12 +182,12 @@ describe('writing', () => {
 		const root = keep(fixtureCopy());
 		const before = hashes(root);
 		const { client } = await connect(['--vault', root]);
-		const PATH = 'MTM/Actions/Send Marco the revised quote.md';
+		const PATH = 'MTM/Actions/Send Marco the revised quote by friday.md';
 
-		const added = await call(client, 'add_action', { text: 'Send Marco the revised quote fri', matter: 'Kitchen', type: 'message' });
+		const added = await call(client, 'add_action', { text: 'Send Marco the revised quote by friday', matter: 'Kitchen', type: 'message' });
 		expect(added.isError).toBeFalsy();
 		expect(text(added)).toBe(
-			['Added “Send Marco the revised quote”', '  Kitchen renovation · Later · Message · due Fri 16 Oct', `  ${PATH}`].join('\n'),
+			['Added “Send Marco the revised quote by friday”', '  Kitchen renovation · Later · Message · due Fri 16 Oct', `  ${PATH}`].join('\n'),
 		);
 		expect(data(added)).toMatchObject({ action: { path: PATH, due: '2026-10-16' }, changed: true, written: true, dryRun: false });
 		expect(data<{ changes: unknown[] }>(added).changes[0]).toEqual({ kind: 'create', path: PATH });
@@ -195,9 +195,9 @@ describe('writing', () => {
 			['---', 'mtm-kind: action', 'mtm-type: message', 'mtm-status: later', 'mtm-matter: "[[Kitchen renovation]]"', 'mtm-due: 2026-10-16', '---', ''].join('\n'),
 		);
 
-		const updated = await call(client, 'update_action', { action: 'Send Marco the revised quote', due: '2026-10-15T10:00', priority: 'high', 'waiting-on': null });
+		const updated = await call(client, 'update_action', { action: 'Send Marco the revised quote by friday', due: '2026-10-15T10:00', priority: 'high', 'waiting-on': null });
 		expect(updated.isError).toBeFalsy();
-		expect(text(updated)).toMatch(/^Changed “Send Marco the revised quote”\n {2}mtm-due\s+2026-10-16 → 2026-10-15T10:00\n {2}mtm-priority\s+\(none\) → 1/);
+		expect(text(updated)).toMatch(/^Changed “Send Marco the revised quote by friday”\n {2}mtm-due\s+2026-10-16 → 2026-10-15T10:00\n {2}mtm-priority\s+\(none\) → 1/);
 		expect(read(root, PATH)).toContain('mtm-due: 2026-10-15T10:00\nmtm-priority: 1\n');
 
 		// Details: empty is refused, null removes them.
@@ -217,7 +217,7 @@ describe('writing', () => {
 		// Idempotent: again, nothing changes.
 		const again = await call(client, 'mark_as_done', { action: PATH });
 		expect(again.isError).toBeFalsy();
-		expect(text(again)).toBe('“Send Marco the revised quote” is already as asked. Nothing was changed.');
+		expect(text(again)).toBe('“Send Marco the revised quote by friday” is already as asked. Nothing was changed.');
 		expect(data(again)).toMatchObject({ changed: false, written: false, changes: [] });
 
 		const reopened = await call(client, 'reopen_action', { action: PATH });

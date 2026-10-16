@@ -30,7 +30,7 @@ export interface EmbedQuery {
 	due: { start: Ymd | null; end: Ymd } | null;
 	/** Tokens and words that match nothing: shown, never applied. */
 	invalid: string[];
-	/** The block's valid tokens, as quick add's starting text for "+". */
+	/** The block's valid tokens, set in quick add by its "+" (given, not typed: their words stay out of the title). */
 	prefill: string;
 	/** An empty block reads its note: the Matter, the person, or neither (today and late). */
 	context: 'matter' | 'person' | 'today' | null;

@@ -53,6 +53,15 @@ describe('applyFieldEdit', () => {
 		expect('mtm-people' in fm).toBe(false);
 	});
 
+	it('adds several people at once, each once, and leaves the list alone when there are none', () => {
+		const fm: Record<string, unknown> = { 'mtm-people': ['[[Ana]]'] };
+		applyFieldEdit(fm, { addPeople: [ana, marco, marco] }, keyOf, TODAY);
+		expect(fm['mtm-people']).toEqual(['[[Ana]]', '[[Marco Rossi]]']);
+		const none: Record<string, unknown> = { 'mtm-people': '[[Ana]]' };
+		applyFieldEdit(none, { addPeople: [] }, keyOf, TODAY);
+		expect(none['mtm-people']).toBe('[[Ana]]');
+	});
+
 	it('restarts the wait for another person, keeps it for the same one', () => {
 		const fm: Record<string, unknown> = { 'mtm-waiting-on': '[[Ana]]', 'mtm-waiting-since': '2026-09-01' };
 		applyFieldEdit(fm, { waitingOn: ana }, keyOf, TODAY);

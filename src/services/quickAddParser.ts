@@ -1,5 +1,6 @@
 // Quick-add parsing: tokens (/type, #Matter, @person, !priority) and natural dates (English and Spanish).
-// Recognised tokens are removed from the title and returned as chips.
+// Recognised tokens are returned as chips. People and dates keep their words in the title (a name without its `@`
+// and quotes, a date as typed); /type, #Matter and !priority leave it.
 
 import { GB as chronoEn } from 'chrono-node/en';
 import { casual as chronoEs } from 'chrono-node/es';
@@ -28,6 +29,8 @@ export interface QuickAddContext {
 	languages?: readonly DateLanguage[];
 	/** Texts of date chips the user removed; they stay in the title. */
 	ignoredDates?: readonly string[];
+	/** Texts of /type, #Matter, @person and !priority tokens the user removed: read as plain words. */
+	ignoredTokens?: readonly string[];
 	/** An IANA time zone whose "today" and "now" dates are read in; the host's own when absent. */
 	timeZone?: string;
 }
@@ -50,6 +53,7 @@ export type Chip =
 
 export interface QuickAddResult {
 	title: string;
+	/** Every token and date read, in the order written; the values below take the last valid one of each kind. */
 	chips: Chip[];
 	/** null: use the default type. */
 	typeId: string | null;
@@ -146,8 +150,12 @@ function matchName<T extends Candidate>(
 	return { end: last[2], query: bare(text.slice(from, last[2])), item: null };
 }
 
-function findTokens(text: string, ctx: QuickAddContext): Chip[] {
+/** The tokens in the text, and the removed `@person` tokens, which the title still keeps as names. */
+function findTokens(text: string, ctx: QuickAddContext): { chips: Chip[]; names: Span[] } {
 	const chips: Chip[] = [];
+	const names: Span[] = [];
+	const ignored = new Set((ctx.ignoredTokens ?? []).map((t) => t.trim().toLowerCase()));
+	const isIgnored = (t: string) => ignored.has(t.trim().toLowerCase());
 	let i = 0;
 	while (i < text.length) {
 		const ch = text[i] ?? '';
@@ -155,7 +163,7 @@ function findTokens(text: string, ctx: QuickAddContext): Chip[] {
 			i++;
 			continue;
 		}
-		if (ch === '!' && /^![123](?=\s|$)/.test(text.slice(i))) {
+		if (ch === '!' && /^![123](?=\s|$)/.test(text.slice(i)) && !isIgnored(text.slice(i, i + 2))) {
 			chips.push({ kind: 'priority', text: text.slice(i, i + 2), start: i, end: i + 2, priority: Number(text[i + 1]) as Priority });
 			i += 2;
 			continue;
@@ -163,7 +171,12 @@ function findTokens(text: string, ctx: QuickAddContext): Chip[] {
 		if (ch === '/' || ch === '#' || ch === '@') {
 			const list = ch === '/' ? ctx.types : ch === '#' ? ctx.matters : ctx.people;
 			const m = matchName<Candidate>(text, i, list, ch !== '/');
-			if (m) {
+			if (m && ch === '@' && isIgnored(text.slice(i, m.end))) {
+				names.push({ text: text.slice(i, m.end), start: i, end: m.end });
+				i = m.end;
+				continue;
+			}
+			if (m && !isIgnored(text.slice(i, m.end))) {
 				const span = { text: text.slice(i, m.end), start: i, end: m.end, query: m.query };
 				if (ch === '/') chips.push({ ...span, kind: 'type', id: (m.item as TypeCandidate | null)?.id ?? null });
 				else if (ch === '#') chips.push({ ...span, kind: 'matter', path: (m.item as NoteCandidate | null)?.path ?? null });
@@ -174,7 +187,7 @@ function findTokens(text: string, ctx: QuickAddContext): Chip[] {
 		}
 		i++;
 	}
-	return chips;
+	return { chips, names };
 }
 
 // ——— Dates ———
@@ -240,12 +253,14 @@ function shiftMonths(ymd: string, months: number): string | null {
 const inMonthBefore = (ymd: string) => shiftMonths(ymd, -1);
 
 /**
- * Words that chrono reads as dates but that are usually part of a title: a part of the day, the weekend,
+ * Words that chrono reads as dates but that are usually part of a title: a part of the day, the weekend, "now",
  * a bare month name, and short weekday forms that are ordinary words ("sun", "sat", Spanish "mar", "dom").
  * They still count with a day or a time ("tomorrow morning", "this weekend", "12 March", "sat 10").
  */
 const WEAK_DATES = new Set([
 	...['morning', 'afternoon', 'evening', 'night', 'noon', 'midday', 'midnight', 'weekend', 'the weekend'],
+	// "now" is how a title says "soon", not a due time; as the last date written it would replace the one meant.
+	...['now', 'right now', 'ahora', 'ahora mismo'],
 	...['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'],
 	...['jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec'],
 	...['sun', 'sat'],
@@ -407,7 +422,11 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date, pars
 		const zoneA = zoneOf(a);
 		let end = a.index + a.text.length - (zoneA?.zone ? 0 : (zoneA?.cut ?? 0));
 		let zone = !!zoneA?.zone;
-		const fromC = a.start;
+		// A word taken for a time zone that goes back to the title ("friday now") is read again without it: chrono may
+		// have read it into the date as well.
+		const kept = zoneA && !zoneA.zone && zoneA.cut ? a.text.slice(0, a.text.length - zoneA.cut) : null;
+		const again = kept && !a.end ? parse(kept).find((r) => r.index === 0 && r.text.length === kept.length && !r.end) : undefined;
+		const fromC = again?.start ?? a.start;
 		let toC = a.end ?? null;
 		let toText = a.text;
 		const ownEnd = timeEndAsWritten(a, parse);
@@ -562,7 +581,8 @@ function parseSpanish(text: string, now: Date): ParsedResult[] {
 	return out;
 }
 
-function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
+/** Every reading of a date in the text, from every language and rule, with removed chips and weak words left out. */
+function dateSpans(text: string, ctx: QuickAddContext): DateSpan[] {
 	const languages = ctx.languages ?? DATE_LANGUAGES;
 	// Every date rule below reads "today" and "now" from this, never from the host's zone directly.
 	const now = wallClock(ctx.now, ctx.timeZone);
@@ -585,10 +605,23 @@ function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	return (
 		spans
 			.map(trimWeakLead)
-			.filter((s) => !ignored(s) && !WEAK_DATES.has(plainWords(s.text)))
-			// Longest match wins; on a tie, the earlier one.
-			.sort((a, b) => b.text.length - a.text.length || a.start - b.start)[0] ?? null
+			// A reading with no words left (chrono takes "now" for a time zone, which goes back to the title) is none.
+			.filter((s) => plainWords(s.text) !== '' && !ignored(s) && !WEAK_DATES.has(plainWords(s.text)))
+			// Longest first; on a tie, the earlier one.
+			.sort((a, b) => b.text.length - a.text.length || a.start - b.start)
 	);
+}
+
+/** The one date the whole text is read as: the longest reading. */
+function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
+	return dateSpans(text, ctx)[0] ?? null;
+}
+
+/** Every date in the text, in the order written: where readings overlap, the longest ("friday 10am", not "10am"). */
+function findDates(text: string, ctx: QuickAddContext): DateSpan[] {
+	const out: DateSpan[] = [];
+	for (const span of dateSpans(text, ctx)) if (!out.some((o) => span.start < o.end && span.end > o.start)) out.push(span);
+	return out.sort((a, b) => a.start - b.start);
 }
 
 /**
@@ -635,8 +668,36 @@ function figureProblems(input: string, tokens: readonly Chip[]): Chip[] {
 
 // ——— Parse ———
 
+/** A person token's words as the title keeps them: the name as written, without the `@` and the quotes. */
+export function personWords(text: string): string {
+	let name = text.replace(/^@/, '');
+	if (name.startsWith('"')) {
+		name = name.slice(1);
+		const close = name.indexOf('"');
+		if (close >= 0) name = name.slice(0, close) + name.slice(close + 1);
+	}
+	return name;
+}
+
+/**
+ * The title: the text with /type, #Matter and !priority tokens taken out and each @person token as its name (a removed
+ * one too). Dates,
+ * read or not, keep their words, so nothing typed is lost but the filing tokens.
+ */
+function titleOf(input: string, chips: readonly Chip[], names: readonly Span[]): string {
+	const spans = [...chips.map((c) => ({ ...c, name: c.kind === 'person' })), ...names.map((n) => ({ ...n, kind: 'name' as const, name: true }))].sort((a, b) => a.start - b.start);
+	let title = '';
+	let i = 0;
+	for (const c of spans) {
+		if (c.kind === 'date' || c.kind === 'invalid-date' || c.start < i) continue;
+		title += input.slice(i, c.start) + (c.name ? personWords(c.text) : ' ');
+		i = c.end;
+	}
+	return (title + input.slice(i)).replace(/\s+/g, ' ').trim();
+}
+
 export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResult {
-	const tokens = findTokens(input, ctx);
+	const { chips: tokens, names } = findTokens(input, ctx);
 	const chips = [...tokens, ...figureProblems(input, tokens)];
 
 	// Dates are read on the text without its tokens, so "tomorrow #Kitchen 5pm" is one date and no date runs into a token.
@@ -649,17 +710,13 @@ export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResu
 		compact += input[i];
 		at.push(i);
 	}
-	// A date that isn't read keeps its text in the title, so nothing typed is lost.
-	const removed = new Array<boolean>(input.length).fill(false);
-	for (const c of chips) if (c.kind !== 'invalid-date') for (let i = c.start; i < c.end; i++) removed[i] = true;
-
-	const date = findDate(compact, ctx);
-	if (date?.problem) {
-		const start = at[date.start] ?? 0, end = (at[date.end - 1] ?? 0) + 1;
-		chips.push({ kind: 'invalid-date', text: input.slice(start, end), start, end, problem: date.problem });
-	} else if (date) {
+	for (const date of findDates(compact, ctx)) {
+		if (date.problem) {
+			const start = at[date.start] ?? 0, end = (at[date.end - 1] ?? 0) + 1;
+			chips.push({ kind: 'invalid-date', text: input.slice(start, end), start, end, problem: date.problem });
+			continue;
+		}
 		const from = withLead(compact, date.start);
-		for (let i = from; i < date.end; i++) removed[at[i] ?? 0] = true;
 		chips.push({
 			kind: 'date',
 			text: date.text,
@@ -671,9 +728,7 @@ export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResu
 	}
 	chips.sort((a, b) => a.start - b.start);
 
-	let title = '';
-	for (let i = 0; i < input.length; i++) title += removed[i] ? ' ' : input[i];
-	title = title.replace(/\s+/g, ' ').trim();
+	const title = titleOf(input, chips, names);
 
 	const result: QuickAddResult = { title, chips, typeId: null, matterPath: null, people: [], priority: null, start: null, due: null };
 	for (const c of chips) {

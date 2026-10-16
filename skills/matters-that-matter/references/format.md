@@ -91,7 +91,7 @@ The minimal Action is a note with only `mtm-kind: action`: it shows in the Inbox
 
 ### File names
 
-- Start from the title; replace each of `/ \ : * ? " < > | # ^ [ ]` with a space (they break file names or links); collapse runs of whitespace to one space; trim; drop leading dots; cap at 100 characters.
+- Start from the title; replace each of `/ \ : * ? " < > | # ^ [ ]` with a space (they break file names or links), except that a time's colon becomes a full stop ("10:00" → "10.00"); collapse runs of whitespace to one space; trim; drop leading dots; cap at 100 characters.
 - If a note with that name already exists, in the folder or anywhere else in the vault (ignoring case), append " 2", " 3"… until the name is free. A name another note already has would make links to that note reach the new one.
 - Changing an Action's title means renaming its file. Renaming outside Obsidian leaves links to the old name broken, so rename through the command line or the MCP server (which update links when Obsidian's "Automatically update internal links" is on), or let the user rename in Obsidian.
 

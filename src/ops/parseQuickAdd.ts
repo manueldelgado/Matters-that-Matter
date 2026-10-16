@@ -18,11 +18,12 @@ export function parseQuickAdd(text: string, s: Snapshot): OpResult<ParsedQuickAd
 	const { settings } = s;
 	const { backlog, fallbackType } = fallbacks(s);
 	const result = parseText(t.value, s);
-	const draft = draftOf(result, { contextMatter: null, contextStatus: null, pickedType: null, inboxPath: settings.inboxPath, backlogId: backlog.id, defaultTypeId: fallbackType.id });
+	const draft = draftOf(result, { contextMatter: null, contextStatus: null, contextType: null, inboxPath: settings.inboxPath, backlogId: backlog.id, defaultTypeId: fallbackType.id });
 	const type = settings.types.find((x) => x.id === draft.typeId) ?? fallbackType;
 
 	const value: ParsedQuickAdd = {
-		title: draft.title,
+		// As the note would be named (a time's colon as a full stop), before " 2" for a taken name.
+		title: sanitiseTitle(draft.title),
 		status: { id: backlog.id, label: backlog.label },
 		type: { id: type.id, label: type.label, isDefault: result.typeId === null },
 		matter: { path: draft.matterPath, name: matterName(draft.matterPath, s), isDefault: draft.matterIsDefault },

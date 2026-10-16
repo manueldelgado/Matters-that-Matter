@@ -1,11 +1,14 @@
 // Action and Matter titles are file names.
 
 const FORBIDDEN = /[/\\:*?"<>|#^[\]]/g;
+/** A time of day ("10:00", "9:30"): its colon becomes a full stop, as times are written in British English ("10.00"). */
+const TIME = /(?<![\d:])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])/g;
 export const MAX_TITLE_LENGTH = 100;
 
-/** Removes characters that break file names or links, collapses whitespace, trims and caps the length. */
+/** Removes characters that break file names or links (a time keeps its colon as a full stop), collapses whitespace, trims and caps the length. */
 export function sanitiseTitle(raw: string): string {
 	const clean = raw
+		.replace(TIME, '$1.$2')
 		.replace(FORBIDDEN, ' ')
 		.replace(/\s+/g, ' ')
 		.trim()

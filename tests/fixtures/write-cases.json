@@ -19,7 +19,7 @@
 		"description": "Add an Action from quick add text alone: Matter, type, person, priority and a date with a time.",
 		"op": "addAction",
 		"input": {
-			"text": "Ask Charlie about the corner unit #Kitchen /call @Charlie !2 fri 10:00"
+			"text": "Ask @Charlie about the corner unit on fri 10:00 #Kitchen /call !2"
 		},
 		"now": "2026-10-09T12:00"
 	},
@@ -28,7 +28,7 @@
 		"description": "Quick add text and fields together: the fields win over the text.",
 		"op": "addAction",
 		"input": {
-			"text": "Buy paint samples #Kitchen /buy tomorrow",
+			"text": "Buy paint samples tomorrow #Kitchen /buy",
 			"type": "visit",
 			"status": "doing",
 			"priority": 3

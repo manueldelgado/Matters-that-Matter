@@ -6,7 +6,7 @@
 	"plan": {
 		"creates": [
 			{
-				"path": "MTM/Actions/Buy paint samples.md",
+				"path": "MTM/Actions/Buy paint samples tomorrow.md",
 				"frontmatter": [
 					[
 						"mtm-kind",

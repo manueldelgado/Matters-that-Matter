@@ -30,10 +30,10 @@ describe('getWorkflow', () => {
 
 describe('parseQuickAdd', () => {
 	it('says what adding would make, without planning anything', () => {
-		const r = ok(parseQuickAdd('Call Marco about the quote /call #Kitchen fri 10:00 !1 @Marco', s));
+		const r = ok(parseQuickAdd('Call @Marco about the quote /call #Kitchen fri 10:00 !1', s));
 		expect(r.plan).toEqual({ creates: [], edits: [], bodies: [], renames: [] });
 		expect(r.value).toEqual({
-			title: 'Call Marco about the quote',
+			title: 'Call Marco about the quote fri 10.00',
 			status: { id: 'later', label: 'Later' },
 			type: { id: 'call', label: 'Call', isDefault: false },
 			matter: { path: 'MTM/Matters/Kitchen renovation.md', name: 'Kitchen renovation', isDefault: false },
@@ -42,11 +42,11 @@ describe('parseQuickAdd', () => {
 			start: null,
 			due: '2026-10-16T10:00',
 			chips: [
+				{ kind: 'person', text: '@Marco', valid: true },
 				{ kind: 'type', text: '/call', valid: true },
 				{ kind: 'matter', text: '#Kitchen', valid: true },
 				{ kind: 'date', text: 'fri 10:00', valid: true },
 				{ kind: 'priority', text: '!1', valid: true },
-				{ kind: 'person', text: '@Marco', valid: true },
 			],
 		});
 		expect(r.warnings).toEqual([]);
@@ -71,9 +71,9 @@ describe('parseQuickAdd', () => {
 
 	it('a date that isn’t read is a date chip that isn’t valid', () => {
 		const r = ok(parseQuickAdd('Call the bank 2026-10-16T10:00Z', s));
-		expect(r.value).toMatchObject({ title: 'Call the bank 2026-10-16T10:00Z', due: null, chips: [{ kind: 'date', text: '2026-10-16T10:00Z', valid: false }] });
+		expect(r.value).toMatchObject({ title: 'Call the bank 2026-10-16T10.00Z', due: null, chips: [{ kind: 'date', text: '2026-10-16T10:00Z', valid: false }] });
 		expect(r.warnings.map((w) => [w.code, w.message])).toEqual([
-			['unreadable-date', '“2026-10-16T10:00Z” has a time zone, so no date is set and it stays in the title. Dates are in local time: leave the zone out.'],
+			['unreadable-date', '“2026-10-16T10:00Z” has a time zone, so no date is set. Dates are in local time: leave the zone out.'],
 		]);
 	});
 });

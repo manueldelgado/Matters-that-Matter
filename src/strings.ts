@@ -322,6 +322,10 @@ export const STRINGS = {
 		rangeSep: ' → ',
 		removeDate: 'Remove date',
 		removeMatter: 'Remove Matter',
+		removeType: 'Remove type',
+		removePriority: 'Remove priority',
+		removePerson: (name: string) => `Remove ${name}`,
+		removeToken: (text: string) => `Remove “${text}”`,
 		defaultMatter: (inbox: string) => `No Matter given, so it goes to the ${inbox}`,
 		defaultStatus: (status: string) => `New Actions start in ${status}`,
 		contextMatter: 'From the lane you added it in',
@@ -974,8 +978,8 @@ export const STRINGS = {
 		/** A date in the quick add text that isn't read; `zone` when it has a time zone. */
 		unreadDate: (text: string, zone: boolean, added = true) =>
 			zone
-				? `“${text}” has a time zone, so no date ${added ? 'was' : 'is'} set and it stays in the title. Dates are in local time: leave the zone out.`
-				: `“${text}” isn’t a real date, so no date ${added ? 'was' : 'is'} set and it stays in the title.`,
+				? `“${text}” has a time zone, so no date ${added ? 'was' : 'is'} set. Dates are in local time: leave the zone out.`
+				: `“${text}” isn’t a real date, so no date ${added ? 'was' : 'is'} set.`,
 		startAfterDue: 'It starts after it’s due; it keeps both dates and is placed by the due date.',
 		newerSettings: 'These settings come from a newer version of Matters that Matter; what you read may miss something new.',
 		missingInbox: (path: string) => `The Inbox note (${path}) is missing; Matters that Matter creates it again when the vault is next open in Obsidian.`,

@@ -173,7 +173,7 @@ describe('reading', () => {
 		const r = await mtm(['parse', 'Call Marco about the tiles /call #Kitchen @Marco @Zed fri 10:00 !1', '--vault', root]);
 		expect(r.code).toBe(0);
 		expect(r.stdout).toMatchInlineSnapshot(`
-			"“Call Marco about the tiles”
+			"“Call Marco about the tiles Marco Zed fri 10.00”
 			  Kitchen renovation · Later · Call · due Fri 16 Oct 10:00 · high priority
 			  People: Marco Rossi
 			  Read: /call, #Kitchen, @Marco, @Zed (matched nothing), fri 10:00, !1
@@ -181,7 +181,7 @@ describe('reading', () => {
 			"
 		`);
 		const json = JSON.parse((await mtm(['parse', 'Ring the bank tomorrow', '--json', '--vault', root])).stdout) as Record<string, unknown>;
-		expect(json).toMatchObject({ title: 'Ring the bank', due: '2026-10-10', matter: { name: 'Inbox', isDefault: true } });
+		expect(json).toMatchObject({ title: 'Ring the bank tomorrow', due: '2026-10-10', matter: { name: 'Inbox', isDefault: true } });
 		expect(hashes(root)).toEqual(before);
 	});
 
@@ -306,9 +306,9 @@ describe('writing', () => {
 	it('a dry run of an add', async () => {
 		const root = keep(syntheticVault());
 		expect((await mtm(['add', 'Ring the bank tomorrow !2', '--dry-run', '--vault', root], writer)).stdout).toMatchInlineSnapshot(`
-			"Would add “Ring the bank”
+			"Would add “Ring the bank tomorrow”
 			  Inbox · Later · Write · due tomorrow · medium priority
-			  MTM/Actions/Ring the bank.md
+			  MTM/Actions/Ring the bank tomorrow.md
 			Nothing written (dry run).
 			"
 		`);
@@ -412,11 +412,11 @@ describe('warnings', () => {
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
-			stdout: `Would add “Ask about the gym”
+			stdout: `Would add “Ask about the gym Zed”
   Inbox · Later · Write
   No Matter matches “Gym”, so it would go to the Inbox.
   No note matches “Zed”, so it would be left out.
-  MTM/Actions/Ask about the gym.md
+  MTM/Actions/Ask about the gym Zed.md
 Nothing written (dry run).
 `,
 		});

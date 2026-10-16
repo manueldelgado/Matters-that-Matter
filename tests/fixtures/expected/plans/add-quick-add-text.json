@@ -6,7 +6,7 @@
 	"plan": {
 		"creates": [
 			{
-				"path": "MTM/Actions/Ask Charlie about the corner unit.md",
+				"path": "MTM/Actions/Ask Charlie about the corner unit on fri 10.00.md",
 				"frontmatter": [
 					[
 						"mtm-kind",

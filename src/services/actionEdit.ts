@@ -19,6 +19,8 @@ export interface FieldEdit {
 	/** 'YYYY-MM-DD', or null to remove; for a wait that started before it was recorded. */
 	waitingSince?: string | null;
 	addPerson?: LinkValue;
+	/** People to add to mtm-people, each once. */
+	addPeople?: readonly LinkValue[];
 	/** Key of the person to remove from mtm-people. */
 	removePerson?: string;
 }
@@ -54,8 +56,9 @@ export function applyFieldEdit(fm: Record<string, unknown>, edit: FieldEdit, key
 	}
 	if (edit.waitingSince !== undefined) setOrDelete(fm, 'mtm-waiting-since', edit.waitingSince);
 	if (edit.addPerson) add(edit.addPerson);
+	for (const person of edit.addPeople ?? []) add(person);
 	if (edit.removePerson !== undefined) people = people.filter((p) => keyOf(p) !== edit.removePerson);
 
-	const touchesPeople = edit.waitingOn || edit.addPerson || edit.removePerson !== undefined;
+	const touchesPeople = edit.waitingOn || edit.addPerson || edit.addPeople?.length || edit.removePerson !== undefined;
 	if (touchesPeople) setOrDelete(fm, 'mtm-people', people.length ? people : null);
 }

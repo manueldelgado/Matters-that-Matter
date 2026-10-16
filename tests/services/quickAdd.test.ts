@@ -9,7 +9,6 @@ import {
 	newName,
 	newPath,
 	replaceSpan,
-	rewriteTypeToken,
 	tokenName,
 } from '../../src/services/quickAdd';
 import { parseQuickAdd, type QuickAddContext } from '../../src/services/quickAddParser';
@@ -74,20 +73,6 @@ describe('replaceSpan and tokenName', () => {
 	});
 });
 
-describe('rewriteTypeToken', () => {
-	it('replaces the last type token, valid or not', () => {
-		const input = '/shop Paint /call';
-		const { chips } = parseQuickAdd(input, ctx);
-		expect(rewriteTypeToken(input, chips, 'Meet')).toBe('/shop Paint /Meet');
-		const invalid = parseQuickAdd('/shop Paint', ctx);
-		expect(rewriteTypeToken('/shop Paint', invalid.chips, 'Follow up')).toBe('/"Follow up" Paint');
-	});
-
-	it('returns null without a type token', () => {
-		expect(rewriteTypeToken('Paint', parseQuickAdd('Paint', ctx).chips, 'Meet')).toBeNull();
-	});
-});
-
 describe('dateChipLabel', () => {
 	it('shows relative days with the date', () => {
 		expect(dateChipLabel(null, '2026-10-09', today)).toBe('Tomorrow · Fri 9 Oct');
@@ -119,7 +104,7 @@ describe('draftOf', () => {
 	const defaults = {
 		contextMatter: null,
 		contextStatus: null,
-		pickedType: null,
+		contextType: null,
 		inboxPath: 'M/Inbox.md',
 		backlogId: 'later',
 		defaultTypeId: 'write',
@@ -144,8 +129,8 @@ describe('draftOf', () => {
 		expect(draftOf(parseQuickAdd('Paint #kitchen', ctx), withContext).matterPath).toBe('M/Kitchen renovation.md');
 	});
 
-	it('prefers a typed type over the picked one', () => {
-		const picked = { ...defaults, pickedType: 'follow-up' };
+	it('prefers a typed type over the context one', () => {
+		const picked = { ...defaults, contextType: 'follow-up' };
 		expect(draftOf(parseQuickAdd('Paint', ctx), picked).typeId).toBe('follow-up');
 		expect(draftOf(parseQuickAdd('/call Paint', ctx), picked).typeId).toBe('call');
 		expect(draftOf(parseQuickAdd('/shop Paint', ctx), picked).typeId).toBe('follow-up');

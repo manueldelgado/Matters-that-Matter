@@ -195,14 +195,14 @@ class MattersEmbed extends MarkdownRenderChild {
 		}
 	}
 
-	/** Quick add with the block's own tokens; an empty block in a Matter or person note starts there. */
+	/** Quick add with the block's own tokens set (not typed, so not in the title); an empty block in a Matter or person note starts there. */
 	private newAction(q: EmbedQuery): void {
 		const { app } = this.plugin;
 		const person = q.context === 'person' && q.people[0] ? app.vault.getFileByPath(q.people[0])?.basename : undefined;
 		const text = [q.prefill, person ? personToken(person) : ''].filter(Boolean).join(' ');
 		this.plugin.quickAdd({
 			...(q.context === 'matter' && q.matters[0] ? { matterPath: q.matters[0] } : {}),
-			...(text ? { text: `${text} ` } : {}),
+			...(text ? { tokens: text } : {}),
 		});
 	}
 

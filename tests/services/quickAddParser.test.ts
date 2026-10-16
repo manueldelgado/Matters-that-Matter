@@ -47,9 +47,9 @@ describe('plain text', () => {
 });
 
 describe('type, Matter, person and priority tokens', () => {
-	it('recognises each token and removes it from the title', () => {
+	it('recognises each token; the filing tokens leave the title, a person stays as the name', () => {
 		const r = parse('/call Marco about the worktop #Kitchen @Marco !1');
-		expect(r.title).toBe('Marco about the worktop');
+		expect(r.title).toBe('Marco about the worktop Marco');
 		expect(r.typeId).toBe('call');
 		expect(r.matterPath).toBe('M/Kitchen renovation.md');
 		expect(r.people).toEqual(['P/Marco Rossi.md']);
@@ -87,7 +87,7 @@ describe('type, Matter, person and priority tokens', () => {
 		expect(r.matterPath).toBeNull();
 		expect(r.typeId).toBeNull();
 		expect(r.people).toEqual([]);
-		expect(r.title).toBe('Fix fence');
+		expect(r.title).toBe('Fix fence Nobody');
 		expect(r.chips).toMatchObject([
 			{ kind: 'matter', query: 'Shed', path: null },
 			{ kind: 'type', query: 'fax', id: null },
@@ -108,6 +108,28 @@ describe('type, Matter, person and priority tokens', () => {
 	it('lets a later token replace an earlier one', () => {
 		const r = parse('#Garden #Kitchen x');
 		expect(r.matterPath).toBe('M/Kitchen renovation.md');
+		const t = parse('Call /call /message !1 !3 x');
+		expect([t.typeId, t.priority, t.title]).toEqual(['message', 3, 'Call x']);
+	});
+
+	it('keeps a person in the title as the name written, without the sigil and the quotes', () => {
+		expect(parse('Call @Jon Evans on Wednesday').title).toBe('Call Jon Evans on Wednesday');
+		expect(parse('Call @"Marco Rossi", then lunch').title).toBe('Call Marco Rossi, then lunch');
+		expect(parse('Email @marco').title).toBe('Email marco');
+		expect(parse('Meet @Marco Rossi and @Ana Gil at the site').title).toBe('Meet Marco Rossi and Ana Gil at the site');
+		expect(parse('@Marco Rossi').title).toBe('Marco Rossi');
+	});
+
+	it('links every person once', () => {
+		expect(parse('Meet @Marco Rossi and @Ana Gil').people).toEqual(['P/Marco Rossi.md', 'P/Ana Gil.md']);
+		expect(parse('Meet @Marco Rossi @Marco Rossi').people).toEqual(['P/Marco Rossi.md']);
+	});
+
+	it('reads removed tokens as plain words', () => {
+		const r = parse('Call @Marco /call #Garden !1', { ignoredTokens: ['@Marco', '/call', '#garden', '!1'] });
+		expect(r.chips).toEqual([]);
+		// A removed person still reads as a name.
+		expect(r.title).toBe('Call Marco /call #Garden !1');
 	});
 
 	it('records chip positions in the input', () => {
@@ -123,7 +145,7 @@ describe('dates', () => {
 		const r = parse('Call Marco tomorrow');
 		expect(r.due).toBe('2026-10-10');
 		expect(r.start).toBeNull();
-		expect(r.title).toBe('Call Marco');
+		expect(r.title).toBe('Call Marco tomorrow');
 	});
 
 	it('keeps times', () => {
@@ -155,18 +177,18 @@ describe('dates', () => {
 
 	it('sets start and due from a range', () => {
 		const r = parse('Holiday from mon to wed');
-		expect(r).toMatchObject({ start: '2026-10-12', due: '2026-10-14', title: 'Holiday' });
+		expect(r).toMatchObject({ start: '2026-10-12', due: '2026-10-14', title: 'Holiday from mon to wed' });
 	});
 
 	it('joins Spanish ranges', () => {
 		const r = parse('Vacaciones del lunes al miércoles');
-		expect(r).toMatchObject({ start: '2026-10-12', due: '2026-10-14', title: 'Vacaciones' });
+		expect(r).toMatchObject({ start: '2026-10-12', due: '2026-10-14', title: 'Vacaciones del lunes al miércoles' });
 	});
 
 	it('uses the longest match across languages', () => {
 		const r = parse('Revisar en 3 días');
 		expect(r.due).toBe('2026-10-12');
-		expect(r.title).toBe('Revisar');
+		expect(r.title).toBe('Revisar en 3 días');
 	});
 
 	it('keeps a removed date chip in the title', () => {
@@ -203,6 +225,16 @@ describe('dates', () => {
 		expect(parse('Llamar a Marco el viernes', { languages: ['es'] }).due).toBe('2026-10-16');
 	});
 
+	it('reads every date and takes the last one in the text', () => {
+		const r = parse('Call Marco tomorrow, no, friday');
+		expect(r.due).toBe('2026-10-16');
+		expect(r.chips.map((c) => c.kind === 'date' && c.text)).toEqual(['tomorrow', 'friday']);
+		expect(r.title).toBe('Call Marco tomorrow, no, friday');
+		expect(parse('Call Marco friday 10am, no, tomorrow').due).toBe('2026-10-10');
+		// Overlapping readings are still one date, the longest.
+		expect(parse('Call friday 10am').chips.filter((c) => c.kind === 'date')).toHaveLength(1);
+	});
+
 	it('returns the date chip with its source text', () => {
 		const chip = parse('Call Marco tomorrow 10am').chips.find((c) => c.kind === 'date');
 		expect(chip).toMatchObject({ kind: 'date', text: 'tomorrow 10am', startDate: null, due: '2026-10-10T10:00' });
@@ -213,7 +245,7 @@ describe('unmatched names', () => {
 	it('keep the surname of a new person', () => {
 		const r = parse('Confirm the quote with @Ana García tomorrow');
 		expect(r.chips.find((c) => c.kind === 'person')).toMatchObject({ text: '@Ana García', query: 'Ana García', path: null });
-		expect(r.title).toBe('Confirm the quote with');
+		expect(r.title).toBe('Confirm the quote with Ana García tomorrow');
 	});
 
 	it('take particles between capitalised words', () => {
@@ -222,7 +254,7 @@ describe('unmatched names', () => {
 	});
 
 	it('stop at lowercase words, conjunctions, date words and punctuation', () => {
-		expect(parse('@Ana call her back').title).toBe('call her back');
+		expect(parse('@Ana call her back').title).toBe('Ana call her back');
 		expect(parse('@Ana y Marco').chips[0]).toMatchObject({ query: 'Ana' });
 		const monday = parse('@Ana Monday');
 		expect(monday.chips[0]).toMatchObject({ query: 'Ana' });
@@ -255,10 +287,10 @@ describe('QA 8 October 2026', () => {
 	};
 
 	it('reads a month name followed by a day as a day, not a year', () => {
-		expect(date('Call Ana oct 12')).toEqual({ title: 'Call Ana', start: null, due: '2026-10-12' });
-		expect(date('Call Ana October 12 at 3pm')).toEqual({ title: 'Call Ana', start: null, due: '2026-10-12T15:00' });
-		expect(date('dec 25 party')).toEqual({ title: 'party', start: null, due: '2026-12-25' });
-		expect(date('Trip oct 12 - oct 14')).toEqual({ title: 'Trip', start: '2026-10-12', due: '2026-10-14' });
+		expect(date('Call Ana oct 12')).toEqual({ title: 'Call Ana oct 12', start: null, due: '2026-10-12' });
+		expect(date('Call Ana October 12 at 3pm')).toEqual({ title: 'Call Ana October 12 at 3pm', start: null, due: '2026-10-12T15:00' });
+		expect(date('dec 25 party')).toEqual({ title: 'dec 25 party', start: null, due: '2026-12-25' });
+		expect(date('Trip oct 12 - oct 14')).toEqual({ title: 'Trip oct 12 - oct 14', start: '2026-10-12', due: '2026-10-14' });
 		expect(date('Dentist 15/10 at 16:30').due).toBe('2026-10-15T16:30');
 	});
 
@@ -267,13 +299,13 @@ describe('QA 8 October 2026', () => {
 			expect(date(t)).toEqual({ title: t, start: null, due: null });
 		}
 		expect(date('Call tomorrow morning').due?.slice(0, 10)).toBe('2026-10-10');
-		expect(date('Weekend 20-22 oct')).toEqual({ title: 'Weekend', start: '2026-10-20', due: '2026-10-22' });
+		expect(date('Weekend 20-22 oct')).toEqual({ title: 'Weekend 20-22 oct', start: '2026-10-20', due: '2026-10-22' });
 	});
 
 	it('reads a date across a token, and a range followed by a token', () => {
 		const r = parse('Call Marco tomorrow #Kitchen 5pm');
-		expect(r).toMatchObject({ title: 'Call Marco', due: '2026-10-10T17:00', matterPath: 'M/Kitchen renovation.md' });
-		expect(date('Weekend away 20-22 oct #Garden')).toEqual({ title: 'Weekend away', start: '2026-10-20', due: '2026-10-22' });
+		expect(r).toMatchObject({ title: 'Call Marco tomorrow 5pm', due: '2026-10-10T17:00', matterPath: 'M/Kitchen renovation.md' });
+		expect(date('Weekend away 20-22 oct #Garden')).toEqual({ title: 'Weekend away 20-22 oct', start: '2026-10-20', due: '2026-10-22' });
 	});
 
 	it('a removed date chip also ignores the dates inside it', () => {
@@ -284,27 +316,27 @@ describe('QA 8 October 2026', () => {
 	});
 
 	it('keeps a weekday range in order', () => {
-		expect(date('Trip friday until monday')).toEqual({ title: 'Trip', start: '2026-10-16', due: '2026-10-19' });
+		expect(date('Trip friday until monday')).toEqual({ title: 'Trip friday until monday', start: '2026-10-16', due: '2026-10-19' });
 	});
 
 	it('reads more Spanish', () => {
-		expect(date('Comprar pan pasado mañana')).toEqual({ title: 'Comprar pan', start: null, due: '2026-10-11' });
-		expect(date('Fin de semana del 20 al 22 de octubre')).toEqual({ title: 'Fin de semana', start: '2026-10-20', due: '2026-10-22' });
-		expect(date('Pagar la luz el viernes')).toEqual({ title: 'Pagar la luz', start: null, due: '2026-10-16' });
+		expect(date('Comprar pan pasado mañana')).toEqual({ title: 'Comprar pan pasado mañana', start: null, due: '2026-10-11' });
+		expect(date('Fin de semana del 20 al 22 de octubre')).toEqual({ title: 'Fin de semana del 20 al 22 de octubre', start: '2026-10-20', due: '2026-10-22' });
+		expect(date('Pagar la luz el viernes')).toEqual({ title: 'Pagar la luz el viernes', start: null, due: '2026-10-16' });
 	});
 
 	it('drops a word that only introduces the date', () => {
-		expect(date('Prepare taxes by end of month').title).toBe('Prepare taxes');
-		expect(date('Pay rent on friday').title).toBe('Pay rent');
+		expect(date('Prepare taxes by end of month').title).toBe('Prepare taxes by end of month');
+		expect(date('Pay rent on friday').title).toBe('Pay rent on friday');
 	});
 
 	it('reads a day of the month with no month as the next one after today', () => {
-		expect(date('Pay rent on the 1st')).toEqual({ title: 'Pay rent', start: null, due: '2026-11-01' });
-		expect(date('Send the report by the 21st')).toEqual({ title: 'Send the report', start: null, due: '2026-10-21' });
+		expect(date('Pay rent on the 1st')).toEqual({ title: 'Pay rent on the 1st', start: null, due: '2026-11-01' });
+		expect(date('Send the report by the 21st')).toEqual({ title: 'Send the report by the 21st', start: null, due: '2026-10-21' });
 		expect(date('Book the hall before the 9th').due).toBe('2026-11-09');
-		expect(date('Pay rent on the 1st at 10am')).toEqual({ title: 'Pay rent', start: null, due: '2026-11-01T10:00' });
-		expect(date('Pay rent on the 1st #Kitchen')).toMatchObject({ title: 'Pay rent', due: '2026-11-01' });
-		expect(date('Pagar el alquiler el día 1')).toEqual({ title: 'Pagar el alquiler', start: null, due: '2026-11-01' });
+		expect(date('Pay rent on the 1st at 10am')).toEqual({ title: 'Pay rent on the 1st at 10am', start: null, due: '2026-11-01T10:00' });
+		expect(date('Pay rent on the 1st #Kitchen')).toMatchObject({ title: 'Pay rent on the 1st', due: '2026-11-01' });
+		expect(date('Pagar el alquiler el día 1')).toEqual({ title: 'Pagar el alquiler el día 1', start: null, due: '2026-11-01' });
 		expect(date('Pagar el alquiler el día 15 a las 10').due).toBe('2026-10-15T10:00');
 	});
 
@@ -321,7 +353,7 @@ describe('QA 8 October 2026', () => {
 	});
 
 	it('keeps punctuation after a token out of the name', () => {
-		expect(parse('Talk about #Kitchen, tomorrow')).toMatchObject({ title: 'Talk about', matterPath: 'M/Kitchen renovation.md', due: '2026-10-10' });
+		expect(parse('Talk about #Kitchen, tomorrow')).toMatchObject({ title: 'Talk about tomorrow', matterPath: 'M/Kitchen renovation.md', due: '2026-10-10' });
 	});
 });
 
@@ -355,13 +387,13 @@ describe('times written in figures', () => {
 	};
 
 	it('reads an hour written with two digits as written, never as afternoon', () => {
-		expect(date('Call 2026-10-16T06:00')).toEqual({ title: 'Call', start: null, due: '2026-10-16T06:00' });
-		expect(date('Call 2026-10-16 06:00')).toEqual({ title: 'Call', start: null, due: '2026-10-16T06:00' });
+		expect(date('Call 2026-10-16T06:00')).toEqual({ title: 'Call 2026-10-16T06:00', start: null, due: '2026-10-16T06:00' });
+		expect(date('Call 2026-10-16 06:00')).toEqual({ title: 'Call 2026-10-16 06:00', start: null, due: '2026-10-16T06:00' });
 		expect(date('Call 2026-10-16T01:00').due).toBe('2026-10-16T01:00');
 		expect(date('Call 16/10/2026 06:00').due).toBe('2026-10-16T06:00');
-		expect(date('Flight 06:30 tomorrow')).toEqual({ title: 'Flight', start: null, due: '2026-10-10T06:30' });
-		expect(date('Vuelo mañana a las 07:00')).toEqual({ title: 'Vuelo', start: null, due: '2026-10-10T07:00' });
-		expect(date('Vuelo a las 06:30')).toEqual({ title: 'Vuelo', start: null, due: '2026-10-10T06:30' });
+		expect(date('Flight 06:30 tomorrow')).toEqual({ title: 'Flight 06:30 tomorrow', start: null, due: '2026-10-10T06:30' });
+		expect(date('Vuelo mañana a las 07:00')).toEqual({ title: 'Vuelo mañana a las 07:00', start: null, due: '2026-10-10T07:00' });
+		expect(date('Vuelo a las 06:30')).toEqual({ title: 'Vuelo a las 06:30', start: null, due: '2026-10-10T06:30' });
 	});
 
 	it('still reads an hour written with one digit, without am or pm, as afternoon', () => {
@@ -375,8 +407,8 @@ describe('times written in figures', () => {
 	});
 
 	it('reads both ends of a range', () => {
-		expect(date('Fly fri 23:00 to sat 02:00')).toEqual({ title: 'Fly', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
-		expect(date('Fly fri 23:00 to 02:00')).toEqual({ title: 'Fly', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
+		expect(date('Fly fri 23:00 to sat 02:00')).toEqual({ title: 'Fly fri 23:00 to sat 02:00', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
+		expect(date('Fly fri 23:00 to 02:00')).toEqual({ title: 'Fly fri 23:00 to 02:00', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
 	});
 
 	it('reads a date on its own the same way', () => {
@@ -389,9 +421,9 @@ describe('times written in figures', () => {
 
 describe('ranges ending in a time', () => {
 	it('put the end on the start\'s day', () => {
-		expect(parse('Reunión 20/10 10:00 hasta 12:00')).toMatchObject({ title: 'Reunión', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
-		expect(parse('Meet 20/10 10:00 y 12:00')).toMatchObject({ title: 'Meet', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
-		expect(parse('Meet fri 10:00 y 12:00')).toMatchObject({ title: 'Meet', start: '2026-10-16T10:00', due: '2026-10-16T12:00' });
+		expect(parse('Reunión 20/10 10:00 hasta 12:00')).toMatchObject({ title: 'Reunión 20/10 10:00 hasta 12:00', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
+		expect(parse('Meet 20/10 10:00 y 12:00')).toMatchObject({ title: 'Meet 20/10 10:00 y 12:00', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
+		expect(parse('Meet fri 10:00 y 12:00')).toMatchObject({ title: 'Meet fri 10:00 y 12:00', start: '2026-10-16T10:00', due: '2026-10-16T12:00' });
 		expect(parseDateText('fri 10:00 y 12:00', now)).toEqual({ start: '2026-10-16T10:00', due: '2026-10-16T12:00' });
 	});
 
@@ -414,24 +446,24 @@ describe('Spanish ranges of days', () => {
 	});
 
 	it('read a first day after the last as a day of the month before', () => {
-		expect(parse('Viaje del 28 al 2 de noviembre')).toMatchObject({ title: 'Viaje', start: '2026-10-28', due: '2026-11-02' });
-		expect(parse('Viaje del 28 al 3 de enero')).toMatchObject({ title: 'Viaje', start: '2026-12-28', due: '2027-01-03' });
+		expect(parse('Viaje del 28 al 2 de noviembre')).toMatchObject({ title: 'Viaje del 28 al 2 de noviembre', start: '2026-10-28', due: '2026-11-02' });
+		expect(parse('Viaje del 28 al 3 de enero')).toMatchObject({ title: 'Viaje del 28 al 3 de enero', start: '2026-12-28', due: '2027-01-03' });
 		expect(parse('Viaje del 30 al 2 de marzo').chips.map((c) => c.kind)).toEqual(['invalid-date']);
 	});
 
 	it('read English ranges the same way', () => {
-		expect(parse('Trip 28 to 2 November')).toMatchObject({ title: 'Trip', start: '2026-10-28', due: '2026-11-02' });
+		expect(parse('Trip 28 to 2 November')).toMatchObject({ title: 'Trip 28 to 2 November', start: '2026-10-28', due: '2026-11-02' });
 	});
 });
 
 describe('Spanish "a las"', () => {
-	it('leaves the title with the time', () => {
-		expect(parse('Reunión a las 5')).toMatchObject({ title: 'Reunión', due: '2026-10-09T17:00' });
-		expect(parse('llamar a Juan a las 10')).toMatchObject({ title: 'llamar a Juan', due: '2026-10-10T10:00' });
-		expect(parse('A las 9 dentista')).toMatchObject({ title: 'dentista', due: '2026-10-10T09:00' });
-		expect(parse('a las 10 llamar')).toMatchObject({ title: 'llamar', due: '2026-10-10T10:00' });
-		expect(parse('Reunión a la 1')).toMatchObject({ title: 'Reunión', due: '2026-10-09T13:00' });
-		expect(parse('Reunión mañana a las 5')).toMatchObject({ title: 'Reunión', due: '2026-10-10T17:00' });
+	it('reads the time and keeps its words in the title', () => {
+		expect(parse('Reunión a las 5')).toMatchObject({ title: 'Reunión a las 5', due: '2026-10-09T17:00' });
+		expect(parse('llamar a Juan a las 10')).toMatchObject({ title: 'llamar a Juan a las 10', due: '2026-10-10T10:00' });
+		expect(parse('A las 9 dentista')).toMatchObject({ title: 'A las 9 dentista', due: '2026-10-10T09:00' });
+		expect(parse('a las 10 llamar')).toMatchObject({ title: 'a las 10 llamar', due: '2026-10-10T10:00' });
+		expect(parse('Reunión a la 1')).toMatchObject({ title: 'Reunión a la 1', due: '2026-10-09T13:00' });
+		expect(parse('Reunión mañana a las 5')).toMatchObject({ title: 'Reunión mañana a las 5', due: '2026-10-10T17:00' });
 	});
 
 	it('is a date on its own', () => {
@@ -474,7 +506,7 @@ describe('ranges whose times are written differently', () => {
 describe('ranges of days that end before they start', () => {
 	it('move the start to the month before only when the month is written once, after the last day', () => {
 		expect(parse('Trip 28 to 20 October')).toMatchObject({ start: '2026-09-28', due: '2026-10-20' });
-		expect(parse('Trip Oct 28 - 20')).toMatchObject({ title: 'Trip', start: '2026-10-28', due: '2026-10-20' });
+		expect(parse('Trip Oct 28 - 20')).toMatchObject({ title: 'Trip Oct 28 - 20', start: '2026-10-28', due: '2026-10-20' });
 	});
 
 	it('agree on the year in English and Spanish when the range is already over', () => {
@@ -486,11 +518,11 @@ describe('ranges of days that end before they start', () => {
 
 describe('Spanish "a" after a time', () => {
 	it('is not a.m. unless written as one', () => {
-		expect(parse('Llamar a las 5 a Juan')).toMatchObject({ title: 'Llamar a Juan', due: '2026-10-09T17:00' });
-		expect(parse('Cita a las 3 a Ana')).toMatchObject({ title: 'Cita a Ana', due: '2026-10-09T15:00' });
-		expect(parse('Llamar a las 5 a.m.')).toMatchObject({ title: 'Llamar', due: '2026-10-10T05:00' });
-		expect(parse('Llamar a las 5 am')).toMatchObject({ title: 'Llamar', due: '2026-10-10T05:00' });
-		expect(parse('Llamar a las 5 a', { languages: ['es'] })).toMatchObject({ title: 'Llamar a', due: '2026-10-09T17:00' });
+		expect(parse('Llamar a las 5 a Juan')).toMatchObject({ title: 'Llamar a las 5 a Juan', due: '2026-10-09T17:00' });
+		expect(parse('Cita a las 3 a Ana')).toMatchObject({ title: 'Cita a las 3 a Ana', due: '2026-10-09T15:00' });
+		expect(parse('Llamar a las 5 a.m.')).toMatchObject({ title: 'Llamar a las 5 a.m.', due: '2026-10-10T05:00' });
+		expect(parse('Llamar a las 5 am')).toMatchObject({ title: 'Llamar a las 5 am', due: '2026-10-10T05:00' });
+		expect(parse('Llamar a las 5 a', { languages: ['es'] })).toMatchObject({ title: 'Llamar a las 5 a', due: '2026-10-09T17:00' });
 	});
 });
 
@@ -501,19 +533,19 @@ describe('overnight ranges', () => {
 	};
 
 	it('put an end that is only a time, earlier than the start, on the next day', () => {
-		expect(range('Meet 18:00 to 6:00')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T06:00']);
-		expect(range('Meet 18:00 to 06:00')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T06:00']);
-		expect(range('Meet 18:00 - 07:30')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T07:30']);
+		expect(range('Meet 18:00 to 6:00')).toEqual(['Meet 18:00 to 6:00', '2026-10-09T18:00', '2026-10-10T06:00']);
+		expect(range('Meet 18:00 to 06:00')).toEqual(['Meet 18:00 to 06:00', '2026-10-09T18:00', '2026-10-10T06:00']);
+		expect(range('Meet 18:00 - 07:30')).toEqual(['Meet 18:00 - 07:30', '2026-10-09T18:00', '2026-10-10T07:30']);
 		// An hour of one digit is still the shortest range after the start.
-		expect(range('Meet 18:00 - 7:30')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-09T19:30']);
-		expect(range('Meet 22:00 to 2:00')).toEqual(['Meet', '2026-10-09T22:00', '2026-10-10T02:00']);
-		expect(range('Reunión 18:00 hasta 6:00')).toEqual(['Reunión', '2026-10-09T18:00', '2026-10-10T06:00']);
+		expect(range('Meet 18:00 - 7:30')).toEqual(['Meet 18:00 - 7:30', '2026-10-09T18:00', '2026-10-09T19:30']);
+		expect(range('Meet 22:00 to 2:00')).toEqual(['Meet 22:00 to 2:00', '2026-10-09T22:00', '2026-10-10T02:00']);
+		expect(range('Reunión 18:00 hasta 6:00')).toEqual(['Reunión 18:00 hasta 6:00', '2026-10-09T18:00', '2026-10-10T06:00']);
 	});
 
 	it('start on the next such weekday when the start is a weekday', () => {
-		expect(range('Meet fri 22:00 to 2:00')).toEqual(['Meet', '2026-10-16T22:00', '2026-10-17T02:00']);
-		expect(range('Meet fri 18:00 to 6:00')).toEqual(['Meet', '2026-10-16T18:00', '2026-10-17T06:00']);
-		expect(range('Reunión el viernes de 22:00 hasta 2:00')).toEqual(['Reunión', '2026-10-16T22:00', '2026-10-17T02:00']);
+		expect(range('Meet fri 22:00 to 2:00')).toEqual(['Meet fri 22:00 to 2:00', '2026-10-16T22:00', '2026-10-17T02:00']);
+		expect(range('Meet fri 18:00 to 6:00')).toEqual(['Meet fri 18:00 to 6:00', '2026-10-16T18:00', '2026-10-17T06:00']);
+		expect(range('Reunión el viernes de 22:00 hasta 2:00')).toEqual(['Reunión el viernes de 22:00 hasta 2:00', '2026-10-16T22:00', '2026-10-17T02:00']);
 		expect(parseDateText('el viernes de 22:00 hasta 2:00', now)).toEqual({ start: '2026-10-16T22:00', due: '2026-10-17T02:00' });
 	});
 });

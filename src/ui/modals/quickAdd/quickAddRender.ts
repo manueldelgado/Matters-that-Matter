@@ -6,7 +6,8 @@ import { STRINGS } from '../../../strings';
 import { matchRanges } from '../../../services/fuzzy';
 import { dateChipLabel, isNewPath, newName, type Draft } from '../../../services/quickAdd';
 import type { PersonCandidate } from '../../../services/notesModel';
-import type { Chip, NoteCandidate } from '../../../services/quickAddParser';
+import type { NoteCandidate } from '../../../services/quickAddParser';
+import type { ShownChip } from '../../../services/quickAddPills';
 import { avatarEl, priorityEl } from '../../components/card';
 import { appendIcon, statusClasses, tileEl, typeClasses } from '../../components/dom';
 
@@ -32,17 +33,20 @@ export const isSuggestion = (row: SuggestRow): row is Suggestion => row.kind !==
 
 export interface TokensInput {
 	draft: Draft;
-	chips: readonly Chip[];
+	/** The pills to show, in the order written (those without words last). */
+	chips: readonly ShownChip[];
 	/** Start of the token being typed: its chip is left out while it is unmatched. */
 	typingAt: number | null;
 	types: readonly TypeDef[];
 	status: StatusDef | undefined;
 	matter: MatterCandidate | undefined;
 	matterFromContext: boolean;
+	/** The pill the Matter comes from, typed or kept. */
+	matterPill: ShownChip | undefined;
 	peopleFolder: string;
 	inboxName: string;
 	today: string;
-	onRemoveDate: (chip: Chip) => void;
+	onRemoveChip: (chip: ShownChip) => void;
 	onRemoveMatter: () => void;
 	onRemoveContextDue: () => void;
 }
@@ -78,6 +82,10 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 	appendIcon(matter, newMatter ? 'circle-dot' : (t.matter?.icon ?? 'inbox'));
 	matter.appendText(newMatter ? newName(draft.matterPath) : (t.matter?.name ?? t.inboxName));
 	if (t.matterFromContext) removeButton(matter, q.removeMatter, t.onRemoveMatter);
+	else if (t.matterPill) {
+		const pill = t.matterPill;
+		removeButton(matter, q.removeMatter, () => t.onRemoveChip(pill));
+	}
 
 	if (t.status) {
 		const status = token(
@@ -105,6 +113,7 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 
 	const fallback = t.types.find((x) => x.id === draft.typeId);
 	for (const c of shown) {
+		const remove = () => t.onRemoveChip(c);
 		if (c.kind === 'type') {
 			const type = c.id ? t.types.find((x) => x.id === c.id) : undefined;
 			if (type) {
@@ -112,12 +121,13 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 				el.createSpan({ cls: 'mtm-token-key', text: '/' });
 				appendIcon(el, type.icon);
 				el.appendText(type.label);
-			} else invalid(row, 'shapes', c.text, q.noType(c.query, fallback?.label ?? ''));
+				removeButton(el, q.removeType, remove);
+			} else invalid(row, 'shapes', c.text, q.noType(c.query, fallback?.label ?? ''), remove);
 		} else if (c.kind === 'matter') {
-			invalid(row, 'folder-x', c.text, q.noMatter(c.query));
+			invalid(row, 'folder-x', c.text, q.noMatter(c.query), remove);
 		} else if (c.kind === 'person') {
 			if (!c.path) {
-				invalid(row, 'user-x', c.text, q.noPerson(c.query));
+				invalid(row, 'user-x', c.text, q.noPerson(c.query), remove);
 				continue;
 			}
 			const isNew = isNewPath(c.path);
@@ -125,25 +135,28 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 			const el = token(row, ['mod-person'], isNew ? q.newPersonToken(t.peopleFolder) : undefined);
 			avatarEl(el, name);
 			el.appendText(name);
+			removeButton(el, q.removePerson(name), remove);
 		} else if (c.kind === 'priority') {
 			const el = token(row, ['mod-priority', `mod-${c.priority}`]);
 			priorityEl(el, c.priority);
 			el.appendText(STRINGS.card.priority[c.priority]);
+			removeButton(el, q.removePriority, remove);
 		} else if (c.kind === 'invalid-date') {
-			invalid(row, 'calendar-x', c.text, c.problem === 'time-zone' ? q.timeZone(c.text) : q.notADay(c.text));
+			invalid(row, 'calendar-x', c.text, c.problem === 'time-zone' ? q.timeZone(c.text) : q.notADay(c.text), remove);
 		} else {
 			const el = token(row, ['mod-date']);
 			appendIcon(el, c.due.includes('T') ? 'clock' : 'calendar');
 			el.appendText(dateChipLabel(c.startDate, c.due, t.today));
-			removeButton(el, q.removeDate, () => t.onRemoveDate(c));
+			removeButton(el, q.removeDate, remove);
 		}
 	}
 }
 
-function invalid(row: HTMLElement, icon: string, text: string, tooltip: string): void {
+function invalid(row: HTMLElement, icon: string, text: string, tooltip: string, onRemove: () => void): void {
 	const el = token(row, ['mod-invalid'], tooltip);
 	appendIcon(el, icon);
 	el.appendText(text);
+	removeButton(el, STRINGS.quickAdd.removeToken(text), onRemove);
 }
 
 /** The name with the matched parts in `mark.mtm-match`. */

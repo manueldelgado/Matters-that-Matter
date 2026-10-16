@@ -255,7 +255,7 @@ describe('links: hostile input written inert', () => {
 
 	it('keeps the words quick add reads in the text', () => {
 		const w = written({ text: 'Call Marco about the worktop /call #Kitchen fri 10:00 !1' });
-		expect(w.path).toBe('MTM/Actions/Call Marco about the worktop.md');
+		expect(w.path).toBe('MTM/Actions/Call Marco about the worktop fri 10.00.md');
 		expect(w.fm).toMatchObject({ 'mtm-type': 'call', 'mtm-matter': '[[Kitchen renovation]]', 'mtm-due': '2026-10-16T10:00', 'mtm-priority': 1 });
 	});
 

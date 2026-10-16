@@ -1,5 +1,5 @@
-// Quick add around the parser: the token being typed, accepting a suggestion, rewriting the type token,
-// date chip labels and the Action a capture creates. Pure.
+// Quick add around the parser: the token being typed, accepting a suggestion, date chip labels and the Action a
+// capture creates. Pure.
 
 import { dayLabel, daysBetween, parseMtmDate, weekday, type MtmDate, type Ymd } from '../model/dates';
 import type { Priority } from '../model/actions';
@@ -7,7 +7,7 @@ import { sanitiseTitle } from '../model/titles';
 import { STRINGS } from '../strings';
 import { normalise } from './fuzzy';
 import { isInboxLikeName } from './inboxGuard';
-import { continuesName, type Chip, type QuickAddResult } from './quickAddParser';
+import { continuesName, type QuickAddResult } from './quickAddParser';
 
 const MAX_TOKEN_WORDS = 6;
 
@@ -89,13 +89,6 @@ export function replaceSpan(input: string, start: number, end: number, replaceme
 	return { input: next, caret: start + spaced.length + (/^\s/.test(after) ? 1 : 0) };
 }
 
-/** Rewrites the last `/type` token (valid or not) to the given label; null when there is none. */
-export function rewriteTypeToken(input: string, chips: readonly Chip[], label: string): string | null {
-	const last = [...chips].reverse().find((c) => c.kind === 'type');
-	if (!last) return null;
-	return input.slice(0, last.start) + '/' + tokenName(label) + input.slice(last.end);
-}
-
 // ——— Date chips ———
 
 function shortDay(ymd: Ymd, today: Ymd): string {
@@ -134,8 +127,8 @@ export interface QuickAddDefaults {
 	contextMatter: string | null;
 	/** Status from the column the modal was opened in. */
 	contextStatus: string | null;
-	/** Type chosen in the picker when the input has no `/type` token. */
-	pickedType: string | null;
+	/** Type of the list group the modal was opened from; a typed or picked type replaces it. */
+	contextType: string | null;
 	/** Due date from the calendar day the modal was opened from ('YYYY-MM-DD'); a typed date replaces it. */
 	contextDue?: string | null;
 	inboxPath: string;
@@ -168,7 +161,7 @@ export function draftOf(result: QuickAddResult, d: QuickAddDefaults): Draft {
 	const contextDue = typedDate ? null : (d.contextDue ?? null);
 	return {
 		title: result.title,
-		typeId: result.typeId ?? d.pickedType ?? d.defaultTypeId,
+		typeId: result.typeId ?? d.contextType ?? d.defaultTypeId,
 		matterPath: matter ?? d.inboxPath,
 		matterIsDefault: matter === null,
 		statusId: d.contextStatus ?? d.backlogId,

@@ -90,13 +90,13 @@ Due today or late
 describe('adding', () => {
 	it('adds from quick add’s words', async () => {
 		const root = vault(fixtureCopy());
-		const r = await mtm(['add', 'Call Marco about the quote /call #Kitchen fri 10:00 !1', '--vault', root]);
+		const r = await mtm(['add', 'Call Marco about the quote on fri 10:00 /call #Kitchen !1', '--vault', root]);
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
-			stdout: `Added “Call Marco about the quote”
+			stdout: `Added “Call Marco about the quote on fri 10.00”
   Kitchen renovation · Later · Call · due Fri 16 Oct 10:00 · high priority
-  MTM/Actions/Call Marco about the quote.md
+  MTM/Actions/Call Marco about the quote on fri 10.00.md
 `,
 		});
 	});

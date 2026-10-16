@@ -58,6 +58,7 @@ export const COMMAND_HELP: Record<string, string> = {
 What matters today: Actions due today or late (else the next ones), the Inbox, reviews due and long waits.`,
 	add: `<b>matters-that-matter add</b> <text> [fields]
 Adds an Action. The text works as in quick add: /type, #Matter, @person, !1, and dates in words.
+People and dates keep their words in the title; to keep a date out of it, give it with --due.
 Fields given separately win over the text. Names that match nothing fall back as quick add does, and say so.
 Text that starts with a dash and a letter goes after --, with every option before it:
 matters-that-matter add --due fri -- "-x marks the spot".
@@ -263,7 +264,7 @@ export const MCP = {
 		add_action: {
 			title: 'Add an Action',
 			description:
-				'Adds a new Action, one thing to do, as a note in the vault. Use it when the user wants to remember, plan or hand over something that isn’t recorded yet; to change an Action that exists, use update_action instead. `text` works like quick add in Matters that Matter: /type, #Matter, @person, !1 to !3 and dates in words, in the languages turned on in the plugin’s settings, English and Spanish by default (“Call Marco about the quote /call #Kitchen fri 10:00 !1”); fields given separately win over the text. Give `text` or `title`. A name that matches nothing falls back (the default type, the Inbox, the backlog status) and the result says so; empty optional fields are left out. No Matters or people are created. Returns the new Action and what was written.',
+				'Adds a new Action, one thing to do, as a note in the vault. Use it when the user wants to remember, plan or hand over something that isn’t recorded yet; to change an Action that exists, use update_action instead. `text` works like quick add in Matters that Matter: /type, #Matter, @person, !1 to !3 and dates in words, in the languages turned on in the plugin’s settings, English and Spanish by default (“Call Marco about the quote /call #Kitchen fri 10:00 !1”). People and dates keep their words in the title (a name without its @), so write the text as the title should read; give a date as `due` to keep it out of the title. Fields given separately win over the text. Give `text` or `title`. A name that matches nothing falls back (the default type, the Inbox, the backlog status) and the result says so; empty optional fields are left out. No Matters or people are created. Returns the new Action and what was written.',
 		},
 		update_action: {
 			title: 'Change an Action',

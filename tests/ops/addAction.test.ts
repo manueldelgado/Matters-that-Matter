@@ -203,8 +203,8 @@ describe('addAction: fields', () => {
 
 describe('addAction: quick add text', () => {
 	it('reads tokens and dates from the text', () => {
-		const { create, fm, r } = created({ text: 'Call Marco about the quote /call #Kitchen fri 10:00 !1 @Marco' });
-		expect(create.path).toBe('MTM/Actions/Call Marco about the quote 2.md');
+		const { create, fm, r } = created({ text: 'Call @Marco about the quote /call #Kitchen fri 10:00 !1' });
+		expect(create.path).toBe('MTM/Actions/Call Marco about the quote fri 10.00.md');
 		expect(fm).toEqual({
 			'mtm-kind': 'action',
 			'mtm-type': 'call',
@@ -263,12 +263,12 @@ describe('addAction: values that match nothing fall back, with a warning each', 
 		expect(create.path).toBe('MTM/Actions/Order the tiles 2026-13-12.md');
 		expect(fm['mtm-due']).toBeUndefined();
 		expect(r.warnings.map((w) => [w.code, w.field, w.value, w.message])).toEqual([
-			['unreadable-date', 'text', '2026-13-12', '“2026-13-12” isn’t a real date, so no date was set and it stays in the title.'],
+			['unreadable-date', 'text', '2026-13-12', '“2026-13-12” isn’t a real date, so no date was set.'],
 		]);
 		const zoned = created({ text: 'Call the bank fri 10am EST' });
 		expect(zoned.fm['mtm-due']).toBeUndefined();
 		expect(zoned.r.warnings.map((w) => w.message)).toEqual([
-			'“fri 10am EST” has a time zone, so no date was set and it stays in the title. Dates are in local time: leave the zone out.',
+			'“fri 10am EST” has a time zone, so no date was set. Dates are in local time: leave the zone out.',
 		]);
 	});
 

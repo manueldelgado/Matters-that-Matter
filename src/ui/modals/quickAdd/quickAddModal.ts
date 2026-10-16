@@ -17,12 +17,23 @@ import {
 	newName,
 	newPath,
 	replaceSpan,
-	rewriteTypeToken,
 	tokenName,
 	type ActiveToken,
 	type Draft,
 } from '../../../services/quickAdd';
-import { parseQuickAdd, type QuickAddContext, type QuickAddResult, type TypeCandidate } from '../../../services/quickAddParser';
+import { parseQuickAdd, type QuickAddContext, type TypeCandidate } from '../../../services/quickAddParser';
+import {
+	applyPills,
+	carryPills,
+	clearedPills,
+	givenPills,
+	noPills,
+	pickType,
+	removePill,
+	type PilledResult,
+	type Pills,
+	type ShownChip,
+} from '../../../services/quickAddPills';
 import { createAction } from '../../../vault/actionWrites';
 import { DEFAULT_MATTER_ICON } from '../../../services/notesModel';
 import { createMatter } from '../../../vault/matterWrites';
@@ -56,8 +67,10 @@ export interface QuickAddInit {
 	sphereId?: string | null;
 	/** Type of the list group the modal was opened from. */
 	typeId?: string;
-	/** Text to start with, such as a person token ("@Marco "). */
+	/** Text to start with, as typed (a link's text). */
 	text?: string;
+	/** Tokens set from the start without being typed, so their words aren't in the title: a `matters` block's or a person note's. */
+	tokens?: string;
 	/** Runs when the dialog closes, added or not (the review session refreshes its step). */
 	onClose?: () => void;
 }
@@ -71,15 +84,19 @@ export class QuickAddModal extends Modal {
 	private readonly contextStatus: string | null;
 	private contextDue: string | null;
 	private contextSphere: string | null;
-	private pickedType: string | null = null;
 	private readonly contextType: string | null;
 	private readonly initialText: string;
+	private readonly initialTokens: string;
+	/** What the capture will set: the chips read from the text, kept when their words are deleted. */
+	private pills: Pills = noPills();
 	private ignoredDates: string[] = [];
+	/** Texts of removed tokens other than dates: read as plain words for the rest of the capture. */
+	private ignoredTokens: string[] = [];
 	/** Start of a token whose suggestions were closed with Escape. */
 	private dismissedAt: number | null = null;
 	private busy = false;
 
-	private result: QuickAddResult | null = null;
+	private result: PilledResult | null = null;
 	private draft: Draft | null = null;
 	private token: ActiveToken | null = null;
 	private rows: SuggestRow[] = [];
@@ -107,8 +124,8 @@ export class QuickAddModal extends Modal {
 		this.contextDue = init.due ?? null;
 		this.contextSphere = init.sphereId ?? null;
 		this.contextType = init.typeId ?? null;
-		this.pickedType = this.contextType;
 		this.initialText = init.text ?? '';
+		this.initialTokens = init.tokens ?? '';
 		this.whenClosed = init.onClose ?? null;
 		// Escape closes the suggestions first, then the modal.
 		this.scope = new Scope(this.app.scope);
@@ -159,12 +176,15 @@ export class QuickAddModal extends Modal {
 		this.addButton.addEventListener('click', () => void this.submit(false));
 
 		this.input.addEventListener('input', () => this.refresh());
-		this.input.addEventListener('click', () => this.refresh());
+		// A caret moved on purpose leaves the token it was in, which then counts (kept when its words are deleted).
+		this.input.addEventListener('click', () => this.refresh(true));
+		this.input.addEventListener('select', () => this.refresh(true));
 		this.input.addEventListener('keyup', (e) => {
-			if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) this.refresh();
+			if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) this.refresh(true);
 		});
 		this.input.addEventListener('keydown', (e) => this.onKeyDown(e));
 
+		if (this.initialTokens) this.pills = givenPills(this.pills, parseQuickAdd(this.initialTokens, this.parserContext()).chips);
 		this.input.value = this.initialText;
 		this.refresh();
 		this.input.focus();
@@ -189,21 +209,25 @@ export class QuickAddModal extends Modal {
 			matters: this.matters,
 			people: this.people,
 			ignoredDates: this.ignoredDates,
+			ignoredTokens: this.ignoredTokens,
 			languages: this.settings.dateLanguages,
 		};
 	}
 
 	// ——— State ———
 
-	private refresh(): void {
+	/** Reads the text again; `moved` says the caret was moved rather than carried by typing. */
+	private refresh(moved = false): void {
 		const s = this.settings;
 		const value = this.input.value;
 		const caret = this.input.selectionStart ?? value.length;
-		const result = parseQuickAdd(value, this.parserContext());
+		const parsed = parseQuickAdd(value, this.parserContext());
+		this.pills = carryPills(this.pills, value, parsed.chips, caret, moved);
+		const result = applyPills(parsed, this.pills);
 		const draft = draftOf(result, {
 			contextMatter: this.contextMatter,
 			contextStatus: this.contextStatus,
-			pickedType: this.pickedType,
+			contextType: this.contextType,
 			contextDue: this.contextDue,
 			inboxPath: s.inboxPath,
 			backlogId: backlogStatus(s.statuses)?.id ?? s.statuses[0]?.id ?? '',
@@ -330,13 +354,11 @@ export class QuickAddModal extends Modal {
 			status: s.statuses.find((x) => x.id === draft.statusId),
 			matter: this.matters.find((m) => m.path === draft.matterPath),
 			matterFromContext: !draft.matterIsDefault && !result.matterPath,
+			matterPill: result.matterPath ? result.chips.find((c) => c.kind === 'matter' && c.path === result.matterPath) : undefined,
 			peopleFolder: normalizePath(s.folders.people),
 			inboxName: inbox?.name ?? s.inboxPath.split('/').pop()?.replace(/\.md$/i, '') ?? s.inboxPath,
 			today: toYmd(new Date()),
-			onRemoveDate: (chip) => {
-				this.ignoredDates.push(chip.text);
-				this.refocus();
-			},
+			onRemoveChip: (chip) => this.removeChip(chip),
 			onRemoveMatter: () => {
 				this.contextMatter = null;
 				this.refocus();
@@ -349,6 +371,17 @@ export class QuickAddModal extends Modal {
 
 		renderTypePicker(this.pickerEl, s.types, draft.typeId, (t) => this.pickType(t));
 		this.addButton.disabled = !draft.canAdd || this.busy;
+	}
+
+	/** × on a pill: it sets nothing, and its words, if still in the text, are plain words for the rest of the capture. */
+	private removeChip(chip: ShownChip): void {
+		const pill = this.pills.list.find((p) => p.id === chip.pillId);
+		if (pill?.inText && pill.words.trim()) {
+			const kind = pill.chip.kind;
+			(kind === 'date' || kind === 'invalid-date' ? this.ignoredDates : this.ignoredTokens).push(pill.words);
+		}
+		this.pills = removePill(this.pills, chip.pillId);
+		this.refocus();
 	}
 
 	private refocus(): void {
@@ -416,12 +449,10 @@ export class QuickAddModal extends Modal {
 		this.setInput(next.input, next.caret);
 	}
 
-	/** The picker rewrites the typed `/type` token, so the text stays the single source of truth. */
+	/** The picker sets the type, as the latest type pill; a `/type` typed afterwards replaces it. */
 	private pickType(type: TypeDef): void {
-		this.pickedType = type.id;
-		const rewritten = this.result ? rewriteTypeToken(this.input.value, this.result.chips, type.label) : null;
-		if (rewritten !== null) this.setInput(rewritten, rewritten.length);
-		else this.refocus();
+		this.pills = pickType(this.pills, type.id, type.label);
+		this.refocus();
 	}
 
 	// ——— Adding ———
@@ -465,8 +496,9 @@ export class QuickAddModal extends Modal {
 			this.notifyAdded(file, draft, matterPath);
 			if (keepOpen) {
 				this.input.value = '';
+				this.pills = clearedPills(this.pills);
 				this.ignoredDates = [];
-				this.pickedType = this.contextType;
+				this.ignoredTokens = [];
 				this.dismissedAt = null;
 			} else this.close();
 		} catch (e) {

@@ -26,7 +26,7 @@ describe('dates in figures that name no real day', () => {
 	it('a date in words elsewhere is still read', () => {
 		const r = parse('Call fri 2026-13-12');
 		expect(r.due).toBe('2026-10-16');
-		expect(r.title).toBe('Call 2026-13-12');
+		expect(r.title).toBe('Call fri 2026-13-12');
 		expect(r.chips.map((c) => c.kind)).toEqual(['date', 'invalid-date']);
 	});
 
@@ -77,13 +77,14 @@ describe('time zones in words', () => {
 	});
 
 	it.each([
-		['Kids 5pm art class', 'Kids art class', '2026-10-13T17:00'],
-		['Feed 5pm cat food', 'Feed cat food', '2026-10-13T17:00'],
-		['Call 4pm mt everest', 'Call mt everest', '2026-10-13T16:00'],
-		['Call fri 10am est', 'Call est', '2026-10-16T10:00'],
-	])('a word chrono takes for a zone, not written as one, goes back to the title: %j', (input, title, due) => {
+		['Kids 5pm art class', '5pm', '2026-10-13T17:00'],
+		['Feed 5pm cat food', '5pm', '2026-10-13T17:00'],
+		['Call 4pm mt everest', '4pm', '2026-10-13T16:00'],
+		['Call fri 10am est', 'fri 10am', '2026-10-16T10:00'],
+	])('a word chrono takes for a zone, not written as one, is no part of the date: %j', (input, text, due) => {
 		const r = parse(input);
-		expect(r.title).toBe(title);
+		expect(r.title).toBe(input);
+		expect(r.chips).toEqual([expect.objectContaining({ kind: 'date', text })]);
 		expect(r.due).toBe(due);
 		expect(invalid(input)).toEqual([]);
 	});
@@ -102,7 +103,7 @@ describe('real days in figures read as before', () => {
 	])('%j', (input, due) => {
 		const r = parse(input);
 		expect(r.due).toBe(due);
-		expect(r.title).toBe('Call');
+		expect(r.title).toBe(input);
 		expect(invalid(input)).toEqual([]);
 	});
 

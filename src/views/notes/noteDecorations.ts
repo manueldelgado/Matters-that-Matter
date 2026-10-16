@@ -319,7 +319,7 @@ export class NoteDecorations {
 			renderPersonBanner(
 				{ name: file.basename, model, matterOf, selected: this.plugin.selection.path, now },
 				{
-					newAction: () => this.plugin.quickAdd({ text: personToken(file.basename) }),
+					newAction: () => this.plugin.quickAdd({ tokens: personToken(file.basename) }),
 					select: (path) => void this.plugin.selectAction(path),
 					open: (path, e) => {
 						const target = app.vault.getFileByPath(path);

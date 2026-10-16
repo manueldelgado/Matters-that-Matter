@@ -109,6 +109,8 @@ export class ProcessInboxModal extends Modal {
 	private pointerDown = false;
 	/** Step values typed as tokens into the title, kept until the item is processed. */
 	private pendingHints: Partial<Form> = {};
+	/** Everyone typed as a token into the title, linked in mtm-people whatever the answer. */
+	private titlePeople: TFile[] = [];
 
 	constructor(
 		private plugin: MattersPlugin,
@@ -207,7 +209,10 @@ export class ProcessInboxModal extends Modal {
 		}
 		// Right after a write (Undo) the cache is empty until the note is parsed again; the item would fall back to defaults.
 		await this.parsed(file);
-		if (this.current?.file !== file) this.pendingHints = {};
+		if (this.current?.file !== file) {
+			this.pendingHints = {};
+			this.titlePeople = [];
+		}
 		const item = actionItem(this.app, file, this.settings);
 		const details = getDetails(await this.app.vault.cachedRead(file));
 		this.current = { file, item, details };
@@ -324,13 +329,20 @@ export class ProcessInboxModal extends Modal {
 
 	// ——— Title tokens ———
 
-	/** Renames to the title without tokens; the tokens prefill the step (Matter, type, due date, person). */
+	/**
+	 * Renames to the title as quick add reads it (people and dates keep their words); the tokens prefill the step
+	 * (Matter, type, due date, the first person as who it waits on), and everyone named is linked on any answer.
+	 */
 	private async retitle(text: string): Promise<void> {
 		const current = this.current;
 		if (!current) return;
 		// Unchanged: nothing to do (and no re-render, which would swallow a click that caused the blur).
 		if (text.trim() === current.file.basename) return;
 		const result = parseQuickAdd(text, { now: new Date(), ...this.candidates, languages: this.settings.dateLanguages });
+		for (const path of result.people) {
+			const file = this.app.vault.getFileByPath(path);
+			if (file && !this.titlePeople.includes(file)) this.titlePeople.push(file);
+		}
 		const hint = this.formHints(result);
 		if (hint) {
 			this.pendingHints = { ...this.pendingHints, ...hint };
@@ -724,6 +736,7 @@ export class ProcessInboxModal extends Modal {
 		const type = this.settings.types.find((t) => t.id === current.item.effective.type.id) ?? current.item.effective.type;
 		this.filed.push({ type, title: current.file.basename });
 		this.pendingHints = {};
+		this.titlePeople = [];
 		this.step = null;
 		this.queue.complete();
 		await this.show();
@@ -747,12 +760,17 @@ export class ProcessInboxModal extends Modal {
 		this.redraw();
 	}
 
+	/** The people typed into the title, to add to mtm-people. */
+	private peopleEdit(current: Current): { addPeople: { link: string; key: string }[] } {
+		return { addPeople: this.titlePeople.map((p) => ({ link: linkTo(this.app, p, current.file.path), key: p.path })) };
+	}
+
 	private async doneNow(current: Current): Promise<void> {
 		const done = doneStatus(this.settings.statuses);
 		if (!done) return;
 		const index = this.queue.index;
 		const previous = current.item.effective.status.id;
-		await editAction(this.app, current.file, this.settings, { statusId: done.id });
+		await editAction(this.app, current.file, this.settings, { statusId: done.id }, this.peopleEdit(current));
 		await this.finish(current, { decision: 'done' });
 		this.undo = {
 			text: STRINGS.process.markedDone(current.file.basename),
@@ -794,7 +812,7 @@ export class ProcessInboxModal extends Modal {
 		if (!status) return;
 		const matterPath = await this.resolveMatter();
 		if (!matterPath) return;
-		await editAction(this.app, current.file, this.settings, { statusId: status.id, matterPath, typeId: this.form.typeId }, this.dueEdit());
+		await editAction(this.app, current.file, this.settings, { statusId: status.id, matterPath, typeId: this.form.typeId }, { ...this.dueEdit(), ...this.peopleEdit(current) });
 		await this.finish(current, { decision: 'next', detail: status.label });
 	}
 
@@ -815,7 +833,7 @@ export class ProcessInboxModal extends Modal {
 			current.file,
 			this.settings,
 			{ statusId: status.id, matterPath },
-			{ waitingOn: { link: linkTo(this.app, person, current.file.path), key: person.path }, ...this.dueEdit() },
+			{ waitingOn: { link: linkTo(this.app, person, current.file.path), key: person.path }, ...this.dueEdit(), ...this.peopleEdit(current) },
 		);
 		await this.finish(current, { decision: 'delegate', detail: firstName(person.basename) });
 	}
@@ -838,7 +856,7 @@ export class ProcessInboxModal extends Modal {
 			this.candidates = loadCandidates(this.app, this.settings);
 		} else matterPath = await this.resolveMatter();
 		if (!matterPath) return;
-		await editAction(this.app, current.file, this.settings, { statusId: backlog.id, matterPath });
+		await editAction(this.app, current.file, this.settings, { statusId: backlog.id, matterPath }, this.peopleEdit(current));
 		await this.finish(current, { decision: 'someday' });
 	}
 
@@ -857,7 +875,7 @@ export class ProcessInboxModal extends Modal {
 			matterPath: matter.path,
 			...(status ? { statusId: status.id } : {}),
 			...(step.typeId ? { typeId: step.typeId } : {}),
-		});
+		}, this.peopleEdit(current));
 		if (step.title) await renameAction(this.app, current.file, step.title);
 		await this.finish(current, { decision: 'matter' });
 	}
