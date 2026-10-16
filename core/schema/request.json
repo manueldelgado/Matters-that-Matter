@@ -37,6 +37,18 @@
 				},
 				{
 					"$ref": "#/definitions/MergeNoteRequest"
+				},
+				{
+					"$ref": "#/definitions/OpenSnapshotRequest"
+				},
+				{
+					"$ref": "#/definitions/ChangeSnapshotRequest"
+				},
+				{
+					"$ref": "#/definitions/ExportCacheRequest"
+				},
+				{
+					"$ref": "#/definitions/CloseSnapshotRequest"
 				}
 			],
 			"description": "One request to the core."
@@ -52,7 +64,12 @@
 					"$ref": "#/definitions/AddActionInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -66,8 +83,7 @@
 			"additionalProperties": false,
 			"required": [
 				"input",
-				"op",
-				"snapshot"
+				"op"
 			]
 		},
 		"AddActionInput": {
@@ -241,6 +257,37 @@
 			"description": "A UUID, as `mtm-id` holds it: the only form the core reads back as a note's ID.",
 			"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 		},
+		"HeldRef": {
+			"type": "object",
+			"properties": {
+				"handle": {
+					"type": "string",
+					"description": "The handle `openSnapshot` answered."
+				},
+				"now": {
+					"type": "string",
+					"description": "As the snapshot's `now`: ISO 8601 with a zone."
+				},
+				"timeZone": {
+					"type": "string",
+					"description": "As the snapshot's `timeZone`."
+				},
+				"ids": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Uuid"
+					},
+					"description": "As the snapshot's `ids`: new IDs for this request, used in order."
+				}
+			},
+			"required": [
+				"handle",
+				"now",
+				"timeZone"
+			],
+			"additionalProperties": false,
+			"description": "A snapshot the core holds (from `openSnapshot`), with what changes from one request to the next. The answer is the one the held files would get handed over whole with this clock, zone and IDs."
+		},
 		"UpdateActionRequest": {
 			"type": "object",
 			"properties": {
@@ -252,7 +299,12 @@
 					"$ref": "#/definitions/UpdateActionInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -266,8 +318,7 @@
 			"additionalProperties": false,
 			"required": [
 				"input",
-				"op",
-				"snapshot"
+				"op"
 			]
 		},
 		"UpdateActionInput": {
@@ -359,7 +410,12 @@
 					"$ref": "#/definitions/ActionRef"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -373,8 +429,7 @@
 			"additionalProperties": false,
 			"required": [
 				"input",
-				"op",
-				"snapshot"
+				"op"
 			]
 		},
 		"ActionRef": {
@@ -401,7 +456,12 @@
 					"$ref": "#/definitions/ActionRef"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -415,8 +475,7 @@
 			"additionalProperties": false,
 			"required": [
 				"input",
-				"op",
-				"snapshot"
+				"op"
 			]
 		},
 		"GetActionRequest": {
@@ -430,7 +489,12 @@
 					"$ref": "#/definitions/ActionRef"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -439,8 +503,7 @@
 			},
 			"required": [
 				"op",
-				"input",
-				"snapshot"
+				"input"
 			],
 			"additionalProperties": false
 		},
@@ -455,7 +518,12 @@
 					"$ref": "#/definitions/ListActionsInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -464,8 +532,7 @@
 			},
 			"required": [
 				"op",
-				"input",
-				"snapshot"
+				"input"
 			],
 			"additionalProperties": false
 		},
@@ -517,7 +584,12 @@
 					"$ref": "#/definitions/NoInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -526,8 +598,7 @@
 			},
 			"required": [
 				"op",
-				"input",
-				"snapshot"
+				"input"
 			],
 			"additionalProperties": false
 		},
@@ -549,7 +620,12 @@
 					"$ref": "#/definitions/AddMatterInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -563,8 +639,7 @@
 			"additionalProperties": false,
 			"required": [
 				"input",
-				"op",
-				"snapshot"
+				"op"
 			]
 		},
 		"AddMatterInput": {
@@ -608,7 +683,12 @@
 					"$ref": "#/definitions/NoInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -617,8 +697,7 @@
 			},
 			"required": [
 				"op",
-				"input",
-				"snapshot"
+				"input"
 			],
 			"additionalProperties": false
 		},
@@ -633,7 +712,12 @@
 					"$ref": "#/definitions/NoInput"
 				},
 				"snapshot": {
-					"$ref": "#/definitions/SerialisedSnapshot"
+					"$ref": "#/definitions/SerialisedSnapshot",
+					"description": "The vault, handed over whole. Give this or `held`, not both."
+				},
+				"held": {
+					"$ref": "#/definitions/HeldRef",
+					"description": "A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both."
 				},
 				"boundary": {
 					"type": "number",
@@ -642,8 +726,7 @@
 			},
 			"required": [
 				"op",
-				"input",
-				"snapshot"
+				"input"
 			],
 			"additionalProperties": false
 		},
@@ -700,6 +783,274 @@
 				"later"
 			],
 			"additionalProperties": false
+		},
+		"OpenSnapshotRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "openSnapshot"
+				},
+				"input": {
+					"$ref": "#/definitions/OpenSnapshotInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false,
+			"description": "Holds the vault handed over, for later requests to name by its handle (`held`), until `closeSnapshot`."
+		},
+		"OpenSnapshotInput": {
+			"type": "object",
+			"properties": {
+				"cache": {
+					"$ref": "#/definitions/SnapshotCache",
+					"description": "Properties read earlier, from `exportCache`. Used only with versions, for notes whose version is the same."
+				}
+			},
+			"additionalProperties": false
+		},
+		"SnapshotCache": {
+			"type": "object",
+			"properties": {
+				"format": {
+					"type": "number",
+					"const": 1
+				},
+				"notes": {
+					"type": "object",
+					"additionalProperties": {
+						"$ref": "#/definitions/CachedNote"
+					}
+				}
+			},
+			"required": [
+				"format",
+				"notes"
+			],
+			"additionalProperties": false,
+			"description": "Notes' properties as read, by path, to keep between launches (`exportCache`) and hand back to `openSnapshot`: a note whose version is the same there is not read again. It is the core's own reading: hand it back unchanged."
+		},
+		"CachedNote": {
+			"type": "object",
+			"properties": {
+				"version": {
+					"type": "string"
+				},
+				"frontmatter": {
+					"anyOf": [
+						{
+							"type": "object",
+							"additionalProperties": {}
+						},
+						{
+							"type": "null"
+						}
+					],
+					"description": "The properties; null when the note has none the core can read."
+				},
+				"end": {
+					"anyOf": [
+						{
+							"type": "object",
+							"properties": {
+								"line": {
+									"type": "number"
+								},
+								"offset": {
+									"type": "number"
+								}
+							},
+							"required": [
+								"line",
+								"offset"
+							],
+							"additionalProperties": false
+						},
+						{
+							"type": "null"
+						}
+					],
+					"description": "Where the properties block ends: its closing line and the offset after it; null with no properties."
+				},
+				"bodyLine": {
+					"type": "number",
+					"description": "The first line of the body."
+				}
+			},
+			"required": [
+				"version",
+				"frontmatter",
+				"end",
+				"bodyLine"
+			],
+			"additionalProperties": false,
+			"description": "A note's properties as the core read them, for one version of the note (from `exportCache`)."
+		},
+		"ChangeSnapshotRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "changeSnapshot"
+				},
+				"input": {
+					"$ref": "#/definitions/SnapshotChange"
+				},
+				"boundary": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"op",
+				"input"
+			],
+			"additionalProperties": false,
+			"description": "Tells a held snapshot what changed. All or nothing."
+		},
+		"SnapshotChange": {
+			"type": "object",
+			"properties": {
+				"handle": {
+					"type": "string"
+				},
+				"renames": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/FileRename"
+					}
+				},
+				"files": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/FileChange"
+					}
+				},
+				"settings": {
+					"type": "object",
+					"additionalProperties": {},
+					"description": "The plugin's settings as stored, when they changed (all of them, not only what changed)."
+				},
+				"settingsVersion": {
+					"type": "string",
+					"description": "The settings' new version."
+				},
+				"linkSettings": {
+					"$ref": "#/definitions/LinkSettings",
+					"description": "The vault's link settings, when they changed (all of them)."
+				}
+			},
+			"required": [
+				"handle"
+			],
+			"additionalProperties": false,
+			"description": "What changed in a held snapshot since it was opened or last changed: renames first, then files, then the settings. Only what changed: every other file stays as held."
+		},
+		"FileRename": {
+			"type": "object",
+			"properties": {
+				"from": {
+					"type": "string"
+				},
+				"to": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"from",
+				"to"
+			],
+			"additionalProperties": false,
+			"description": "A file renamed or moved, keeping its text and version."
+		},
+		"FileChange": {
+			"type": "object",
+			"properties": {
+				"path": {
+					"type": "string"
+				},
+				"content": {
+					"type": "string",
+					"description": "A note's new text."
+				},
+				"version": {
+					"type": "string",
+					"description": "The note's new version; only for a snapshot opened with versions, and then needed for every new note."
+				},
+				"removed": {
+					"type": "boolean",
+					"description": "The file is gone."
+				}
+			},
+			"required": [
+				"path"
+			],
+			"additionalProperties": false,
+			"description": "A file that changed: added (with its text, for a note), its text changed, or removed."
+		},
+		"ExportCacheRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "exportCache"
+				},
+				"input": {
+					"$ref": "#/definitions/HandleInput"
+				},
+				"boundary": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"op",
+				"input"
+			],
+			"additionalProperties": false,
+			"description": "A held snapshot's notes' properties as read, to keep for the next `openSnapshot`."
+		},
+		"HandleInput": {
+			"type": "object",
+			"properties": {
+				"handle": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"handle"
+			],
+			"additionalProperties": false,
+			"description": "A held snapshot, named by its handle."
+		},
+		"CloseSnapshotRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "closeSnapshot"
+				},
+				"input": {
+					"$ref": "#/definitions/HandleInput"
+				},
+				"boundary": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"op",
+				"input"
+			],
+			"additionalProperties": false,
+			"description": "Lets a held snapshot go."
 		}
 	}
 }

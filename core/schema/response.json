@@ -39,6 +39,18 @@
 					"$ref": "#/definitions/MergeNoteResponse"
 				},
 				{
+					"$ref": "#/definitions/OpenSnapshotResponse"
+				},
+				{
+					"$ref": "#/definitions/ChangeSnapshotResponse"
+				},
+				{
+					"$ref": "#/definitions/ExportCacheResponse"
+				},
+				{
+					"$ref": "#/definitions/CloseSnapshotResponse"
+				},
+				{
 					"$ref": "#/definitions/Failure"
 				}
 			],
@@ -2156,6 +2168,337 @@
 			],
 			"description": "What the merge chose where both sides changed the same thing; nothing is lost without one of these."
 		},
+		"OpenSnapshotResponse": {
+			"type": "object",
+			"properties": {
+				"boundary": {
+					"type": "number"
+				},
+				"ok": {
+					"type": "boolean",
+					"const": true
+				},
+				"op": {
+					"type": "string",
+					"const": "openSnapshot"
+				},
+				"value": {
+					"$ref": "#/definitions/HeldValue"
+				},
+				"warnings": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Warning"
+					},
+					"description": "Things done differently from what was asked."
+				},
+				"plan": {
+					"$ref": "#/definitions/Plan",
+					"description": "The writes to make; empty for reads."
+				},
+				"changes": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Change"
+					},
+					"description": "What the writes change, one entry per property, body part or file."
+				},
+				"idsUsed": {
+					"type": "number",
+					"description": "How many of the snapshot's `ids` the plan used, from the first."
+				},
+				"files": {
+					"$ref": "#/definitions/FileOutcome",
+					"description": "With `apply`: what every file holds after the plan."
+				}
+			},
+			"required": [
+				"boundary",
+				"ok",
+				"op",
+				"value",
+				"warnings",
+				"plan",
+				"changes",
+				"idsUsed"
+			],
+			"additionalProperties": false
+		},
+		"HeldValue": {
+			"type": "object",
+			"properties": {
+				"handle": {
+					"type": "string"
+				},
+				"notes": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"handle",
+				"notes"
+			],
+			"additionalProperties": false,
+			"description": "A held snapshot: its handle, and how many notes it holds."
+		},
+		"ChangeSnapshotResponse": {
+			"type": "object",
+			"properties": {
+				"boundary": {
+					"type": "number"
+				},
+				"ok": {
+					"type": "boolean",
+					"const": true
+				},
+				"op": {
+					"type": "string",
+					"const": "changeSnapshot"
+				},
+				"value": {
+					"$ref": "#/definitions/HeldValue"
+				},
+				"warnings": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Warning"
+					},
+					"description": "Things done differently from what was asked."
+				},
+				"plan": {
+					"$ref": "#/definitions/Plan",
+					"description": "The writes to make; empty for reads."
+				},
+				"changes": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Change"
+					},
+					"description": "What the writes change, one entry per property, body part or file."
+				},
+				"idsUsed": {
+					"type": "number",
+					"description": "How many of the snapshot's `ids` the plan used, from the first."
+				},
+				"files": {
+					"$ref": "#/definitions/FileOutcome",
+					"description": "With `apply`: what every file holds after the plan."
+				}
+			},
+			"required": [
+				"boundary",
+				"ok",
+				"op",
+				"value",
+				"warnings",
+				"plan",
+				"changes",
+				"idsUsed"
+			],
+			"additionalProperties": false
+		},
+		"ExportCacheResponse": {
+			"type": "object",
+			"properties": {
+				"boundary": {
+					"type": "number"
+				},
+				"ok": {
+					"type": "boolean",
+					"const": true
+				},
+				"op": {
+					"type": "string",
+					"const": "exportCache"
+				},
+				"value": {
+					"$ref": "#/definitions/SnapshotCache"
+				},
+				"warnings": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Warning"
+					},
+					"description": "Things done differently from what was asked."
+				},
+				"plan": {
+					"$ref": "#/definitions/Plan",
+					"description": "The writes to make; empty for reads."
+				},
+				"changes": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Change"
+					},
+					"description": "What the writes change, one entry per property, body part or file."
+				},
+				"idsUsed": {
+					"type": "number",
+					"description": "How many of the snapshot's `ids` the plan used, from the first."
+				},
+				"files": {
+					"$ref": "#/definitions/FileOutcome",
+					"description": "With `apply`: what every file holds after the plan."
+				}
+			},
+			"required": [
+				"boundary",
+				"ok",
+				"op",
+				"value",
+				"warnings",
+				"plan",
+				"changes",
+				"idsUsed"
+			],
+			"additionalProperties": false
+		},
+		"SnapshotCache": {
+			"type": "object",
+			"properties": {
+				"format": {
+					"type": "number",
+					"const": 1
+				},
+				"notes": {
+					"type": "object",
+					"additionalProperties": {
+						"$ref": "#/definitions/CachedNote"
+					}
+				}
+			},
+			"required": [
+				"format",
+				"notes"
+			],
+			"additionalProperties": false,
+			"description": "Notes' properties as read, by path, to keep between launches (`exportCache`) and hand back to `openSnapshot`: a note whose version is the same there is not read again. It is the core's own reading: hand it back unchanged."
+		},
+		"CachedNote": {
+			"type": "object",
+			"properties": {
+				"version": {
+					"type": "string"
+				},
+				"frontmatter": {
+					"anyOf": [
+						{
+							"type": "object",
+							"additionalProperties": {}
+						},
+						{
+							"type": "null"
+						}
+					],
+					"description": "The properties; null when the note has none the core can read."
+				},
+				"end": {
+					"anyOf": [
+						{
+							"type": "object",
+							"properties": {
+								"line": {
+									"type": "number"
+								},
+								"offset": {
+									"type": "number"
+								}
+							},
+							"required": [
+								"line",
+								"offset"
+							],
+							"additionalProperties": false
+						},
+						{
+							"type": "null"
+						}
+					],
+					"description": "Where the properties block ends: its closing line and the offset after it; null with no properties."
+				},
+				"bodyLine": {
+					"type": "number",
+					"description": "The first line of the body."
+				}
+			},
+			"required": [
+				"version",
+				"frontmatter",
+				"end",
+				"bodyLine"
+			],
+			"additionalProperties": false,
+			"description": "A note's properties as the core read them, for one version of the note (from `exportCache`)."
+		},
+		"CloseSnapshotResponse": {
+			"type": "object",
+			"properties": {
+				"boundary": {
+					"type": "number"
+				},
+				"ok": {
+					"type": "boolean",
+					"const": true
+				},
+				"op": {
+					"type": "string",
+					"const": "closeSnapshot"
+				},
+				"value": {
+					"$ref": "#/definitions/ClosedValue"
+				},
+				"warnings": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Warning"
+					},
+					"description": "Things done differently from what was asked."
+				},
+				"plan": {
+					"$ref": "#/definitions/Plan",
+					"description": "The writes to make; empty for reads."
+				},
+				"changes": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Change"
+					},
+					"description": "What the writes change, one entry per property, body part or file."
+				},
+				"idsUsed": {
+					"type": "number",
+					"description": "How many of the snapshot's `ids` the plan used, from the first."
+				},
+				"files": {
+					"$ref": "#/definitions/FileOutcome",
+					"description": "With `apply`: what every file holds after the plan."
+				}
+			},
+			"required": [
+				"boundary",
+				"ok",
+				"op",
+				"value",
+				"warnings",
+				"plan",
+				"changes",
+				"idsUsed"
+			],
+			"additionalProperties": false
+		},
+		"ClosedValue": {
+			"type": "object",
+			"properties": {
+				"closed": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"closed"
+			],
+			"additionalProperties": false,
+			"description": "Whether the core held the snapshot it was asked to let go."
+		},
 		"Failure": {
 			"type": "object",
 			"properties": {
@@ -2194,7 +2537,11 @@
 				"addMatter",
 				"listMatters",
 				"getWorkflow",
-				"mergeNote"
+				"mergeNote",
+				"openSnapshot",
+				"changeSnapshot",
+				"exportCache",
+				"closeSnapshot"
 			]
 		},
 		"CoreError": {
@@ -2257,6 +2604,10 @@
 				},
 				{
 					"type": "string",
+					"const": "unknown-snapshot"
+				},
+				{
+					"type": "string",
 					"const": "write-failed"
 				},
 				{
@@ -2264,7 +2615,7 @@
 					"const": "internal"
 				}
 			],
-			"description": "Why a request failed. The operations' own codes (`not-found`, `ambiguous`, `unmatched`, `invalid`, `not-ready`) and the boundary's: a request that isn't valid JSON or doesn't fit the schema (`bad-request`), a boundary version the core doesn't speak (`unsupported-boundary`), a snapshot that contradicts itself (`bad-snapshot`), too few IDs (`not-enough-ids`), a plan that can't be applied to the snapshot's files (`write-failed`), and anything unexpected (`internal`, a bug)."
+			"description": "Why a request failed. The operations' own codes (`not-found`, `ambiguous`, `unmatched`, `invalid`, `not-ready`) and the boundary's: a request that isn't valid JSON or doesn't fit the schema (`bad-request`), a boundary version the core doesn't speak (`unsupported-boundary`), a snapshot that contradicts itself (`bad-snapshot`), too few IDs (`not-enough-ids`), a plan that can't be applied to the snapshot's files (`write-failed`), and anything unexpected (`internal`, a bug), and a held snapshot the core doesn't hold (`unknown-snapshot`: closed, or the core loaded again)."
 		},
 		"OpErrorCode": {
 			"type": "string",

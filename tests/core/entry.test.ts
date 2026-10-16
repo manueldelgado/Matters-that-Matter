@@ -49,7 +49,7 @@ describe('requests that can’t be read come back as values', () => {
 	});
 
 	it('a missing snapshot, a field of the wrong type and an unknown field name their place', () => {
-		expect(failure(core.run({ op: 'getToday', input: {} }))).toMatchObject({ code: 'bad-request', field: '/snapshot', message: '/snapshot is required.' });
+		expect(failure(core.run({ op: 'getToday', input: {} }))).toMatchObject({ code: 'bad-request', field: '/snapshot', message: '/snapshot is required, or /held: a snapshot the core holds.' });
 		expect(failure(core.run({ op: 'addAction', input: { title: 5 }, snapshot: vault() }))).toMatchObject({ field: '/input/title', message: '/input/title must be string, not number.' });
 		expect(failure(core.run({ op: 'addAction', input: { colour: 'red' }, snapshot: vault() }))).toMatchObject({ field: '/input/colour', message: '/input/colour is not a known field.' });
 		expect(failure(core.run({ op: 'getToday', input: { x: 1 }, snapshot: vault() }))).toMatchObject({ field: '/input/x' });

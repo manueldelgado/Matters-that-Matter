@@ -1,15 +1,17 @@
-// The core bundle's one way in: a JSON request naming an operation, its input and a snapshot of the vault; a JSON
-// response with the result, warnings, plan and changes, or an error. Nothing is ever thrown: a request that can't be
-// read, a snapshot that contradicts itself and a bug alike come back as a failure value. Pure: no files, no clock and
-// no randomness; the caller supplies the vault, the time and new IDs, and writes what the plan says.
+// The core bundle's one way in: a JSON request naming an operation, its input and a snapshot of the vault (handed
+// over whole, or held by the core from an earlier `openSnapshot`); a JSON response with the result, warnings, plan and
+// changes, or an error. Nothing is ever thrown: a request that can't be read, a snapshot that contradicts itself and
+// a bug alike come back as a failure value. No files, no clock and no randomness; the caller supplies the vault, the
+// time and new IDs, and writes what the plan says. The only state is the held snapshots (core/src/held.ts).
 
 import { mergeNote } from '../../src/files/merge';
 import { contentsAfter, WriteError } from '../../src/files/write';
 import { addAction, addMatter, emptyPlan, getAction, getWorkflow, listActions, listMatters, markAsDone, reopen, today, updateAction } from '../../src/ops';
 import type { OpResult } from '../../src/ops/types';
 import requestSchema from '../schema/request.json';
-import { BOUNDARY, type CoreError, type CoreOp, type CoreRequest, type CoreResponse, type Failure } from './boundary';
-import { openSnapshot, SnapshotError } from './snapshot';
+import { BOUNDARY, type CoreError, type CoreOp, type CoreRequest, type CoreResponse, type Failure, type VaultRequest } from './boundary';
+import { changeHeld, closeHeld, exportHeld, heldSnapshot, openHeld } from './held';
+import { openSnapshot, SnapshotError, type OpenedSnapshot } from './snapshot';
 import { Validator } from './validate';
 
 export { BOUNDARY };
@@ -28,6 +30,10 @@ const OPS: readonly CoreOp[] = [
 	'listMatters',
 	'getWorkflow',
 	'mergeNote',
+	'openSnapshot',
+	'changeSnapshot',
+	'exportCache',
+	'closeSnapshot',
 ];
 
 const fail = (error: CoreError, op?: CoreOp): Failure => ({ boundary: BOUNDARY, ok: false, ...(op ? { op } : {}), error });
@@ -38,8 +44,19 @@ function opOf(request: unknown): CoreOp | undefined {
 	return OPS.find((known) => known === op);
 }
 
-function answer(r: Exclude<CoreRequest, { op: 'mergeNote' }>): CoreResponse {
-	const opened = openSnapshot(r.snapshot);
+/** The vault a request runs on: handed over whole, or held. */
+function vaultOf(r: VaultRequest): OpenedSnapshot {
+	if (r.snapshot && r.held) throw new SnapshotError('bad-request', 'Give the snapshot or a held one, not both.', '/held');
+	if (r.held) return heldSnapshot(r.held);
+	if (r.snapshot) return openSnapshot(r.snapshot);
+	throw new SnapshotError('bad-request', '/snapshot is required, or /held: a snapshot the core holds.', '/snapshot');
+}
+
+/** An answer with nothing to write. */
+const settledAnswer = (op: CoreOp, value: unknown): CoreResponse => ({ boundary: BOUNDARY, ok: true, op, value, warnings: [], plan: emptyPlan(), changes: [], idsUsed: 0 }) as CoreResponse;
+
+function answer(r: VaultRequest): CoreResponse {
+	const opened = vaultOf(r);
 	const s = opened.snapshot;
 	let result: OpResult<unknown>;
 	switch (r.op) {
@@ -108,10 +125,20 @@ export function handle(text: unknown): CoreResponse {
 		const miss = validator.check(request);
 		if (miss) return fail({ code: 'bad-request', field: miss.at, message: `${miss.at || 'The request'} ${miss.message}.` }, op);
 		const r = request as CoreRequest;
-		if (r.op === 'mergeNote') {
-			return { boundary: BOUNDARY, ok: true, op: r.op, value: mergeNote(r.input), warnings: [], plan: emptyPlan(), changes: [], idsUsed: 0 };
+		switch (r.op) {
+			case 'mergeNote':
+				return settledAnswer(r.op, mergeNote(r.input));
+			case 'openSnapshot':
+				return settledAnswer(r.op, openHeld(r.snapshot, r.input.cache));
+			case 'changeSnapshot':
+				return settledAnswer(r.op, changeHeld(r.input));
+			case 'exportCache':
+				return settledAnswer(r.op, exportHeld(r.input.handle));
+			case 'closeSnapshot':
+				return settledAnswer(r.op, closeHeld(r.input.handle));
+			default:
+				return answer(r);
 		}
-		return answer(r);
 	} catch (error) {
 		if (error instanceof SnapshotError) return fail({ code: error.code, message: error.message, ...(error.field ? { field: error.field } : {}) }, op);
 		if (error instanceof WriteError) return fail({ code: 'write-failed', writeCode: error.code, path: error.path, message: error.message }, op);

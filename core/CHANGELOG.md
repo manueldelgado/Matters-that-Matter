@@ -2,6 +2,17 @@
 
 The core is the part of Matters that Matter that every product shares: the note format's rules, the operations and the files layer, bundled as one script, `mtm-core.js`, for JavaScript hosts other than Node and Obsidian. Its versions are tagged `core-x.y.z` in this repository, apart from the plugin's and the command line's. To get the bundle for a tag, check it out and run `npm ci && npm run build:core` (it writes `core/dist/mtm-core.js`); its JSON Schemas are in `core/schema/`.
 
+## 0.2.0 (unreleased)
+
+Held snapshots, for hosts that live longer than one request. Boundary version 1 still: everything here is new and optional.
+
+- **`openSnapshot`** takes a snapshot as requests do and answers a handle; the core keeps every note's reading and the operations' view of the vault under it.
+- **Every operation takes `held` in place of `snapshot`**: the handle, with `now`, `timeZone` and `ids` for this request. The answer is the one the same files would get handed over whole; the tests run the whole corpus both ways.
+- **`changeSnapshot`** tells a held snapshot what changed: files renamed, added (a note with its text and version), changed or removed, and new settings or link settings. Only the notes it names are read again, and the other Actions are kept as they were while no note became or stopped being a Matter or an Action. All or nothing: a change the core refuses leaves the snapshot as it was.
+- **`exportCache`** gives each note's properties as read, by path and version; handed back to `openSnapshot` as `cache`, a note whose version is the same isn't read again.
+- **`closeSnapshot`** lets a held snapshot go. Handles last as long as the JavaScript context, and a handle the core doesn't hold answers `unknown-snapshot`.
+- A request without `snapshot` or `held`, or with both, is refused (`bad-request`).
+
 ## 0.1.0 (16 October 2026)
 
 The first version, from plugin 1.1.4 and command line 0.5.0.

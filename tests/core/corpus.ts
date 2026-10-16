@@ -107,8 +107,8 @@ function sourcesRun(request: CoreRequest, s: Snapshot): Run {
 			return () => listMatters(s);
 		case 'getWorkflow':
 			return () => getWorkflow(s);
-		case 'mergeNote':
-			throw new Error('No snapshot for a merge');
+		default:
+			throw new Error(`No snapshot for ${request.op}`);
 	}
 }
 

@@ -29,6 +29,7 @@ export function expectAsSources(e: CorpusEntry, response: CoreResponse): void {
 	expect(response.plan).toEqual(asJson(r.plan));
 	expect(response.changes).toEqual(asJson(r.changes));
 	expect(response.files).toEqual(asJson(e.expected.files));
-	const ids = e.request.op !== 'mergeNote' ? (e.request.snapshot.ids ?? []) : [];
+	const r0 = e.request as { snapshot?: { ids?: string[] }; held?: { ids?: string[] } };
+	const ids = r0.held?.ids ?? r0.snapshot?.ids ?? [];
 	expect(response.idsUsed).toBe(ids.filter((id) => JSON.stringify(r.plan).includes(id)).length);
 }

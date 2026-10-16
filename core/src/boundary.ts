@@ -80,6 +80,86 @@ export interface SerialisedSnapshot {
 	ids?: Uuid[];
 }
 
+// ——— Held snapshots ———
+
+/**
+ * A snapshot the core holds (from `openSnapshot`), with what changes from one request to the next. The answer is the
+ * one the held files would get handed over whole with this clock, zone and IDs.
+ */
+export interface HeldRef {
+	/** The handle `openSnapshot` answered. */
+	handle: string;
+	/** As the snapshot's `now`: ISO 8601 with a zone. */
+	now: string;
+	/** As the snapshot's `timeZone`. */
+	timeZone: string;
+	/** As the snapshot's `ids`: new IDs for this request, used in order. */
+	ids?: Uuid[];
+}
+
+/** A note's properties as the core read them, for one version of the note (from `exportCache`). */
+export interface CachedNote {
+	version: string;
+	/** The properties; null when the note has none the core can read. */
+	frontmatter: Record<string, unknown> | null;
+	/** Where the properties block ends: its closing line and the offset after it; null with no properties. */
+	end: { line: number; offset: number } | null;
+	/** The first line of the body. */
+	bodyLine: number;
+}
+
+/**
+ * Notes' properties as read, by path, to keep between launches (`exportCache`) and hand back to `openSnapshot`: a
+ * note whose version is the same there is not read again. It is the core's own reading: hand it back unchanged.
+ */
+export interface SnapshotCache {
+	format: 1;
+	notes: Record<string, CachedNote>;
+}
+
+export interface OpenSnapshotInput {
+	/** Properties read earlier, from `exportCache`. Used only with versions, for notes whose version is the same. */
+	cache?: SnapshotCache;
+}
+
+/** A held snapshot, named by its handle. */
+export interface HandleInput {
+	handle: string;
+}
+
+/** A file that changed: added (with its text, for a note), its text changed, or removed. */
+export interface FileChange {
+	path: string;
+	/** A note's new text. */
+	content?: string;
+	/** The note's new version; only for a snapshot opened with versions, and then needed for every new note. */
+	version?: string;
+	/** The file is gone. */
+	removed?: boolean;
+}
+
+/** A file renamed or moved, keeping its text and version. */
+export interface FileRename {
+	from: string;
+	to: string;
+}
+
+/**
+ * What changed in a held snapshot since it was opened or last changed: renames first, then files, then the settings.
+ * Only what changed: every other file stays as held.
+ */
+export interface SnapshotChange {
+	handle: string;
+	renames?: FileRename[];
+	files?: FileChange[];
+	/** The plugin's settings as stored, when they changed (all of them, not only what changed). */
+	settings?: Record<string, unknown>;
+	/** The settings' new version. */
+	settingsVersion?: string;
+	/** The vault's link settings, when they changed (all of them). */
+	linkSettings?: LinkSettings;
+}
+
 // ——— Requests ———
 
 /** An Action named by its path (`.md` optional), its title or its `mtm-id`. */
@@ -93,7 +173,10 @@ export type NoInput = Record<string, never>;
 interface Request<Op extends string, Input> {
 	op: Op;
 	input: Input;
-	snapshot: SerialisedSnapshot;
+	/** The vault, handed over whole. Give this or `held`, not both. */
+	snapshot?: SerialisedSnapshot;
+	/** A snapshot the core holds, with this request's clock, zone and IDs. Give this or `snapshot`, not both. */
+	held?: HeldRef;
 	/** The boundary version the caller was written for; a different one is refused (`unsupported-boundary`). */
 	boundary?: number;
 }
@@ -121,6 +204,35 @@ export interface MergeNoteRequest {
 	boundary?: number;
 }
 
+/** Holds the vault handed over, for later requests to name by its handle (`held`), until `closeSnapshot`. */
+export interface OpenSnapshotRequest {
+	op: 'openSnapshot';
+	input: OpenSnapshotInput;
+	snapshot: SerialisedSnapshot;
+	boundary?: number;
+}
+
+/** Tells a held snapshot what changed. All or nothing. */
+export interface ChangeSnapshotRequest {
+	op: 'changeSnapshot';
+	input: SnapshotChange;
+	boundary?: number;
+}
+
+/** A held snapshot's notes' properties as read, to keep for the next `openSnapshot`. */
+export interface ExportCacheRequest {
+	op: 'exportCache';
+	input: HandleInput;
+	boundary?: number;
+}
+
+/** Lets a held snapshot go. */
+export interface CloseSnapshotRequest {
+	op: 'closeSnapshot';
+	input: HandleInput;
+	boundary?: number;
+}
+
 /** One request to the core. */
 export type CoreRequest =
 	| AddActionRequest
@@ -133,7 +245,14 @@ export type CoreRequest =
 	| AddMatterRequest
 	| ListMattersRequest
 	| GetWorkflowRequest
-	| MergeNoteRequest;
+	| MergeNoteRequest
+	| OpenSnapshotRequest
+	| ChangeSnapshotRequest
+	| ExportCacheRequest
+	| CloseSnapshotRequest;
+
+/** The requests that run an operation on a vault: with `snapshot` or `held`. */
+export type VaultRequest = Exclude<CoreRequest, MergeNoteRequest | OpenSnapshotRequest | ChangeSnapshotRequest | ExportCacheRequest | CloseSnapshotRequest>;
 
 export type CoreOp = CoreRequest['op'];
 
@@ -174,14 +293,30 @@ export type ListMattersResponse = Answer<'listMatters', MatterSummary[]>;
 export type GetWorkflowResponse = Answer<'getWorkflow', WorkflowValue>;
 export type MergeNoteResponse = Answer<'mergeNote', MergeValue>;
 
+/** A held snapshot: its handle, and how many notes it holds. */
+export interface HeldValue {
+	handle: string;
+	notes: number;
+}
+
+/** Whether the core held the snapshot it was asked to let go. */
+export interface ClosedValue {
+	closed: boolean;
+}
+
+export type OpenSnapshotResponse = Answer<'openSnapshot', HeldValue>;
+export type ChangeSnapshotResponse = Answer<'changeSnapshot', HeldValue>;
+export type ExportCacheResponse = Answer<'exportCache', SnapshotCache>;
+export type CloseSnapshotResponse = Answer<'closeSnapshot', ClosedValue>;
+
 /**
  * Why a request failed. The operations' own codes (`not-found`, `ambiguous`, `unmatched`, `invalid`, `not-ready`)
  * and the boundary's: a request that isn't valid JSON or doesn't fit the schema (`bad-request`), a boundary version
  * the core doesn't speak (`unsupported-boundary`), a snapshot that contradicts itself (`bad-snapshot`), too few IDs
  * (`not-enough-ids`), a plan that can't be applied to the snapshot's files (`write-failed`), and anything unexpected
- * (`internal`, a bug).
+ * (`internal`, a bug), and a held snapshot the core doesn't hold (`unknown-snapshot`: closed, or the core loaded again).
  */
-export type CoreErrorCode = OpErrorCode | 'bad-request' | 'unsupported-boundary' | 'bad-snapshot' | 'not-enough-ids' | 'write-failed' | 'internal';
+export type CoreErrorCode = OpErrorCode | 'bad-request' | 'unsupported-boundary' | 'bad-snapshot' | 'not-enough-ids' | 'unknown-snapshot' | 'write-failed' | 'internal';
 
 export interface CoreError {
 	code: CoreErrorCode;
@@ -220,4 +355,8 @@ export type CoreResponse =
 	| ListMattersResponse
 	| GetWorkflowResponse
 	| MergeNoteResponse
+	| OpenSnapshotResponse
+	| ChangeSnapshotResponse
+	| ExportCacheResponse
+	| CloseSnapshotResponse
 	| Failure;
