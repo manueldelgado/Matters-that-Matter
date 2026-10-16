@@ -206,7 +206,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 **Claude Code**
 
 ```bash
-claude mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
+claude mcp add matters-that-matter -- npx -y matters-that-matter mcp --vault ~/Notes
 ```
 
 **Claude Desktop**: in Settings → Developer → Edit Config, add the server to `claude_desktop_config.json` and restart Claude:
@@ -214,7 +214,7 @@ claude mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
 ```json
 {
   "mcpServers": {
-    "matters": {
+    "matters-that-matter": {
       "command": "npx",
       "args": ["-y", "matters-that-matter", "mcp", "--vault", "/Users/you/Notes"]
     }
@@ -225,13 +225,13 @@ claude mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
 **Codex**
 
 ```bash
-codex mcp add matters -- npx -y matters-that-matter mcp --vault ~/Notes
+codex mcp add matters-that-matter -- npx -y matters-that-matter mcp --vault ~/Notes
 ```
 
 or in `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.matters]
+[mcp_servers.matters-that-matter]
 command = "npx"
 args = ["-y", "matters-that-matter", "mcp", "--vault", "~/Notes"]
 ```

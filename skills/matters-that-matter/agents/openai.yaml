@@ -1,6 +1,6 @@
 # Codex reads this file; other assistants ignore it.
 # The MCP server needs the path to the user's vault, so it is added once by hand:
-#   codex mcp add matters -- npx -y matters-that-matter mcp --vault <path to the vault>
+#   codex mcp add matters-that-matter -- npx -y matters-that-matter mcp --vault <path to the vault>
 # No command is given below on purpose: Codex starts a stdio dependency with its command and no arguments,
 # which can't name the vault, so it should not set the server up by itself.
 interface:
@@ -10,6 +10,6 @@ interface:
 dependencies:
   tools:
     - type: "mcp"
-      value: "matters"
-      description: "The Matters that Matter MCP server, for reading and changing Actions and Matters. Add it with: codex mcp add matters -- npx -y matters-that-matter mcp --vault <path to the vault>"
+      value: "matters-that-matter"
+      description: "The Matters that Matter MCP server, for reading and changing Actions and Matters. Add it with: codex mcp add matters-that-matter -- npx -y matters-that-matter mcp --vault <path to the vault>"
       transport: "stdio"
