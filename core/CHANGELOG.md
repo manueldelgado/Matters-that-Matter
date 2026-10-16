@@ -2,7 +2,7 @@
 
 The core is the part of Matters that Matter that every product shares: the note format's rules, the operations and the files layer, bundled as one script, `mtm-core.js`, for JavaScript hosts other than Node and Obsidian. Its versions are tagged `core-x.y.z` in this repository, apart from the plugin's and the command line's. To get the bundle for a tag, check it out and run `npm ci && npm run build:core` (it writes `core/dist/mtm-core.js`); its JSON Schemas are in `core/schema/`.
 
-## 0.2.0 (unreleased)
+## 0.2.0 (16 October 2026)
 
 Held snapshots, for hosts that live longer than one request. Boundary version 1 still: everything here is new and optional.
 
