@@ -1,6 +1,9 @@
 // The bundle's URL parser against Node's own (the URL Standard's): the same `href` for every http(s) address, and a
-// TypeError for the same addresses. Hand-picked cases, then generated ones from a fixed seed.
+// TypeError for the same addresses. Hand-picked cases against Node's answers as recorded, then generated ones from a
+// fixed seed against the Node running the tests, when it reads the standard as those answers do.
 
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { WebURL } from '../../core/src/webUrl';
 
@@ -131,24 +134,32 @@ function generated(count: number): string[] {
 }
 
 /**
- * Hosts with an `xn--` label that isn't valid Punycode (`xn--`, `xn--abc`): Node 22 and Node 24 up to 24.13 refuse
- * them, as the bundle does; later Node 24 releases take them. Where Node takes them, the bundle still refuses the
- * hand-picked ones, and generated addresses with such a label are left out.
+ * The hand-picked cases' answers, as Node's own parser gave them when the bundle's was written (its version is in the
+ * file). Node's reading of the URL Standard differs between releases (`^` in a path, `xn--` labels that aren't valid
+ * Punycode), so the bundle is held to these, whatever Node runs the tests. Regenerate on that Node only:
+ *   MTM_WEB_URL_EXPECTED=1 npx vitest run tests/core/webUrl.test.ts
  */
-const lenientPunycode = parse(URL, 'http://xn--/') !== 'TypeError';
-const VALID_PUNYCODE = ['xn--mnchen-3ya', 'xn--ls8h'];
-const unsettled = (text: string) => lenientPunycode && VALID_PUNYCODE.reduce((t, label) => t.split(label).join(''), text.toLowerCase()).includes('xn--');
-const expected = (text: string) => (unsettled(text) ? 'TypeError' : parse(URL, text));
+const EXPECTED_FILE = fileURLToPath(new URL('./webUrl.expected.json', import.meta.url));
+if (process.env.MTM_WEB_URL_EXPECTED) {
+	const cases = Object.fromEntries(CASES.map((text) => [text, parse(URL, text)]));
+	writeFileSync(EXPECTED_FILE, `${JSON.stringify({ node: process.versions.node, cases }, null, '\t')}\n`);
+}
+const EXPECTED = JSON.parse(readFileSync(EXPECTED_FILE, 'utf8')) as { node: string; cases: Record<string, string> };
+
+/** Whether this Node reads the hand-picked cases as the expected answers say, so it can judge generated ones too. */
+const sameReading = CASES.every((text) => parse(URL, text) === EXPECTED.cases[text]);
 
 describe('the bundle’s URL parser', () => {
-	it.each(CASES)('%s', (text) => {
-		expect(parse(WebURL, text)).toBe(expected(text));
+	it('has an expected answer for every hand-picked case', () => {
+		expect(Object.keys(EXPECTED.cases).sort()).toEqual([...CASES].sort());
 	});
 
-	it('agrees with the URL Standard on 5,000 generated addresses', () => {
-		const differ = generated(5000)
-			.filter((text) => !unsettled(text))
-			.filter((text) => parse(WebURL, text) !== parse(URL, text));
+	it.each(CASES)('%s', (text) => {
+		expect(parse(WebURL, text)).toBe(EXPECTED.cases[text]);
+	});
+
+	it.skipIf(!sameReading)('agrees with Node’s parser on 5,000 generated addresses, where Node reads the URL Standard as the bundle does', () => {
+		const differ = generated(5000).filter((text) => parse(WebURL, text) !== parse(URL, text));
 		expect(differ.map((text) => [text, parse(WebURL, text), parse(URL, text)])).toEqual([]);
 	});
 
