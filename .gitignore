@@ -4,6 +4,7 @@ node_modules/
 # Build output (shipped as a release asset, not committed)
 main.js
 cli/dist/
+core/dist/
 *.map
 
 # Obsidian plugin settings when the repo is linked into a test vault

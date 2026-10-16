@@ -1,0 +1,705 @@
+{
+	"$id": "mtm-core/request",
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$ref": "#/definitions/CoreRequest",
+	"definitions": {
+		"CoreRequest": {
+			"anyOf": [
+				{
+					"$ref": "#/definitions/AddActionRequest"
+				},
+				{
+					"$ref": "#/definitions/UpdateActionRequest"
+				},
+				{
+					"$ref": "#/definitions/MarkAsDoneRequest"
+				},
+				{
+					"$ref": "#/definitions/ReopenActionRequest"
+				},
+				{
+					"$ref": "#/definitions/GetActionRequest"
+				},
+				{
+					"$ref": "#/definitions/ListActionsRequest"
+				},
+				{
+					"$ref": "#/definitions/GetTodayRequest"
+				},
+				{
+					"$ref": "#/definitions/AddMatterRequest"
+				},
+				{
+					"$ref": "#/definitions/ListMattersRequest"
+				},
+				{
+					"$ref": "#/definitions/GetWorkflowRequest"
+				},
+				{
+					"$ref": "#/definitions/MergeNoteRequest"
+				}
+			],
+			"description": "One request to the core."
+		},
+		"AddActionRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "addAction"
+				},
+				"input": {
+					"$ref": "#/definitions/AddActionInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				},
+				"apply": {
+					"type": "boolean",
+					"description": "Also apply the plan to the snapshot's files and return what every file would hold (`files`)."
+				}
+			},
+			"additionalProperties": false,
+			"required": [
+				"input",
+				"op",
+				"snapshot"
+			]
+		},
+		"AddActionInput": {
+			"type": "object",
+			"properties": {
+				"title": {
+					"type": "string"
+				},
+				"matter": {
+					"type": "string"
+				},
+				"status": {
+					"type": "string"
+				},
+				"type": {
+					"type": "string"
+				},
+				"priority": {
+					"type": [
+						"number",
+						"string",
+						"null"
+					],
+					"description": "1–3, or high, medium, low; null removes it (updates)."
+				},
+				"start": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "'YYYY-MM-DD', 'YYYY-MM-DDTHH:mm' or words such as \"fri 10:00\"; null removes it (updates)."
+				},
+				"due": {
+					"type": [
+						"string",
+						"null"
+					]
+				},
+				"waitingOn": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "A person note; null removes it (updates). Setting someone also adds them to the people."
+				},
+				"people": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Person notes; on update they replace the list."
+				},
+				"details": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "The details; null removes them (updates)."
+				},
+				"checklist": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Checklist items; on update they are added after the existing ones."
+				},
+				"link": {
+					"type": "string",
+					"description": "A note in the vault or an http(s) address, written as a line at the end of the body."
+				},
+				"text": {
+					"type": "string",
+					"description": "Quick add text; fields given separately win over what it says."
+				}
+			},
+			"additionalProperties": false
+		},
+		"SerialisedSnapshot": {
+			"type": "object",
+			"properties": {
+				"files": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Every file in the vault, of any kind (attachments too: links resolve to them). Files Obsidian doesn't list are left out by the core: those in the configuration folder, and any file or folder whose name starts with a dot."
+				},
+				"contents": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "The text of every Markdown note in `files`, by path. A note missing here reads as empty."
+				},
+				"settings": {
+					"type": "object",
+					"additionalProperties": {},
+					"description": "The plugin's settings as stored (its `data.json`), read and migrated as the plugin reads them."
+				},
+				"linkSettings": {
+					"$ref": "#/definitions/LinkSettings",
+					"description": "The vault's link settings."
+				},
+				"configDir": {
+					"type": "string",
+					"description": "The vault's configuration folder, which the core leaves out of `files`. `.obsidian` when absent."
+				},
+				"now": {
+					"type": "string",
+					"description": "The moment every rule reads (today, overdue, completion dates): ISO 8601 with a zone (`2026-10-09T10:00:00Z`)."
+				},
+				"timeZone": {
+					"type": "string",
+					"description": "The IANA time zone `now` is read in (`Europe/Madrid`): \"today\", overdue and the dates written follow its wall clock."
+				},
+				"versions": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "Each Markdown note's version as read: an opaque token that changes whenever its bytes do (a SHA-256 of the content, say). Given, every Markdown note needs one, and write plans record what they were computed from (`basis`)."
+				},
+				"settingsVersion": {
+					"type": "string",
+					"description": "The settings' version as read, a token like `versions`'."
+				},
+				"ids": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/Uuid"
+					},
+					"description": "New IDs (UUIDs) for `mtm-id`, used in order: each Action and Matter gets one when it is created, or at its first write if it has none. Absent, no IDs are written. Too few, and the request fails with `not-enough-ids`."
+				}
+			},
+			"required": [
+				"files",
+				"contents",
+				"settings",
+				"now",
+				"timeZone"
+			],
+			"additionalProperties": false,
+			"description": "The vault at one moment. The core reads it as Obsidian's metadata cache would: each note's properties, links and embeds come from its content, and links resolve over `files` the way a wikilink does, so the caller passes files, not a cache. Paths are vault paths: `/`-separated, relative to the vault root, with their extension."
+		},
+		"LinkSettings": {
+			"type": "object",
+			"properties": {
+				"alwaysUpdateLinks": {
+					"type": "boolean",
+					"description": "\"Automatically update internal links\": renames rewrite links in other notes. Off when absent."
+				},
+				"newLinkFormat": {
+					"type": "string",
+					"enum": [
+						"shortest",
+						"relative",
+						"absolute"
+					],
+					"description": "\"New link format\". Shortest when absent."
+				},
+				"useMarkdownLinks": {
+					"type": "boolean",
+					"description": "\"Use [[Wikilinks]]\" off. Off when absent."
+				}
+			},
+			"additionalProperties": false,
+			"description": "The vault's link settings (Obsidian's `app.json`); Obsidian's defaults where absent."
+		},
+		"Uuid": {
+			"type": "string",
+			"description": "A UUID, as `mtm-id` holds it: the only form the core reads back as a note's ID.",
+			"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+		},
+		"UpdateActionRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "updateAction"
+				},
+				"input": {
+					"$ref": "#/definitions/UpdateActionInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				},
+				"apply": {
+					"type": "boolean",
+					"description": "Also apply the plan to the snapshot's files and return what every file would hold (`files`)."
+				}
+			},
+			"additionalProperties": false,
+			"required": [
+				"input",
+				"op",
+				"snapshot"
+			]
+		},
+		"UpdateActionInput": {
+			"type": "object",
+			"properties": {
+				"title": {
+					"type": "string"
+				},
+				"matter": {
+					"type": "string"
+				},
+				"status": {
+					"type": "string"
+				},
+				"type": {
+					"type": "string"
+				},
+				"priority": {
+					"type": [
+						"number",
+						"string",
+						"null"
+					],
+					"description": "1–3, or high, medium, low; null removes it (updates)."
+				},
+				"start": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "'YYYY-MM-DD', 'YYYY-MM-DDTHH:mm' or words such as \"fri 10:00\"; null removes it (updates)."
+				},
+				"due": {
+					"type": [
+						"string",
+						"null"
+					]
+				},
+				"waitingOn": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "A person note; null removes it (updates). Setting someone also adds them to the people."
+				},
+				"people": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Person notes; on update they replace the list."
+				},
+				"details": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "The details; null removes them (updates)."
+				},
+				"checklist": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Checklist items; on update they are added after the existing ones."
+				},
+				"link": {
+					"type": "string",
+					"description": "A note in the vault or an http(s) address, written as a line at the end of the body."
+				},
+				"action": {
+					"type": "string",
+					"description": "The Action: its path (`.md` optional) or its title."
+				}
+			},
+			"required": [
+				"action"
+			],
+			"additionalProperties": false
+		},
+		"MarkAsDoneRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "markAsDone"
+				},
+				"input": {
+					"$ref": "#/definitions/ActionRef"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				},
+				"apply": {
+					"type": "boolean",
+					"description": "Also apply the plan to the snapshot's files and return what every file would hold (`files`)."
+				}
+			},
+			"additionalProperties": false,
+			"required": [
+				"input",
+				"op",
+				"snapshot"
+			]
+		},
+		"ActionRef": {
+			"type": "object",
+			"properties": {
+				"action": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"action"
+			],
+			"additionalProperties": false,
+			"description": "An Action named by its path (`.md` optional) or its title."
+		},
+		"ReopenActionRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "reopenAction"
+				},
+				"input": {
+					"$ref": "#/definitions/ActionRef"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				},
+				"apply": {
+					"type": "boolean",
+					"description": "Also apply the plan to the snapshot's files and return what every file would hold (`files`)."
+				}
+			},
+			"additionalProperties": false,
+			"required": [
+				"input",
+				"op",
+				"snapshot"
+			]
+		},
+		"GetActionRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "getAction"
+				},
+				"input": {
+					"$ref": "#/definitions/ActionRef"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false
+		},
+		"ListActionsRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "listActions"
+				},
+				"input": {
+					"$ref": "#/definitions/ListActionsInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false
+		},
+		"ListActionsInput": {
+			"type": "object",
+			"properties": {
+				"matter": {
+					"type": "string"
+				},
+				"status": {
+					"type": "string"
+				},
+				"type": {
+					"type": "string"
+				},
+				"sphere": {
+					"type": "string"
+				},
+				"person": {
+					"type": "string",
+					"description": "Named in mtm-people or mtm-waiting-on."
+				},
+				"dueFrom": {
+					"type": "string",
+					"description": "Due on or after / on or before these days (stored forms or words); undated Actions are left out."
+				},
+				"dueTo": {
+					"type": "string"
+				},
+				"waiting": {
+					"type": "boolean",
+					"description": "Only Actions waiting on someone."
+				},
+				"done": {
+					"type": "boolean",
+					"description": "Include closed Actions (always when `status` names a closed status)."
+				}
+			},
+			"additionalProperties": false
+		},
+		"GetTodayRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "getToday"
+				},
+				"input": {
+					"$ref": "#/definitions/NoInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false
+		},
+		"NoInput": {
+			"type": "object",
+			"additionalProperties": {
+				"not": {}
+			},
+			"description": "The input of an operation that takes none."
+		},
+		"AddMatterRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "addMatter"
+				},
+				"input": {
+					"$ref": "#/definitions/AddMatterInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				},
+				"apply": {
+					"type": "boolean",
+					"description": "Also apply the plan to the snapshot's files and return what every file would hold (`files`)."
+				}
+			},
+			"additionalProperties": false,
+			"required": [
+				"input",
+				"op",
+				"snapshot"
+			]
+		},
+		"AddMatterInput": {
+			"type": "object",
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"icon": {
+					"type": "string",
+					"description": "A Lucide icon name; circle-dot when absent."
+				},
+				"sphere": {
+					"type": "string"
+				},
+				"state": {
+					"type": "string",
+					"description": "Active when absent."
+				},
+				"outcome": {
+					"type": "string"
+				},
+				"reviewEvery": {
+					"type": "string",
+					"description": "`<n>d`, `<n>w` or `<n>m`."
+				}
+			},
+			"required": [
+				"name"
+			],
+			"additionalProperties": false
+		},
+		"ListMattersRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "listMatters"
+				},
+				"input": {
+					"$ref": "#/definitions/NoInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false
+		},
+		"GetWorkflowRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "getWorkflow"
+				},
+				"input": {
+					"$ref": "#/definitions/NoInput"
+				},
+				"snapshot": {
+					"$ref": "#/definitions/SerialisedSnapshot"
+				},
+				"boundary": {
+					"type": "number",
+					"description": "The boundary version the caller was written for; a different one is refused (`unsupported-boundary`)."
+				}
+			},
+			"required": [
+				"op",
+				"input",
+				"snapshot"
+			],
+			"additionalProperties": false
+		},
+		"MergeNoteRequest": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"const": "mergeNote"
+				},
+				"input": {
+					"$ref": "#/definitions/MergeInput"
+				},
+				"boundary": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"op",
+				"input"
+			],
+			"additionalProperties": false,
+			"description": "Three versions of one note merged into one. Needs no snapshot."
+		},
+		"MergeInput": {
+			"type": "object",
+			"properties": {
+				"base": {
+					"type": [
+						"string",
+						"null"
+					],
+					"description": "The version both writers started from, or null when there is none to hand (a new device): then whatever is the same on both sides is kept, and whatever differs counts as changed on both."
+				},
+				"ours": {
+					"type": "string"
+				},
+				"theirs": {
+					"type": "string"
+				},
+				"later": {
+					"type": "string",
+					"enum": [
+						"ours",
+						"theirs"
+					],
+					"description": "The side written later: it wins where both changed the same thing differently."
+				}
+			},
+			"required": [
+				"base",
+				"ours",
+				"theirs",
+				"later"
+			],
+			"additionalProperties": false
+		}
+	}
+}

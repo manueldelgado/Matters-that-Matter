@@ -14,6 +14,7 @@ export default defineConfig(
 		'package-lock.json',
 		'tsconfig.json',
 		'cli/dist',
+		'core/dist',
 		'cli/package.json',
 	]),
 	{
@@ -23,7 +24,7 @@ export default defineConfig(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs', 'cli/build.mjs'],
+					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'scripts/*.mjs', 'cli/build.mjs', 'core/*.mjs'],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],
@@ -33,7 +34,7 @@ export default defineConfig(
 	...obsidianmd.configs.recommended,
 	{
 		// Node scripts, the test configuration and the tests that read files or run scripts: they never ship in the plugin.
-		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**', 'tests/skills/**', 'vitest.config.ts'],
+		files: ['scripts/**', 'tests/scripts/**', 'tests/schema/**', 'tests/files/**', 'tests/skills/**', 'tests/core/**', 'core/*.mjs', 'vitest.config.ts'],
 		languageOptions: {
 			globals: {
 				...globals.node,
@@ -65,6 +66,15 @@ export default defineConfig(
 		files: ['cli/src/mcp.ts'],
 		rules: {
 			'@typescript-eslint/no-deprecated': 'off',
+		},
+	},
+	{
+		// The core bundle's entry point runs in any JavaScript host, never in Obsidian: it names the configuration folder
+		// only as a default the caller can change, and its stand-ins for missing globals look the host's up on `globalThis`.
+		files: ['core/src/**'],
+		rules: {
+			'obsidianmd/hardcoded-config-path': 'off',
+			'obsidianmd/no-global-this': 'off',
 		},
 	},
 	{
