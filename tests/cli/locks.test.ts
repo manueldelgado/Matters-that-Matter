@@ -94,6 +94,30 @@ describe('locks', () => {
 		expect(readdirSync(join(target, '..')).filter((n) => n.startsWith('.mtm'))).toHaveLength(1);
 	});
 
+	it('two runs taking over one old lock, when the new lock reuses the old one’s inode (as on Linux)', () => {
+		const target = join(dir(), 'New.md');
+		writeFileSync(lockPath(target), 'left behind');
+		old(lockPath(target), STALE_LOCK + 5_000);
+		const seen = statSync(lockPath(target), { bigint: true });
+		let first: ReturnType<typeof takeLock> = null;
+		const second: LockFs = {
+			...nodeFs,
+			stat: (p) => {
+				if (p === lockPath(target) && !first) {
+					first = takeLock(nodeFs, target);
+					return { dev: seen.dev, ino: seen.ino, mtimeMs: Number(seen.mtimeMs) };
+				}
+				const real = nodeFs.stat(p);
+				// The moved file reports the old lock's inode, as a file system that reuses numbers would.
+				return real && p.endsWith('.stale') ? { ...real, dev: seen.dev, ino: seen.ino } : real;
+			},
+		};
+		expect(takeLock(second, target)).toBeNull();
+		expect(first).not.toBeNull();
+		expect(readFileSync(lockPath(target), 'utf8')).toBe(first?.['token']);
+		expect(readdirSync(join(target, '..')).filter((n) => n.startsWith('.mtm'))).toHaveLength(1);
+	});
+
 	it('a folder that can’t be written is an error, not a lock held', () => {
 		const target = join(dir(), 'No such folder', 'New.md');
 		expect(() => takeLock(nodeFs, target)).toThrow();

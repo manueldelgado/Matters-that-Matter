@@ -64,7 +64,10 @@ export function takeLock(fs: LockFs, target: string, now: () => number = Date.no
 			continue;
 		}
 		const moved = fs.stat(aside);
-		if (moved && (moved.ino !== held.ino || moved.dev !== held.dev)) {
+		// A fresh lock was moved, not the old one. The inode alone can't tell: Linux gives a new file the number of one
+		// just deleted, so the other run's new lock may carry the old lock's number.
+		const fresh = moved?.mtimeMs !== undefined && Math.abs(now() - moved.mtimeMs) <= STALE_LOCK;
+		if (moved && (fresh || moved.ino !== held.ino || moved.dev !== held.dev)) {
 			// Another run took the old lock over first and made its own, which was moved instead: put it back, unless a
 			// third run holds the name by now.
 			try {
