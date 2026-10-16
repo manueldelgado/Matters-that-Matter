@@ -4,7 +4,7 @@
 import { GB as chronoEn } from 'chrono-node/en';
 import { casual as chronoEs } from 'chrono-node/es';
 import type { ParsedResult } from 'chrono-node/en';
-import { addDays, formatMtmDate, readFigureDate, toHm, toYmd, wallClock, type DateProblem, type MtmDate } from '../model/dates';
+import { addDays, daysBetween, daysInMonth, formatMtmDate, readFigureDate, toHm, toYmd, wallClock, type DateProblem, type MtmDate } from '../model/dates';
 import type { Priority } from '../model/actions';
 import { DATE_LANGUAGES, type DateLanguage } from '../settings';
 import { bestStrong, normalise, type Candidate } from './fuzzy';
@@ -212,6 +212,34 @@ const RANGE_LEAD = /(?:^|\s)(from|del|de|desde)\s+$/i;
 const isBareWeekday = (c: ParsedComponents) => c.isCertain('weekday') && !c.isCertain('day') && !c.isCertain('month') && !c.isCertain('year');
 
 /**
+ * A range's end that is only a time ("12:00"): it is on the start's day. chrono gives the end of a range it reads
+ * whole the start's weekday ("fri 10 to 2"); that weekday isn't the end's own.
+ */
+function endIsTimeOnly(a: ParsedResult, fromC: ParsedComponents, toC: ParsedComponents): boolean {
+	if (!toC.isCertain('hour') || toC.isCertain('day') || toC.isCertain('month') || toC.isCertain('year')) return false;
+	if (!toC.isCertain('weekday')) return true;
+	return !!a.end && fromC.isCertain('weekday') && toC.get('weekday') === fromC.get('weekday');
+}
+
+/**
+ * Days written as "28 to 2 November", "28-2 nov", "del 28 al 2 de noviembre": the month is written once, after the
+ * last day, so it is the end's; a first day after the last is in the month before.
+ */
+const MONTH_AFTER_END = /^(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\s*(?:-|–|—|to|until|till|through|al|a|hasta|y)\s*(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+|de\s+)?\p{L}/iu;
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** The day `months` months later (or earlier), or null when that month doesn't have it. */
+function shiftMonths(ymd: string, months: number): string | null {
+	const [y = 0, m = 1, d = 1] = ymd.split('-').map(Number);
+	const total = y * 12 + (m - 1) + months;
+	const year = Math.floor(total / 12), month = (total % 12) + 1;
+	return d > daysInMonth(year, month) ? null : `${year}-${pad2(month)}-${pad2(d)}`;
+}
+
+const inMonthBefore = (ymd: string) => shiftMonths(ymd, -1);
+
+/**
  * Words that chrono reads as dates but that are usually part of a title: a part of the day, the weekend,
  * a bare month name, and short weekday forms that are ordinary words ("sun", "sat", Spanish "mar", "dom").
  * They still count with a day or a time ("tomorrow morning", "this weekend", "12 March", "sat 10").
@@ -228,19 +256,40 @@ const WEAK_DATES = new Set([
 
 /** Words left before a date that only introduce it ("on", "by", "before", Spanish "el", "para"); they leave the title with the date. */
 const DATE_LEAD = /(?:^|\s)(on|by|before|el|para)\s+$/i;
+/** Spanish "a" before a time ("a las 5", "a la 1"): chrono starts the time at "las", so the "a" is a lead word too. */
+const TIME_LEAD_ES = /(?:^|\s)(a)\s+$/i;
+
+/** Where a date starts once the words that only introduce it are taken with it. */
+function withLead(text: string, start: number): number {
+	const before = text.slice(0, start);
+	const lead = DATE_LEAD.exec(before) ?? (/^las?\s/i.test(text.slice(start)) ? TIME_LEAD_ES.exec(before) : null);
+	return lead ? start - lead[0].trimStart().length : start;
+}
 
 /**
- * Applies the quick-add rules on top of chrono:
- * a bare weekday means the next occurrence after today; a time without am/pm from 1 to 7 is afternoon;
- * a time without a day is today, or tomorrow if it has passed.
+ * Whether the hour (1 to 9) is written with two digits in the date's text ("06:30", "2026-10-16T06:00"): then it is
+ * taken as written. Only an hour of one digit without am or pm ("at 3", "3:30", "a las 5") is ambiguous.
  */
-function toMtmDate(c: ParsedComponents, now: Date): MtmDate {
+const twoDigitHour = (written: string, hour: number) => new RegExp(`(?<![\\d:])0${hour}:\\d{2}`).test(written);
+
+/** An hour written with one digit and without am or pm: morning or evening, as the rest of the text says. */
+function ambiguousHour(c: ParsedComponents, written: string): boolean {
+	const hour = c.get('hour') ?? 0;
+	return c.isCertain('hour') && !c.isCertain('meridiem') && hour >= 1 && hour <= 9 && !twoDigitHour(written, hour);
+}
+
+/**
+ * Applies the quick-add rules on top of chrono, `written` being the text chrono read it from:
+ * a bare weekday means the next occurrence after today; an hour from 1 to 7 written with one digit and without am/pm
+ * is afternoon, unless `evening` says which it is; a time without a day is today, or tomorrow if it has passed.
+ */
+function toMtmDate(c: ParsedComponents, now: Date, written: string, evening?: boolean): MtmDate {
 	const today = toYmd(now);
 	let date = ymdOf(c);
 	const timed = c.isCertain('hour');
 	let hour = c.get('hour') ?? 0;
 	const minute = c.get('minute') ?? 0;
-	if (timed && !c.isCertain('meridiem') && hour >= 1 && hour <= 7) hour += 12;
+	if (timed && !c.isCertain('meridiem') && hour < 12 && (evening ?? (hour >= 1 && hour <= 7 && !twoDigitHour(written, hour)))) hour += 12;
 	const time = timed ? `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` : undefined;
 
 	const hasDay = c.isCertain('day') || c.isCertain('month') || c.isCertain('year');
@@ -274,6 +323,58 @@ function zoneOf(r: ParsedResult): { cut: number; zone: boolean } | null {
 	return { cut: m[0].length, zone: /[+-]/.test(word) || /^[A-Z]+$/.test(word) };
 }
 
+interface RangeParts {
+	fromC: ParsedComponents;
+	toC: ParsedComponents;
+	fromText: string;
+	toText: string;
+	timeOnly: boolean;
+}
+
+const minutesOf = (hm: string) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5));
+
+/** Minutes from one timed date to another; null unless both have a time. */
+function minutesBetween(from: MtmDate, to: MtmDate): number | null {
+	if (!from.time || !to.time) return null;
+	return daysBetween(from.date, to.date) * 1440 + minutesOf(to.time) - minutesOf(from.time);
+}
+
+/** A range's two ends, the hours read as `evening` says where it says. */
+function readRange(r: RangeParts, now: Date, evening: readonly [boolean?, boolean?] = []): { from: MtmDate; to: MtmDate } {
+	const from = toMtmDate(r.fromC, now, r.fromText, evening[0]);
+	let to = toMtmDate(r.toC, now, r.toText, evening[1]);
+	// "friday until monday": the end is the next Monday after the start.
+	while (isBareWeekday(r.toC) && to.date < from.date) to = { ...to, date: addDays(to.date, 7) };
+	// "20/10 10:00 hasta 12:00": the end is on the start's day, or the day after when it is earlier than the start.
+	if (to.time && r.timeOnly) {
+		const time = to.time;
+		to = { date: from.time && time < from.time ? addDays(from.date, 1) : from.date, time };
+	}
+	return { from, to };
+}
+
+/**
+ * A range's two ends. An ambiguous end hour is morning or evening, whichever makes the shortest range that ends
+ * strictly after the start ("06:00 to 7:00", "18:00 hasta 6", "7 to 9"); the start follows the afternoon rule. An
+ * ambiguous start with an end that isn't ("6:00 to 07:00") is read the same way against the end.
+ */
+function rangeEnds(r: RangeParts, now: Date): { from: MtmDate; to: MtmDate } {
+	const plain = readRange(r, now);
+	const fromAmbiguous = ambiguousHour(r.fromC, r.fromText), toAmbiguous = ambiguousHour(r.toC, r.toText);
+	if ((!fromAmbiguous && !toAmbiguous) || minutesBetween(plain.from, plain.to) === null) return plain;
+	let best: { from: MtmDate; to: MtmDate } | null = null;
+	let shortest = Infinity;
+	for (const evening of [false, true]) {
+		const read = readRange(r, now, toAmbiguous ? [undefined, evening] : [evening]);
+		const length = minutesBetween(read.from, read.to) ?? 0;
+		if (length > 0 && length < shortest) {
+			best = read;
+			shortest = length;
+		}
+	}
+	return best ?? plain;
+}
+
 /** Joins two results separated by a range word ("del lunes al miércoles"), and keeps a range's end after its start. */
 function toSpans(text: string, results: readonly ParsedResult[], now: Date): DateSpan[] {
 	const out: DateSpan[] = [];
@@ -287,22 +388,39 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date): Dat
 		let zone = !!zoneA?.zone;
 		const fromC = a.start;
 		let toC = a.end ?? null;
+		let toText = a.text;
 		if (b && !a.end && !b.end && !zoneA && RANGE_JOIN.test(text.slice(end, b.index))) {
 			const zoneB = zoneOf(b);
 			end = b.index + b.text.length - (zoneB?.zone ? 0 : (zoneB?.cut ?? 0));
 			zone = !!zoneB?.zone;
 			toC = b.start;
+			toText = b.text;
 			i++;
 		}
-		const from = toMtmDate(fromC, now);
-		let to = toC ? toMtmDate(toC, now) : null;
-		// "friday until monday": the end is the next Monday after the start.
-		while (to && toC && isBareWeekday(toC) && to.date < from.date) to = { ...to, date: addDays(to.date, 7) };
+		let from: MtmDate;
+		let to: MtmDate | null = null;
+		if (toC) ({ from, to } = rangeEnds({ fromC, toC, fromText: a.text, toText, timeOnly: endIsTimeOnly(a, fromC, toC) }, now));
+		else from = toMtmDate(fromC, now, a.text);
+		let problem: DateProblem | undefined = zone ? 'time-zone' : undefined;
+		// "28 to 2 November": the month chrono gives both ends is written once, after the last day; a first day after
+		// the last is in the month before. A range that is then already over is next year's, as a date on its own is.
+		const monthOnce = a.end ? MONTH_AFTER_END.test(a.text) : !fromC.isCertain('month');
+		if (to && toC && to.date < from.date && to.date.slice(0, 7) === from.date.slice(0, 7) && fromC.isCertain('day') && monthOnce) {
+			const before = inMonthBefore(from.date);
+			if (!before) problem ??= 'not-a-day';
+			else if (to.date < toYmd(now) && !toC.isCertain('year')) {
+				const fromNext = shiftMonths(before, 12), toNext = shiftMonths(to.date, 12);
+				if (fromNext && toNext) {
+					from = { ...from, date: fromNext };
+					to = { ...to, date: toNext };
+				} else problem ??= 'not-a-day';
+			} else from = { ...from, date: before };
+		}
 		if (to) {
 			const lead = RANGE_LEAD.exec(text.slice(0, start));
 			if (lead) start -= lead[0].trimStart().length;
 		}
-		out.push({ text: text.slice(start, end), start, end, from, to, ...(zone ? { problem: 'time-zone' as const } : {}) });
+		out.push({ text: text.slice(start, end), start, end, from, to, ...(problem ? { problem } : {}) });
 	}
 	return out;
 }
@@ -311,7 +429,10 @@ const MONTHS_ES: Record<string, number> = {
 	enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
 };
 
-/** Spanish forms chrono misses: "pasado mañana" and "del 20 al 22 de octubre". */
+/**
+ * Spanish forms chrono misses: "pasado mañana" and "del 20 al 22 de octubre". A first day after the last is in the
+ * month before ("del 28 al 2 de noviembre"); a day the month doesn't have makes the range an invalid date.
+ */
 function spanishSpans(text: string, now: Date): DateSpan[] {
 	const out: DateSpan[] = [];
 	const today = toYmd(now);
@@ -324,17 +445,15 @@ function spanishSpans(text: string, now: Date): DateSpan[] {
 		const month = MONTHS_ES[normalise(m[4] ?? '')];
 		const d1 = Number(m[2]), d2 = Number(m[3]);
 		if (!month || d1 < 1 || d2 < 1 || d1 > 31 || d2 > 31) continue;
-		const year = now.getFullYear();
-		const pad = (n: number) => String(n).padStart(2, '0');
-		let fromYmd = `${year}-${pad(month)}-${pad(d1)}`;
-		let toYmd2 = `${year}-${pad(month)}-${pad(d2)}`;
-		// Like chrono's forward dates: a range already over means next year.
-		if (toYmd2 < today) {
-			fromYmd = `${year + 1}-${pad(month)}-${pad(d1)}`;
-			toYmd2 = `${year + 1}-${pad(month)}-${pad(d2)}`;
-		}
 		const start = (m.index ?? 0) + m[0].indexOf(m[1] ?? '');
-		out.push({ text: m[1] ?? '', start, end: start + (m[1] ?? '').length, from: { date: fromYmd }, to: { date: toYmd2 } });
+		const span = { text: m[1] ?? '', start, end: start + (m[1] ?? '').length };
+		// Like chrono's forward dates: a range already over means next year.
+		let year = now.getFullYear();
+		if (`${year}-${pad2(month)}-${pad2(d2)}` < today) year++;
+		const toYmd2 = d2 > daysInMonth(year, month) ? null : `${year}-${pad2(month)}-${pad2(d2)}`;
+		const fromYmd = d1 > d2 ? toYmd2 && inMonthBefore(`${year}-${pad2(month)}-${pad2(d1)}`) : toYmd2 && `${year}-${pad2(month)}-${pad2(d1)}`;
+		if (!toYmd2 || !fromYmd) out.push({ ...span, from: { date: today }, to: null, problem: 'not-a-day' });
+		else out.push({ ...span, from: { date: fromYmd }, to: { date: toYmd2 } });
 	}
 	return out;
 }
@@ -375,7 +494,7 @@ function dayOfMonthSpans(text: string, now: Date, lang: DateLanguage): DateSpan[
 		const next = gap ? parser.parse(tail, now)[0] : undefined;
 		const joins = next && next.index >= gap && next.index <= lead && !next.end;
 		const time = joins && next.start.isCertain('hour') && !next.start.isCertain('day') && !next.start.isCertain('weekday')
-			? toMtmDate(next.start, now).time
+			? toMtmDate(next.start, now, next.text).time
 			: undefined;
 		const zone = next && time ? zoneOf(next) : null;
 		if (next && time) end += next.index + next.text.length - (zone?.zone ? 0 : (zone?.cut ?? 0));
@@ -395,14 +514,34 @@ function trimWeakLead(span: DateSpan): DateSpan {
 	return { ...span, text: span.text.slice(m[0].length), start: span.start + m[0].length };
 }
 
+/**
+ * chrono's Spanish parser reads a lone "a" after a time as a.m. ("a las 5 a Juan"). Only "am" or "a.m." is: such a
+ * result is read again without the "a", which goes back to the title.
+ */
+function parseSpanish(text: string, now: Date): ParsedResult[] {
+	const read = (t: string) => chronoEs.parse(t, now, { forwardDate: true });
+	const out: ParsedResult[] = [];
+	for (const r of read(text)) {
+		const lone = /\s+a$/i.exec(r.text);
+		const end = r.index + r.text.length;
+		if (!lone || /^\.?\s?m(?:\.|(?!\p{L}))/iu.test(text.slice(end))) {
+			out.push(r);
+			continue;
+		}
+		const again = read(text.slice(0, end - lone[0].length)).find((s) => s.index === r.index);
+		if (again) out.push(again);
+	}
+	return out;
+}
+
 function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	const languages = ctx.languages ?? DATE_LANGUAGES;
 	// Every date rule below reads "today" and "now" from this, never from the host's zone directly.
 	const now = wallClock(ctx.now, ctx.timeZone);
 	const spans: DateSpan[] = [];
 	for (const lang of languages) {
-		const parser = lang === 'en' ? chronoEnDayFirst : chronoEs;
-		spans.push(...toSpans(text, parser.parse(text, now, { forwardDate: true }), now));
+		const results = lang === 'en' ? chronoEnDayFirst.parse(text, now, { forwardDate: true }) : parseSpanish(text, now);
+		spans.push(...toSpans(text, results, now));
 		spans.push(...dayOfMonthSpans(text, now, lang));
 	}
 	if (languages.includes('es')) spans.push(...spanishSpans(text, now));
@@ -440,8 +579,7 @@ export function parseDateText(
 	if (figure && 'problem' in figure) return figure;
 	const date = findDate(clean, { now, types: [], matters: [], people: [], languages, timeZone });
 	if (!date) return null;
-	const lead = DATE_LEAD.exec(clean.slice(0, date.start));
-	const from = lead ? date.start - lead[0].trimStart().length : date.start;
+	const from = withLead(clean, date.start);
 	if (from !== 0 || clean.slice(date.end).replace(/[,.;!?]+$/, '') !== '') return null;
 	if (date.problem) return { problem: date.problem };
 	return { start: date.to ? formatMtmDate(date.from) : null, due: formatMtmDate(date.to ?? date.from) };
@@ -492,9 +630,7 @@ export function parseQuickAdd(input: string, ctx: QuickAddContext): QuickAddResu
 		const start = at[date.start] ?? 0, end = (at[date.end - 1] ?? 0) + 1;
 		chips.push({ kind: 'invalid-date', text: input.slice(start, end), start, end, problem: date.problem });
 	} else if (date) {
-		let from = date.start;
-		const lead = DATE_LEAD.exec(compact.slice(0, from));
-		if (lead) from -= lead[0].trimStart().length;
+		const from = withLead(compact, date.start);
 		for (let i = from; i < date.end; i++) removed[at[i] ?? 0] = true;
 		chips.push({
 			kind: 'date',

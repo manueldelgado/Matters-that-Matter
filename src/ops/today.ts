@@ -23,7 +23,7 @@ export function today(s: Snapshot): OpResult<TodayValue> {
 		nextStatus: model.nextStatus && { id: model.nextStatus.id, label: model.nextStatus.label },
 		next: model.next.map(summary),
 		inbox: model.inbox,
-		reviews: model.reviews.map((m) => matterSummary(m, items, s)),
+		reviews: model.reviews.map((m) => matterSummary(m, view.actionsByMatter.get(m.path) ?? [], s)),
 		waiting: model.waiting.map(summary),
 		longWaits: model.longWaits,
 	};

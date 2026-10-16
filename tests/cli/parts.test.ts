@@ -133,7 +133,9 @@ describe('safe writes', () => {
 		};
 		const r = applyOutcome(root, outcome([{ path: 'New/Name.md', from: 'Old.md', before: 'x\n', after: 'y\n' }, { path: 'Made.md', from: null, before: null, after: 'z\n' }]), fs);
 		expect(r.ok).toBe(true);
-		expect(calls).toEqual(['rename Old.md → New/Name.md', 'rename New/<temp> → New/Name.md', 'rename <temp> → Made.md']);
+		// The hidden lock files that hold new names aside.
+		expect(calls.filter((c) => !c.endsWith('.lock'))).toEqual(['rename Old.md → New/Name.md', 'rename New/<temp> → New/Name.md', 'rename <temp> → Made.md']);
+		expect(calls.filter((c) => c.endsWith('.lock'))).toHaveLength(2);
 		expect(readdirSync(root).sort()).toEqual(['Made.md', 'New']);
 	});
 
@@ -206,7 +208,7 @@ describe('safe writes', () => {
 		);
 		expect(changed).toEqual({ ok: false, reason: 'changed', path: 'One.md' });
 		expect(existsSync(join(root, 'New.md'))).toBe(false);
-		expect(applyOutcome(root, outcome([{ path: 'Taken.md', from: null, before: null, after: 'mine\n' }]))).toEqual({ ok: false, reason: 'changed', path: 'Taken.md' });
+		expect(applyOutcome(root, outcome([{ path: 'Taken.md', from: null, before: null, after: 'mine\n' }]))).toEqual({ ok: false, reason: 'changed', path: 'Taken.md', appeared: true });
 		expect(applyOutcome(root, outcome([{ path: 'Taken.md', from: 'Two.md', before: 'two\n', after: 'mine\n' }]))).toEqual({ ok: false, reason: 'changed', path: 'Taken.md' });
 		expect(readFileSync(join(root, 'Taken.md'), 'utf8')).toBe('here\n');
 		expect(temps(root)).toEqual([]);
@@ -250,7 +252,7 @@ describe('safe writes', () => {
 			asBefore(root);
 		});
 
-		it('a new file whose path is taken while the others are committed is never replaced', () => {
+		it('a new file whose path is taken while the others are committed is never replaced, and everything is put back', () => {
 			const root = dir();
 			// Another program creates C.md while A is being written.
 			const fs: ApplyFs = {
@@ -261,7 +263,8 @@ describe('safe writes', () => {
 				},
 			};
 			const r = applyOutcome(root, three(root), fs);
-			expect(r).toEqual({ ok: false, reason: 'failed', path: 'C.md', error: 'C.md appeared meanwhile', left: [] });
+			// Put back as it was: the vault changed, so the write can be planned again.
+			expect(r).toEqual({ ok: false, reason: 'changed', path: 'C.md', appeared: true });
 			expect(readFileSync(join(root, 'C.md'), 'utf8')).toBe('someone else’s\n');
 			expect(temps(root)).toEqual([]);
 			expect(readFileSync(join(root, 'A.md'), 'utf8')).toBe('a\n');

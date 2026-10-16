@@ -49,6 +49,7 @@ import {
 	renderEnd,
 	renderStepHead,
 	statusSegments,
+	type DateReading,
 	type FiledCard,
 } from './processRender';
 
@@ -232,6 +233,7 @@ export class ProcessInboxModal extends Modal {
 	}
 
 	private render(): void {
+		this.dateCheck = null;
 		const current = this.current;
 		if (!current) return;
 		const { contentEl } = this;
@@ -414,15 +416,23 @@ export class ProcessInboxModal extends Modal {
 
 	/** A plain-words date, as quick add reads it; null when it isn't one. */
 	private parseDate(text: string): { start: string | null; due: string } | null {
-		const result = parseQuickAdd(text, { now: new Date(), types: [], matters: [], people: [], languages: this.settings.dateLanguages });
-		const chip = result.chips.find((c) => c.kind === 'date');
+		const chip = this.dateChips(text).find((c) => c.kind === 'date');
 		return chip?.kind === 'date' ? { start: chip.startDate, due: chip.due } : null;
 	}
 
-	private dateLabel = (text: string): string | null => {
+	private dateChips(text: string) {
+		return parseQuickAdd(text, { now: new Date(), types: [], matters: [], people: [], languages: this.settings.dateLanguages }).chips;
+	}
+
+	private readDate = (text: string): DateReading => {
 		const parsed = this.parseDate(text);
-		return parsed ? dateChipLabel(parsed.start, parsed.due, toYmd(new Date())) : null;
+		if (parsed) return { label: dateChipLabel(parsed.start, parsed.due, toYmd(new Date())) };
+		const zone = this.dateChips(text).some((c) => c.kind === 'invalid-date' && c.problem === 'time-zone');
+		return { problem: zone ? STRINGS.process.dateTimeZone : STRINGS.process.dateUnreadable };
 	};
+
+	/** The step's date field, so a save can refuse text that is no date. */
+	private dateCheck: (() => boolean) | null = null;
 
 	// ——— Steps ———
 
@@ -442,7 +452,7 @@ export class ProcessInboxModal extends Modal {
 			this.matterField(grid.createDiv());
 			statusSegments(field(grid.createDiv(), p.status), offered, preset?.id ?? null, (id) => (f.statusId = id));
 			this.typeField(body);
-			dateField(body, p.due, f.dueText, this.dateLabel, (t) => (f.dueText = t));
+			this.dateCheck = dateField(body, p.due, f.dueText, this.readDate, (t) => (f.dueText = t)).check;
 			return { label: p.saveNext, run: save(() => this.doNext(current)) };
 		}
 
@@ -453,7 +463,7 @@ export class ProcessInboxModal extends Modal {
 			this.matterField(grid.createDiv());
 			const offered = nextStatuses(s.statuses);
 			statusSegments(field(grid.createDiv(), p.status), offered, f.statusId, (id) => (f.statusId = id));
-			dateField(body, p.checkBack, f.dueText, this.dateLabel, (t) => (f.dueText = t));
+			this.dateCheck = dateField(body, p.checkBack, f.dueText, this.readDate, (t) => (f.dueText = t)).check;
 			body.createSpan({ cls: 'mtm-field-hint', text: f.person ? p.delegateHint(firstName(f.person.basename)) : p.delegateHintNobody });
 			return { label: p.saveNext, run: save(() => this.delegate(current)) };
 		}
@@ -771,7 +781,15 @@ export class ProcessInboxModal extends Modal {
 		return this.settings.statuses.find((s) => s.id === id);
 	}
 
+	/** False when the date field holds text that is no date: the step stays, with the field's warning. */
+	private dateReadable(): boolean {
+		if (this.dateCheck?.() !== false) return true;
+		this.contentEl.querySelector<HTMLInputElement>('.mtm-process-date input')?.focus();
+		return false;
+	}
+
 	private async doNext(current: Current): Promise<void> {
+		if (!this.dateReadable()) return;
 		const status = this.status(this.form.statusId) ?? nextStatuses(this.settings.statuses)[0];
 		if (!status) return;
 		const matterPath = await this.resolveMatter();
@@ -781,6 +799,7 @@ export class ProcessInboxModal extends Modal {
 	}
 
 	private async delegate(current: Current): Promise<void> {
+		if (!this.dateReadable()) return;
 		const person = this.form.person;
 		if (!person) {
 			this.contentEl.querySelector<HTMLElement>('.mtm-process-step .mtm-chip-add')?.focus();

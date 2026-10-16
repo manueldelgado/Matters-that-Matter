@@ -147,3 +147,71 @@ describe('date languages', () => {
 		expect(migrateSettings({ schemaVersion: CURRENT_SCHEMA, dateLanguages: [] }).schemaVersion).toBe(CURRENT_SCHEMA);
 	});
 });
+
+describe('scalar settings repair', () => {
+	it('repairs values of the wrong type or outside their choices to the defaults', () => {
+		const s = migrateSettings({
+			schemaVersion: CURRENT_SCHEMA,
+			inboxPath: 5,
+			boardPath: null,
+			folders: { matters: 3, actions: ['x'], boards: 'Work/Boards' },
+			weekStart: 'Sunday',
+			defaultInboxPosition: 'middle',
+			showDone: 'no',
+			setupDone: 1,
+			openMattersAsOverview: 'yes',
+			inlineChips: 0,
+			linksAddActions: 'false',
+			todayInNewTabs: 'sometimes',
+			dateLanguages: 'es',
+		});
+		expect(s.inboxPath).toBe(DEFAULT_SETTINGS.inboxPath);
+		expect(s.boardPath).toBe(DEFAULT_SETTINGS.boardPath);
+		expect(s.folders).toEqual({ ...DEFAULT_SETTINGS.folders, boards: 'Work/Boards' });
+		expect(s.weekStart).toBe('monday');
+		expect(s.defaultInboxPosition).toBe('top');
+		expect(s.showDone).toBe(true);
+		expect(s.setupDone).toBe(false);
+		expect(s.openMattersAsOverview).toBe(true);
+		expect(s.inlineChips).toBe(true);
+		expect(s.linksAddActions).toBe(true);
+		expect(s.todayInNewTabs).toBe('every');
+		expect(s.dateLanguages).toEqual(['en', 'es']);
+	});
+
+	it('keeps every valid value', () => {
+		const saved = {
+			schemaVersion: CURRENT_SCHEMA,
+			setupDone: true,
+			folders: { matters: 'A/M', actions: 'A/A', boards: 'A/B', people: '' },
+			inboxPath: 'A/M/Tray.md',
+			boardPath: 'A/B/Board.base',
+			defaultInboxPosition: 'bottom' as const,
+			showDone: false,
+			weekStart: 'sunday' as const,
+			dateLanguages: ['es' as const],
+			openMattersAsOverview: false,
+			todayInNewTabs: 'alone' as const,
+			inlineChips: false,
+			linksAddActions: false,
+		};
+		expect(migrateSettings(saved)).toMatchObject(saved);
+	});
+
+	it('drops duplicate Sphere IDs, keeping the first', () => {
+		const s = migrateSettings({
+			schemaVersion: CURRENT_SCHEMA,
+			spheres: [
+				{ id: 'home', label: 'Home', icon: 'house' },
+				{ id: 'work', label: 'Work', icon: 'briefcase' },
+				{ id: 'home', label: 'Home again', icon: 'tent' },
+			],
+		});
+		expect(s.spheres.map((x) => `${x.id}:${x.label}`)).toEqual(['home:Home', 'work:Work']);
+	});
+
+	it('is idempotent', () => {
+		const once = migrateSettings({ schemaVersion: 3, inboxPath: 5, weekStart: 'x', spheres: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }] });
+		expect(migrateSettings(once)).toEqual(once);
+	});
+});

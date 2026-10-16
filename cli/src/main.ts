@@ -9,7 +9,8 @@ import { resolve } from 'node:path';
 import type { VaultReader } from '../../src/files/index';
 import { toYmd } from '../../src/model/dates';
 import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, parseQuickAdd, reopen, today, updateAction } from '../../src/ops';
-import { findMatter } from '../../src/ops/fields';
+import { readiness } from '../../src/ops/fields';
+import { findActionOrMatter } from '../../src/ops/findAction';
 import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Snapshot, Warning } from '../../src/ops/types';
 import type { ApplyFs } from './apply';
 import { boolFlag, listFlag, parseArgs, textFlag, type Command, type FlagValue } from './args';
@@ -34,8 +35,8 @@ import {
 	type Style,
 } from './output';
 import { STRINGS } from '../../src/strings';
-import { CLI, COMMAND_HELP, HELP } from './strings';
-import { openVault, type Vault } from './vault';
+import { CLI, COMMAND_HELP, HELP, type WriteVerb } from './strings';
+import { inVault, openVault, type Vault } from './vault';
 import { planAndWrite, takeSnapshot, type WriteFlow } from './writeFlow';
 
 export const EXIT = { done: 0, unmatched: 1, notReady: 2, changed: 3 } as const;
@@ -43,6 +44,8 @@ export const EXIT = { done: 0, unmatched: 1, notReady: 2, changed: 3 } as const;
 interface Stream {
 	write(text: string): unknown;
 	isTTY?: boolean;
+	/** The terminal's width, when it is one. */
+	columns?: number;
 }
 
 /** Everything the command line reaches outside itself, so tests can run it in-process. */
@@ -141,6 +144,10 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 			print(io.stderr, err.r(chosen.message));
 			return EXIT.notReady;
 		}
+		if (words.length) {
+			print(io.stderr, err.r(CLI.noWords(command, words.join(' '))));
+			return EXIT.unmatched;
+		}
 		if (!opened.vault.settings.setupDone) print(io.stderr, err.y(STRINGS.ops.notSetUp));
 		return serveMcp(
 			{
@@ -166,28 +173,43 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 
 // ——— Commands ———
 
+/** Commands that take no words: words given are a mistake (`list Kitchen` for `list --matter Kitchen`), never ignored. */
+const NO_WORDS: readonly Command[] = ['today', 'workflow', 'matters', 'list'];
+
 async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise<number> {
-	const ref = ctx.words.join(' ').trim();
+	const words = ctx.words.join(' ').trim();
+	// A note named by its full path is named by its path in the vault.
+	const ref = inVault(words, ctx.vault.root);
+	if (NO_WORDS.includes(command) && words) return usageError(ctx, command === 'list' ? CLI.noWordsList(words) : CLI.noWords(command, words));
+	// The terminal's width, so long titles don't wrap tables; none when the output goes to a file or another program.
+	const width = ctx.io.stdout.isTTY ? ctx.io.stdout.columns : undefined;
 	switch (command) {
 		case 'today':
-			return read(ctx, today, (v, s) => formatToday(v, shownPath(ctx.vault.root, ctx.io.home), typeTones(s), ctx.out));
+			return read(ctx, today, (v, s) => formatToday(v, shownPath(ctx.vault.root, ctx.io.home), typeTones(s), ctx.out, width));
 		case 'workflow':
 			return read(ctx, getWorkflow, (v) => formatWorkflow(v, ctx.out));
 		case 'matters':
 			return read(ctx, listMatters, (v) => formatMatters(v, ctx.out));
 		case 'list':
-			return read(ctx, (s) => listActions(listInput(ctx.flags), s), (v, s) => formatList(v, toYmd(s.now), typeTones(s), ctx.out));
+			return read(ctx, (s) => listActions(listInput(ctx.flags, ctx.vault.root), s), (v, s) => formatList(v, toYmd(s.now), typeTones(s), ctx.out, width));
 		case 'show':
 			if (!ref) return usageError(ctx, CLI.nameAction);
 			return read(ctx, (s) => getAction(ref, s), (v, s) => formatShow(v, toYmd(s.now), ctx.out));
 		case 'parse':
-			if (!ref) return usageError(ctx, CLI.noParseText);
-			return read(ctx, (s) => parseQuickAdd(ref, s), (v, s, w) => formatParse(v, w, toYmd(s.now), ctx.out), true);
+			if (!words) return usageError(ctx, CLI.noParseText);
+			return read(ctx, (s) => parseQuickAdd(words, s), (v, s, w) => formatParse(v, w, toYmd(s.now), ctx.out), true);
 		case 'add':
-			return writeAction(ctx, (s) => addAction({ ...(ref ? { text: ref } : {}), ...fieldInput(ctx.flags) }, s), null);
-		case 'update':
+			return writeAction(ctx, (s) => addAction({ ...(words ? { text: words } : {}), ...fieldInput(ctx.flags, ctx.vault.root) }, s), null);
+		case 'update': {
 			if (!ref) return usageError(ctx, CLI.nameAction);
-			return writeAction(ctx, (s) => updateAction({ action: ref, ...fieldInput(ctx.flags) }, s), CLI.changed);
+			// An empty value never removes one (an unset variable in a script would): --no-<field> does.
+			const blank = BLANK_REFUSED.find((flag) => {
+				const v = ctx.flags[flag];
+				return typeof v === 'string' && !v.trim();
+			});
+			if (blank) return usageError(ctx, CLI.emptyFlag(blank));
+			return writeAction(ctx, (s) => updateAction({ action: ref, ...fieldInput(ctx.flags, ctx.vault.root) }, s), CLI.changed);
+		}
 		case 'done':
 			if (!ref) return usageError(ctx, CLI.nameAction);
 			return writeAction(ctx, (s) => markAsDone(ref, s), CLI.markedDone);
@@ -195,21 +217,26 @@ async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise
 			if (!ref) return usageError(ctx, CLI.nameAction);
 			return writeAction(ctx, (s) => reopen(ref, s), CLI.reopened);
 		case 'add-matter':
-			if (!ref) return usageError(ctx, CLI.nameNew);
-			return writeMatter(ctx, ref);
+			if (!words) return usageError(ctx, CLI.nameNew);
+			return writeMatter(ctx, words);
 		case 'open':
-			if (!ref) return usageError(ctx, CLI.nameMatter);
+			if (!ref) return usageError(ctx, CLI.nameTarget);
 			return open(ctx, ref);
 	}
 }
 
-/** The fields an Action command was given, by their public names. */
-function fieldInput(flags: Record<string, FlagValue>): ActionFields {
+/** Flags whose empty value, on update, is refused rather than read as removing the value. */
+const BLANK_REFUSED = ['priority', 'start', 'due', 'waiting-on', 'details'] as const;
+
+/** The fields an Action command was given, by their public names; a Matter given by its full path, by its path in the vault. */
+function fieldInput(flags: Record<string, FlagValue>, root: string): ActionFields {
 	const input: ActionFields = {};
 	for (const name of ['title', 'matter', 'status', 'type', 'details', 'link'] as const) {
 		const v = textFlag(flags, name);
-		if (typeof v === 'string') input[name] = v;
+		if (typeof v === 'string') input[name] = name === 'matter' ? inVault(v, root) : v;
 	}
+	// --no-details removes them.
+	if (flags.details === null) input.details = null;
 	for (const [flag, key] of [
 		['priority', 'priority'],
 		['start', 'start'],
@@ -226,7 +253,7 @@ function fieldInput(flags: Record<string, FlagValue>): ActionFields {
 	return input;
 }
 
-function listInput(flags: Record<string, FlagValue>): ListActionsInput {
+function listInput(flags: Record<string, FlagValue>, root: string): ListActionsInput {
 	const input: ListActionsInput = {};
 	for (const [flag, key] of [
 		['matter', 'matter'],
@@ -238,7 +265,7 @@ function listInput(flags: Record<string, FlagValue>): ListActionsInput {
 		['due-to', 'dueTo'],
 	] as const) {
 		const v = textFlag(flags, flag);
-		if (typeof v === 'string') input[key] = v;
+		if (typeof v === 'string') input[key] = key === 'matter' ? inVault(v, root) : v;
 	}
 	if (boolFlag(flags, 'waiting')) input.waiting = true;
 	if (boolFlag(flags, 'done')) input.done = true;
@@ -327,7 +354,7 @@ function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | 
 }
 
 /** Add, update, done, reopen: `verb` is null for add. */
-function writeAction(ctx: Context, op: (s: Snapshot) => OpResult<ActionWrite>, verb: string | null): number {
+function writeAction(ctx: Context, op: (s: Snapshot) => OpResult<ActionWrite>, verb: WriteVerb | null): number {
 	const w = write(ctx, op);
 	if (typeof w === 'number') return w;
 	const { r, snap, outcome, written } = w;
@@ -366,24 +393,18 @@ function writeMatter(ctx: Context, name: string): number {
 
 async function open(ctx: Context, ref: string): Promise<number> {
 	const { snap } = snapshot(ctx);
+	const ready = readiness(snap, false);
+	if (ready.error) return opError(ctx, ready.error, false);
 	setupHint(ctx);
-	let target: OpenTarget;
-	let name: string;
-	const action = getAction(ref, snap);
-	if (action.ok) {
-		target = { file: action.value.path };
-		name = action.value.title;
-	} else if (action.error.code !== 'not-found') {
-		return opError(ctx, action.error, false);
-	} else {
-		const matter = findMatter(ref, snap);
-		if (!matter.ok) {
-			if (matter.error.code === 'ambiguous') return opError(ctx, matter.error, false);
-			return opError(ctx, { code: 'not-found', value: ref, message: CLI.nothingToOpen(ref) }, false);
-		}
-		target = { matter: matter.value.path };
-		name = matter.value.name;
+	// An Action or a Matter named exactly wins over a loose match of either.
+	const found = findActionOrMatter(ref, snap);
+	if (!found.ok) {
+		if (found.error.code === 'ambiguous') return opError(ctx, found.error, false);
+		return opError(ctx, { code: 'not-found', value: ref, message: CLI.nothingToOpen(ref) }, false);
 	}
+	const t = found.value;
+	const target: OpenTarget = t.kind === 'action' ? { file: t.action.note.path } : { matter: t.matter.path };
+	const name = t.kind === 'action' ? t.action.note.basename : t.matter.name;
 	const obsidianDir = ctx.io.obsidianDir === undefined ? obsidianSettingsDir(process.platform, ctx.io.env, ctx.io.home) : ctx.io.obsidianDir;
 	const url = openUrl(vaultRef(ctx.vault.root, obsidianDir), target);
 	// A dry run only says which link it would open.

@@ -13,7 +13,7 @@ export interface AddedAction {
 	/** The Matter's name and the status's label. */
 	matter: string;
 	status: string;
-	/** Where it came from when it wasn't typed in Matters ("From a link"). */
+	/** Where it came from when it wasn't typed in Matters that Matter ("From a link"). */
 	source?: string;
 }
 

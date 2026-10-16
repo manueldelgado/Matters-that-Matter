@@ -347,3 +347,149 @@ describe('parseDateText: a date on its own', () => {
 		expect(parseDateText('mañana', now, ['es'])).toEqual({ start: null, due: '2026-10-10' });
 	});
 });
+
+describe('times written in figures', () => {
+	const date = (input: string) => {
+		const r = parse(input);
+		return { title: r.title, start: r.start, due: r.due };
+	};
+
+	it('reads an hour written with two digits as written, never as afternoon', () => {
+		expect(date('Call 2026-10-16T06:00')).toEqual({ title: 'Call', start: null, due: '2026-10-16T06:00' });
+		expect(date('Call 2026-10-16 06:00')).toEqual({ title: 'Call', start: null, due: '2026-10-16T06:00' });
+		expect(date('Call 2026-10-16T01:00').due).toBe('2026-10-16T01:00');
+		expect(date('Call 16/10/2026 06:00').due).toBe('2026-10-16T06:00');
+		expect(date('Flight 06:30 tomorrow')).toEqual({ title: 'Flight', start: null, due: '2026-10-10T06:30' });
+		expect(date('Vuelo mañana a las 07:00')).toEqual({ title: 'Vuelo', start: null, due: '2026-10-10T07:00' });
+		expect(date('Vuelo a las 06:30')).toEqual({ title: 'Vuelo', start: null, due: '2026-10-10T06:30' });
+	});
+
+	it('still reads an hour written with one digit, without am or pm, as afternoon', () => {
+		expect(date('Meet at 3').due).toBe('2026-10-09T15:00');
+		expect(date('Meet 3:30').due).toBe('2026-10-09T15:30');
+		expect(date('Call 7:30').due).toBe('2026-10-09T19:30');
+		expect(date('Vuelo mañana a las 6').due).toBe('2026-10-10T18:00');
+		expect(date('Call 2026-10-16 at 3').due).toBe('2026-10-16T15:00');
+		expect(date('Call fri 5pm').due).toBe('2026-10-16T17:00');
+		expect(date('Call fri 5am').due).toBe('2026-10-16T05:00');
+	});
+
+	it('reads both ends of a range', () => {
+		expect(date('Fly fri 23:00 to sat 02:00')).toEqual({ title: 'Fly', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
+		expect(date('Fly fri 23:00 to 02:00')).toEqual({ title: 'Fly', start: '2026-10-16T23:00', due: '2026-10-17T02:00' });
+	});
+
+	it('reads a date on its own the same way', () => {
+		expect(parseDateText('2026-10-16T06:00', now)).toEqual({ start: null, due: '2026-10-16T06:00' });
+		expect(parseDateText('tomorrow 06:00', now)).toEqual({ start: null, due: '2026-10-10T06:00' });
+		expect(parseDateText('mañana a las 06:00', now)).toEqual({ start: null, due: '2026-10-10T06:00' });
+		expect(parseDateText('tomorrow 6:00', now)).toEqual({ start: null, due: '2026-10-10T18:00' });
+	});
+});
+
+describe('ranges ending in a time', () => {
+	it('put the end on the start\'s day', () => {
+		expect(parse('Reunión 20/10 10:00 hasta 12:00')).toMatchObject({ title: 'Reunión', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
+		expect(parse('Meet 20/10 10:00 y 12:00')).toMatchObject({ title: 'Meet', start: '2026-10-20T10:00', due: '2026-10-20T12:00' });
+		expect(parse('Meet fri 10:00 y 12:00')).toMatchObject({ title: 'Meet', start: '2026-10-16T10:00', due: '2026-10-16T12:00' });
+		expect(parseDateText('fri 10:00 y 12:00', now)).toEqual({ start: '2026-10-16T10:00', due: '2026-10-16T12:00' });
+	});
+
+	it('put the end on the next day when it isn\'t later than the start', () => {
+		expect(parse('Guardia 20/10 23:00 hasta 01:00')).toMatchObject({ start: '2026-10-20T23:00', due: '2026-10-21T01:00' });
+	});
+});
+
+describe('Spanish ranges of days', () => {
+	it('make a day the month doesn\'t have an invalid date, with no date set', () => {
+		for (const [input, text] of [
+			['Viaje del 29 al 31 de abril', 'del 29 al 31 de abril'],
+			['Viaje del 30 al 31 de febrero', 'del 30 al 31 de febrero'],
+		] as const) {
+			const r = parse(input);
+			expect([r.start, r.due, r.title]).toEqual([null, null, input]);
+			expect(r.chips).toEqual([{ kind: 'invalid-date', text, start: input.indexOf(text), end: input.length, problem: 'not-a-day' }]);
+		}
+		expect(parseDateText('del 29 al 31 de abril', now)).toEqual({ problem: 'not-a-day' });
+	});
+
+	it('read a first day after the last as a day of the month before', () => {
+		expect(parse('Viaje del 28 al 2 de noviembre')).toMatchObject({ title: 'Viaje', start: '2026-10-28', due: '2026-11-02' });
+		expect(parse('Viaje del 28 al 3 de enero')).toMatchObject({ title: 'Viaje', start: '2026-12-28', due: '2027-01-03' });
+		expect(parse('Viaje del 30 al 2 de marzo').chips.map((c) => c.kind)).toEqual(['invalid-date']);
+	});
+
+	it('read English ranges the same way', () => {
+		expect(parse('Trip 28 to 2 November')).toMatchObject({ title: 'Trip', start: '2026-10-28', due: '2026-11-02' });
+	});
+});
+
+describe('Spanish "a las"', () => {
+	it('leaves the title with the time', () => {
+		expect(parse('Reunión a las 5')).toMatchObject({ title: 'Reunión', due: '2026-10-09T17:00' });
+		expect(parse('llamar a Juan a las 10')).toMatchObject({ title: 'llamar a Juan', due: '2026-10-10T10:00' });
+		expect(parse('A las 9 dentista')).toMatchObject({ title: 'dentista', due: '2026-10-10T09:00' });
+		expect(parse('a las 10 llamar')).toMatchObject({ title: 'llamar', due: '2026-10-10T10:00' });
+		expect(parse('Reunión a la 1')).toMatchObject({ title: 'Reunión', due: '2026-10-09T13:00' });
+		expect(parse('Reunión mañana a las 5')).toMatchObject({ title: 'Reunión', due: '2026-10-10T17:00' });
+	});
+
+	it('is a date on its own', () => {
+		expect(parseDateText('a las 5', now)).toEqual({ start: null, due: '2026-10-09T17:00' });
+	});
+});
+
+describe('ranges whose times are written differently', () => {
+	const range = (input: string, extra: Partial<QuickAddContext> = {}) => {
+		const r = parse(input, extra);
+		return [r.start, r.due];
+	};
+
+	it('read an ambiguous hour at one end as the shortest range after the start', () => {
+		expect(range('Meet 06:00 to 7:00')).toEqual(['2026-10-10T06:00', '2026-10-10T07:00']);
+		expect(range('Reunión 06:00 hasta 7:00')).toEqual(['2026-10-10T06:00', '2026-10-10T07:00']);
+		expect(range('Meet 6:00 to 07:00')).toEqual(['2026-10-10T06:00', '2026-10-10T07:00']);
+		expect(range('Meet 6:30 to 07:30')).toEqual(['2026-10-10T06:30', '2026-10-10T07:30']);
+		expect(range('Meet 6am to 7')).toEqual(['2026-10-10T06:00', '2026-10-10T07:00']);
+		expect(range('Meet 20/10 18:00 hasta 6:00')).toEqual(['2026-10-20T18:00', '2026-10-21T06:00']);
+		expect(range('Fly 23:45 to 1:00')).toEqual(['2026-10-09T23:45', '2026-10-10T01:00']);
+		expect(range('Fly fri 23:00 to 2')).toEqual(['2026-10-16T23:00', '2026-10-17T02:00']);
+		expect(range('Meet fri 10 to 2')).toEqual(['2026-10-16T10:00', '2026-10-16T14:00']);
+	});
+
+	it('read the start by the afternoon rule and the end as the shortest range after it when both ends are ambiguous', () => {
+		expect(range('Meet 3 to 5')).toEqual(['2026-10-09T15:00', '2026-10-09T17:00']);
+		expect(range('Meet 7 to 9')).toEqual(['2026-10-09T19:00', '2026-10-09T21:00']);
+		expect(range('Meet 8 to 9')).toEqual(['2026-10-10T08:00', '2026-10-10T09:00']);
+		expect(range('Meet fri 10 to 2')).toEqual(['2026-10-16T10:00', '2026-10-16T14:00']);
+		expect(range('Reunión 7:00 hasta 9:00')).toEqual(['2026-10-09T19:00', '2026-10-09T21:00']);
+	});
+
+	it('read equal times as one moment, not a day', () => {
+		expect(range('Meet 23:00 to 23:00')).toEqual(['2026-10-09T23:00', '2026-10-09T23:00']);
+		expect(range('Reunión 20/10 10:00 hasta 10:00')).toEqual(['2026-10-20T10:00', '2026-10-20T10:00']);
+	});
+});
+
+describe('ranges of days that end before they start', () => {
+	it('move the start to the month before only when the month is written once, after the last day', () => {
+		expect(parse('Trip 28 to 20 October')).toMatchObject({ start: '2026-09-28', due: '2026-10-20' });
+		expect(parse('Trip Oct 28 - 20')).toMatchObject({ title: 'Trip', start: '2026-10-28', due: '2026-10-20' });
+	});
+
+	it('agree on the year in English and Spanish when the range is already over', () => {
+		const later = new Date(2026, 10, 10, 12, 0);
+		expect(parse('Trip 28 to 2 November', { now: later })).toMatchObject({ start: '2027-10-28', due: '2027-11-02' });
+		expect(parse('Viaje del 28 al 2 de noviembre', { now: later })).toMatchObject({ start: '2027-10-28', due: '2027-11-02' });
+	});
+});
+
+describe('Spanish "a" after a time', () => {
+	it('is not a.m. unless written as one', () => {
+		expect(parse('Llamar a las 5 a Juan')).toMatchObject({ title: 'Llamar a Juan', due: '2026-10-09T17:00' });
+		expect(parse('Cita a las 3 a Ana')).toMatchObject({ title: 'Cita a Ana', due: '2026-10-09T15:00' });
+		expect(parse('Llamar a las 5 a.m.')).toMatchObject({ title: 'Llamar', due: '2026-10-10T05:00' });
+		expect(parse('Llamar a las 5 am')).toMatchObject({ title: 'Llamar', due: '2026-10-10T05:00' });
+		expect(parse('Llamar a las 5 a', { languages: ['es'] })).toMatchObject({ title: 'Llamar a', due: '2026-10-09T17:00' });
+	});
+});

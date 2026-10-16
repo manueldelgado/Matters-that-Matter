@@ -277,7 +277,7 @@ export class NoteDecorations {
 						showNoNextActionMenu(anchor, {
 							matterName: matter.name,
 							newAction: () => this.plugin.quickAdd({ matterPath: file.path, statusId: nextStepStatus(settings.statuses)?.id }),
-							markDormant: () => void setMatterState(app, file, 'dormant'),
+							markDormant: () => void this.run(() => setMatterState(app, file, 'dormant')),
 							openOverview: () => void this.plugin.openMatter(file.path),
 						}),
 				},

@@ -24,6 +24,8 @@ export const VIEW_INSPECTOR = 'mtm-inspector';
 
 /** Details are saved about a second after typing stops (and on blur, and when the view closes). */
 const DETAILS_DELAY = 1000;
+/** Vault changes come in bursts (a folder rename, a sync); render once they settle. */
+const REFRESH_DELAY = 150;
 
 export class InspectorView extends ItemView {
 	private file: TFile | null = null;
@@ -37,6 +39,7 @@ export class InspectorView extends ItemView {
 	/** The details write in flight; a refresh waits for it so it never shows the old text. */
 	private detailsWrite: Promise<void> = Promise.resolve();
 	private saveDetailsSoon = debounce(() => void this.flushDetails(), DETAILS_DELAY, true);
+	private refreshSoon = debounce(() => void this.refresh(), REFRESH_DELAY, true);
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -62,6 +65,7 @@ export class InspectorView extends ItemView {
 		this.registerEvent(
 			plugin.selection.on('changed', () => {
 				void this.flushDetails();
+				this.refreshSoon.cancel();
 				void this.refresh();
 			}),
 		);
@@ -69,16 +73,21 @@ export class InspectorView extends ItemView {
 		// The Action itself, its Matter's name and icon, and the Matter list all come from metadata.
 		this.registerEvent(
 			app.metadataCache.on('changed', (file) => {
-				if (file.path === plugin.selection.path || frontmatterOf(app, file)?.['mtm-kind'] === 'matter') void this.refresh();
+				if (file.path === plugin.selection.path || frontmatterOf(app, file)?.['mtm-kind'] === 'matter') this.refreshSoon();
 			}),
 		);
-		this.registerEvent(app.vault.on('rename', () => void this.refresh()));
+		// The selected Action's own rename moves the selection, and that refreshes; reading the old path first would show the empty state.
+		this.registerEvent(
+			app.vault.on('rename', (_file, oldPath) => {
+				if (oldPath !== plugin.selection.path) this.refreshSoon();
+			}),
+		);
 		// The empty state offers "Open board" and "Hide sidebar" depending on the layout.
 		this.registerEvent(app.workspace.on('layout-change', () => {
 			if (!this.file) void this.refresh();
 		}));
 		// Deleting the selected Action clears the selection (see main.ts); other deletions may remove a linked note.
-		this.registerEvent(app.vault.on('delete', () => void this.refresh()));
+		this.registerEvent(app.vault.on('delete', () => this.refreshSoon()));
 		this.registerDomEvent(this.contentEl, 'focusout', () => {
 			// Wait for focus to land before deciding whether the user is still typing.
 			window.setTimeout(() => {
@@ -89,6 +98,7 @@ export class InspectorView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.refreshSoon.cancel();
 		await this.flushDetails();
 	}
 

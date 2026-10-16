@@ -15,9 +15,9 @@ import type { ApplyFs } from './apply';
 import type { ContentsAfter } from './filesLayer';
 import { writeJson, type ErrorJson } from './json';
 import { formatActionWrite, formatError, formatList, formatMatterAdded, formatMatters, formatShow, formatToday, formatWorkflow, shownPath, style, typeTones } from './output';
-import { CLI, MCP } from './strings';
+import { CLI, MCP, type WriteVerb } from './strings';
 import { PACKAGE_NAME, VERSION } from './version';
-import { openVault, type Vault } from './vault';
+import { inVault, openVault, type Vault } from './vault';
 import { planAndWrite, takeSnapshot, type ReaderFactory, type WriteFlow } from './writeFlow';
 
 // ——— The tools ———
@@ -75,7 +75,11 @@ interface Field {
 type JsonSchema = Record<string, unknown>;
 
 const F = MCP.fields;
-const PRIORITIES = [1, 2, 3, 'high', 'medium', 'low'] as const;
+/** A number or a word, as separate schemas: some hosts read only enums of one type. */
+const PRIORITY = [
+	{ type: 'integer', enum: [1, 2, 3] },
+	{ type: 'string', enum: ['high', 'medium', 'low'] },
+];
 
 function fieldSchema(f: Field): JsonSchema {
 	const base = { description: f.description };
@@ -91,9 +95,9 @@ function fieldSchema(f: Field): JsonSchema {
 		case 'bool':
 			return { type: 'boolean', ...base };
 		case 'priority':
-			return { enum: [...PRIORITIES], ...base };
+			return { anyOf: PRIORITY, ...base };
 		case 'nullablePriority':
-			return { enum: [...PRIORITIES, null], ...base };
+			return { anyOf: [...PRIORITY, { type: 'null' }], ...base };
 	}
 }
 
@@ -110,7 +114,7 @@ function actionFields(update: boolean): Field[] {
 		{ name: 'due', kind: update ? 'nullableText' : 'text', description: update ? F.dateUpdate : F.date },
 		{ name: 'waiting-on', kind: update ? 'nullableText' : 'text', description: update ? F.waitingOnUpdate : F.waitingOn },
 		{ name: 'people', kind: update ? 'nullableList' : 'list', description: update ? F.peopleUpdate : F.people },
-		{ name: 'details', kind: 'text', description: F.details },
+		{ name: 'details', kind: update ? 'nullableText' : 'text', description: update ? F.detailsUpdate : F.details },
 		{ name: 'checklist', kind: 'list', description: update ? F.checklistUpdate : F.checklist },
 		{ name: 'link', kind: 'text', description: F.link },
 	];
@@ -247,10 +251,11 @@ const ACTION_DETAIL: JsonSchema = {
 		details: str,
 		checklist: arr(obj({ text: str, checked: bool })),
 		linkedNotes: arr(noteRef),
+		attachments: arr(obj({ path: str, name: str })),
 		people: arr(noteRef),
 		startsAfterDue: bool,
 	},
-	required: [...(ACTION.required as string[]), 'details', 'checklist', 'linkedNotes', 'people', 'startsAfterDue'],
+	required: [...(ACTION.required as string[]), 'details', 'checklist', 'linkedNotes', 'attachments', 'people', 'startsAfterDue'],
 };
 
 const MATTER = obj({
@@ -313,6 +318,8 @@ const OUTPUT: Record<ToolName, JsonSchema> = {
 
 const WRITES: readonly ToolName[] = ['add_action', 'update_action', 'mark_as_done', 'reopen_action', 'add_matter'];
 const IDEMPOTENT: readonly ToolName[] = ['mark_as_done', 'reopen_action'];
+/** Writes that may replace or remove values (people, details, dates, the title); the others only add, or move a status that can be moved back. */
+const DESTRUCTIVE: readonly ToolName[] = ['update_action'];
 
 /** A tool as `tools/list` gives it. */
 export function toolDefinition(name: ToolName): Tool {
@@ -327,7 +334,7 @@ export function toolDefinition(name: ToolName): Tool {
 		annotations: {
 			title: text.title,
 			readOnlyHint: !writes,
-			...(writes ? { destructiveHint: false, idempotentHint: IDEMPOTENT.includes(name) } : {}),
+			...(writes ? { destructiveHint: DESTRUCTIVE.includes(name), idempotentHint: IDEMPOTENT.includes(name) } : {}),
 			openWorldHint: false,
 		},
 	};
@@ -401,7 +408,7 @@ function failed<T>(w: Exclude<WriteFlow<T>, { ok: true }>): CallToolResult {
 }
 
 /** Add, update, done, reopen: `verb` is null for add. */
-function writeAction(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) => OpResult<ActionWrite>, verb: string | null): CallToolResult {
+function writeAction(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) => OpResult<ActionWrite>, verb: WriteVerb | null): CallToolResult {
 	const w = planAndWrite(writeSource(vault, now, config), op);
 	if (!w.ok) return failed(w);
 	const { r, snap, outcome, written } = w;
@@ -431,7 +438,9 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
 	const parsed = readArguments(name, args);
 	if (!parsed.ok) return opError(parsed.error, WRITES.includes(name));
 	const input = parsed.input;
-	const ref = typeof input.action === 'string' ? input.action.trim() : '';
+	// A note named by its full path is named by its path in the vault.
+	const ref = typeof input.action === 'string' ? inVault(input.action.trim(), vault.root) : '';
+	if (typeof input.matter === 'string') input.matter = inVault(input.matter, vault.root);
 	switch (name) {
 		case 'get_today':
 			return read(vault, now, config, today, (v, s) => formatToday(v, shownPath(vault.root, config.home), typeTones(s), plain));
@@ -463,7 +472,8 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
  * the tools are declared with plain JSON Schemas, so its higher-level one (and its schema conversion) isn't needed.
  */
 export function createMcpServer(config: McpConfig): Server {
-	const server = new Server({ name: PACKAGE_NAME, title: 'Matters that Matter', version: VERSION }, { capabilities: { tools: {} }, instructions: MCP.instructions });
+	const instructions = config.dryRun ? `${MCP.instructions}\n\n${MCP.dryRunInstructions}` : MCP.instructions;
+	const server = new Server({ name: PACKAGE_NAME, title: 'Matters that Matter', version: VERSION }, { capabilities: { tools: {} }, instructions });
 	const offered = TOOL_NAMES.filter((n) => config.tools.includes(n));
 	server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: offered.map(toolDefinition) }));
 	server.setRequestHandler(CallToolRequestSchema, (request) => {

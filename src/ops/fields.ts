@@ -45,9 +45,16 @@ export function fallbacks(s: Snapshot): { backlog: StatusDef; fallbackType: Type
 
 const PRIORITY_WORDS: Record<string, Priority> = { high: 1, medium: 2, low: 3 };
 
-/** 1–3 or high, medium, low; null or '' removes it. */
+/** An empty value: refused where it would otherwise be read as removing the value (null does that). */
+const empty = (field: string): { ok: false; error: OpError } => fail({ code: 'invalid', field, value: '', message: T.emptyValue(field) });
+
+/** Whether a value is text with nothing but spaces in it. */
+export const isBlank = (value: unknown): boolean => typeof value === 'string' && value.trim() === '';
+
+/** 1–3 or high, medium, low; null removes it. */
 export function readPriority(value: number | string | null): Read<Priority | null> {
-	if (value === null || (typeof value === 'string' && value.trim() === '')) return done(null);
+	if (value === null) return done(null);
+	if (isBlank(value)) return empty('priority');
 	const text = String(value).trim().toLowerCase();
 	const word = PRIORITY_WORDS[text];
 	if (word) return done(word);
@@ -59,14 +66,15 @@ export function readPriority(value: number | string | null): Read<Priority | nul
 const LOOKS_STORED = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}/;
 
 /**
- * A date in a stored form (seconds and a space allowed) or in words, as quick add reads them; null or '' removes it.
+ * A date in a stored form (seconds and a space allowed) or in words, as quick add reads them; null removes it.
  * Anything else that starts like a date in figures is refused rather than guessed: a time zone (`Z`, `+02:00`) or a
  * month or day out of range would otherwise be read as other words, and a different date would be stored. A time zone
  * in words ("fri 10am EST") is refused too: dates are local.
  */
 export function readDate(key: string, value: string | null, s: Snapshot): Read<string | null> {
 	const field = publicField(key);
-	if (value === null || value.trim() === '') return done(null);
+	if (value === null) return done(null);
+	if (isBlank(value)) return empty(field);
 	const stored = parseMtmDate(value);
 	if (stored) return done(formatMtmDate(stored));
 	const figure = readFigureDate(value);
@@ -89,8 +97,8 @@ export function readLink(value: string, fromPath: string, s: Snapshot): Read<str
 	const text = value.trim();
 	if (!text || /[\r\n]/.test(text)) return bad;
 	if (/^https?:\/\//i.test(text)) {
-		// An address with spaces can't be written as one link.
-		const href = /\s/.test(text) ? null : webAddress(text);
+		// Spaces in an address are written as %20, so the line stays one link.
+		const href = webAddress(text.replace(/\s/g, (ch) => (ch === ' ' ? '%20' : encodeURIComponent(ch))));
 		return href ? done(`<${href}>`) : bad;
 	}
 	// A scheme other than http(s) is never a note.
@@ -139,6 +147,20 @@ export function readText(field: string, value: unknown): Read<string> {
 	return typeof value === 'string' ? done(value) : fail({ code: 'invalid', field, message: T.badText(field) });
 }
 
+/**
+ * A line the plugin would read as a Details marker (`<!-- mtm-details…` or `<!-- /mtm-details…`): details holding one
+ * would start or end somewhere else, and wouldn't read back as written. Spaces before it count too, to be safe.
+ */
+const DETAILS_MARKER = /^\s*<!--\s*\/?mtm-details(?![\w-])/m;
+
+/** Details: text, without a line the plugin would read as a Details marker. */
+export function readDetails(value: unknown): Read<string> {
+	const text = readText('details', value);
+	if (!text.ok) return text;
+	if (DETAILS_MARKER.test(text.value)) return fail({ code: 'invalid', field: 'details', message: T.detailsMarker });
+	return text;
+}
+
 // ——— Names ———
 
 function ambiguous(field: string, value: string, message: string, candidates: string[]): OpError {
@@ -184,10 +206,25 @@ export function findMatter(value: string, s: Snapshot, fromPath = ''): Read<Matt
 	}), (i) => i.matter);
 }
 
-/** People are notes without mtm-kind; those in the people folder win ties. Never created. */
-export function findPerson(key: string, value: string, s: Snapshot, fromPath = ''): Read<PersonCandidate> {
+/** The kind of the Matter or Action named exactly so, for saying why it isn't a person; null when none is. */
+export function notAPerson(value: string, s: Snapshot, fromPath = ''): 'matter' | 'action' | null {
+	const notes = s.notes
+		.filter((n) => n.frontmatter?.['mtm-kind'] === 'matter' || n.frontmatter?.['mtm-kind'] === 'action')
+		.map((n) => ({ path: n.path, name: n.basename, kind: n.frontmatter?.['mtm-kind'] as 'matter' | 'action' }));
+	const m = matchNote(value, notes, (t) => s.resolve(t, fromPath), { exact: true });
+	return m.kind === 'match' ? m.item.kind : m.kind === 'ambiguous' ? (m.items[0]?.kind ?? null) : null;
+}
+
+/**
+ * People are notes without mtm-kind; those in the people folder win ties. Never created. `filter` when the person
+ * only narrows what is read (nothing would be created there anyway).
+ */
+export function findPerson(key: string, value: string, s: Snapshot, fromPath = '', filter = false): Read<PersonCandidate> {
 	const field = publicField(key);
-	return strict(matchNote(value, vaultView(s).people, (t) => s.resolve(t, fromPath)), field, value, T.severalPeople(value), (i) => i.path, () => ({
-		code: 'unmatched', field, value, message: T.unmatchedPerson(value),
-	}), (i) => i);
+	const unmatched = (): OpError => {
+		const kind = notAPerson(value, s, fromPath);
+		const message = kind ? T.notAPerson(value, kind) : filter ? T.noNote(value) : T.unmatchedPerson(value);
+		return { code: 'unmatched', field, value, message };
+	};
+	return strict(matchNote(value, vaultView(s).people, (t) => s.resolve(t, fromPath)), field, value, T.severalPeople(value), (i) => i.path, unmatched, (i) => i);
 }

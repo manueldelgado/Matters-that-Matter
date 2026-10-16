@@ -1,6 +1,6 @@
 // Small DOM helpers shared by views and modals.
 
-import { setIcon, setTooltip } from 'obsidian';
+import { Notice, setIcon, setTooltip, type Menu } from 'obsidian';
 import type { StatusDef, TypeDef } from '../../settings';
 import { classId } from '../../services/ids';
 import { STRINGS } from '../../strings';
@@ -84,6 +84,30 @@ export function pressable(el: HTMLElement, onPress: (e: MouseEvent | KeyboardEve
 		}
 	});
 	return el;
+}
+
+/** Where a menu opens: at the pointer, or under the element when it was opened from the keyboard. */
+export function menuPoint(e: MouseEvent | KeyboardEvent, el: HTMLElement): { x: number; y: number } {
+	// A button activated with Enter fires a click at 0, 0.
+	if (e.instanceOf(MouseEvent) && (e.clientX !== 0 || e.clientY !== 0)) return { x: e.clientX, y: e.clientY };
+	const rect = el.getBoundingClientRect();
+	return { x: rect.left, y: rect.bottom + 4 };
+}
+
+/** Shows a menu at the pointer, or under the element when it was opened from the keyboard. */
+export function showMenuFor(menu: Menu, e: MouseEvent | KeyboardEvent, el: HTMLElement): void {
+	menu.showAtPosition(menuPoint(e, el), el.doc);
+}
+
+/** The notice every write path shows when a note can't be written. */
+export function writeFailedNotice(e: unknown): void {
+	new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+}
+
+/** A failed write: logged with its stack, and the notice. */
+export function reportWriteFailed(e: unknown): void {
+	console.error('Matters that Matter: write failed', e);
+	writeFailedNotice(e);
 }
 
 /** A note at the end of an editor row: how many notes use it, or that setup added it. */

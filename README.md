@@ -15,7 +15,7 @@ To add it: **Settings → Appearance → Themes → Manage**, search for *Calm M
 ## Features
 
 - **Four views of the same notes.** Board, list, calendar and timeline are Bases views, so they live in a `.base` file next to your other bases and respect its filters.
-- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, change them from the inspector, or right-click a card for every status, **Mark as done** or **Reopen**, and **Move to Matter…**. On a phone, the board shows one Matter at a time.
+- **Swimlanes per Matter**, grouped by Sphere (Home, Work, Family…), with columns for your own statuses. Drag cards between cells, change them from the inspector, or right-click a card for every status, **Mark as done** or **Reopen**, and **Move to Matter…**. A dashed **New Matter** row after the last lane adds a Matter (on a board focused on one Sphere, in that Sphere). On a phone, the board shows one Matter at a time.
 - **Cards in your own order.** Cells sort themselves by priority, due date and title, or select **Order by hand** and every card stays where you drop it. Right-click a card (touch and hold on a phone) for **Move to top**, **Move up** and **Move down**. Lists can follow the same order too, with **Order by hand** in their toolbar.
 - **Colour means type.** Action types (call, message, write, meet, buy, visit, or your own) give every card its colour and icon. You choose labels, icons and colours in settings.
 - **Quick add** with tokens: `Call Charlie about the worktop /call #Kitchen @Charlie !1 tomorrow 10am`. Dates are read in English and Spanish; turn off the one you don't write in.
@@ -55,11 +55,13 @@ Setup opens in a tab the first time the plugin loads. It creates nothing until t
 1. **Location**: the folders for Matters, Actions, boards and people (`MTM/…` by default). Existing folders are reused.
 2. **Workflow**: your statuses, which are the board's columns, and your Action types. Pick a preset (Default, Simple, Get stuff done) or make your own. You can change both later in settings.
 3. **Matters**: type a few names, one per line, or adopt notes you already have, by picking them or by folder or tag.
-4. **Summary**: every file setup will create or change. Select **Create** to write them and open the board.
+4. **Summary**: every file setup will create or change. A new Matter whose name another note already has gets " 2", and Summary shows the final name. Select **Create** to write them and open the board.
 
 Tick **Add sample content** to get a small, made-up life to try every view with: Matters across four Spheres, Actions in every type and status, and the people they involve, with dates relative to today. The command **Remove sample content** moves those notes to the trash.
 
 Then run **Quick add** from the command palette (or give it a hotkey in Settings → Hotkeys) and start capturing.
+
+Each view's help icon, **Documentation ↗** in settings and the command **Open documentation** open the [documentation](https://matters-that-matter.app/docs/).
 
 ## How your notes look
 
@@ -93,7 +95,7 @@ The plugin never rewrites a value on its own. If an Action names a status, type 
 | Command | What it does |
 |---|---|
 | Quick add | Captures an Action |
-| New Matter | Creates a Matter: name, outcome, review rhythm and Sphere |
+| New Matter | Creates a Matter: name, icon, outcome, review rhythm and Sphere |
 | Open board | Opens the board, or lets you choose one if you have several |
 | Mark as done | Marks the current Action as done |
 | Open Matter overview | Opens the overview of the current Matter note |
@@ -103,6 +105,7 @@ The plugin never rewrites a value on its own. If an Action names a status, type 
 | Run setup | Opens setup again |
 | Fix orphaned Actions | Gives every Action with an unknown status, type or Matter the fallback value, after asking |
 | Remove sample content | Moves the sample notes to the trash |
+| Open documentation | Opens the documentation in your browser |
 
 No command has a default hotkey.
 
@@ -121,7 +124,7 @@ Anything that can write your vault can change your Actions. None of these lets a
 - **All-day dates in Obsidian's own panels.** `mtm-start` and `mtm-due` hold either a date (`2026-10-15`, all day) or a date and time (`2026-10-15T10:00`). Obsidian's Properties panel and Bases tables show an all-day date as "00:00", and editing it with Obsidian's date picker adds a time, which makes the Action timed. Edit dates in the inspector to keep them all day.
 - **Sync your plugin settings.** Statuses, types and Spheres live in the plugin's settings, and notes store their IDs. If your sync doesn't include plugin settings, another device shows badges on those Actions until the settings arrive. Nothing is rewritten in the meantime. On a vault that has notes but no settings at all (after reinstalling, or a copy without its `.obsidian` folder), setup reads the statuses, types, Spheres and folders back from the notes, changing none of them.
 - **Keep links up to date.** Leave Settings → Files and links → **Automatically update internal links** on. Actions point to their Matter with a link, so renaming a Matter should update every Action that names it.
-- **Phones.** The board shows one Matter at a time: choose it from the pills under the toolbar, swipe sideways between its statuses, and touch and hold a card to move it to another status or Matter. The round + adds an Action where you are. Tablets get the full board.
+- **Phones.** The board shows one Matter at a time: choose it from the pills under the toolbar, swipe sideways between its statuses, and touch and hold a card to move it to another status or Matter. The round + adds an Action where you are, and the dashed + after the last pill adds a Matter. Tablets get the full board.
 
 ### Obsidian internals
 
@@ -129,7 +132,7 @@ A few features reach into parts of Obsidian that have no public API. Each one is
 
 | Feature | What it touches | Without it |
 |---|---|---|
-| Date properties | Sets `mtm-start` and `mtm-due` to the Date & time property type (in `.obsidian/types.json`), so Obsidian doesn't treat them as dates only | Dates still work; only Obsidian's own date widgets differ |
+| Date properties | Sets `mtm-start` and `mtm-due` to the Date & time property type (in `types.json` in the vault's configuration folder), so Obsidian doesn't treat them as dates only | Dates still work; only Obsidian's own date widgets differ |
 | Matters open as their overview | Rewrites what a tab is asked to show before it renders, so Back and Forward work with no flash. Can be turned off in settings | Matter notes open as notes |
 | What matters today? | Adds a panel to Obsidian's empty new tab. Can be turned off in settings | New tabs look as usual |
 | File explorer | Adds classes to Action entries (a dot in the type's colour) | Entries look as usual |

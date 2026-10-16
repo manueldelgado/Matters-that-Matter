@@ -1,6 +1,6 @@
 // Chips for links to Actions in notes: what a chip shows, and where the links are in a line of Markdown. Pure.
 
-import type { MtmDate } from '../model/dates';
+import { isOverdue, toYmd, type MtmDate } from '../model/dates';
 import type { Tone } from '../settings';
 import type { ActionItem } from './actionItems';
 
@@ -23,10 +23,38 @@ export function chipModel(item: ActionItem): ChipModel {
 	return { path: item.path, title: item.title, typeId: type.id, tone: type.tone, icon: type.icon, done, due: done ? null : item.due };
 }
 
-/** A cheap fingerprint: a chip is redrawn only when this changes (the day matters for "Today" and overdue). */
-export function chipSignature(model: ChipModel, today: string): string {
+/**
+ * A cheap fingerprint: a chip is redrawn only when this changes. For a dated chip the day matters ("Today") and so
+ * does whether it is overdue, which a timed Action becomes during the day.
+ */
+export function chipSignature(model: ChipModel, now: Date): string {
 	const due = model.due ? `${model.due.date}T${model.due.time ?? ''}` : '';
-	return [model.path, model.title, model.typeId, model.tone, model.icon, model.done ? 1 : 0, due, due ? today : ''].join('|');
+	const when = model.due ? `${toYmd(now)}${isOverdue(model.due, now, model.done) ? '!' : ''}` : '';
+	return [model.path, model.title, model.typeId, model.tone, model.icon, model.done ? 1 : 0, due, when].join('|');
+}
+
+/**
+ * What an editor's chips were drawn from: every note its links resolved to, the names its links use (see `noteName`),
+ * and whether any link resolved to none.
+ */
+export interface ChipTargets {
+	paths: ReadonlySet<string>;
+	names: ReadonlySet<string>;
+	unresolved: boolean;
+}
+
+/** A note's name as links match it, from a path or a link path: the last segment, without ".md", lower-cased. */
+export function noteName(pathOrLink: string): string {
+	return (pathOrLink.split('/').pop() ?? '').replace(/\.md$/i, '').toLowerCase();
+}
+
+/**
+ * Whether a change to the note at `path` (null: settings or the clock) may change an editor's chips: it does when a
+ * link there resolved to that note, when a link uses that note's name (it may resolve to it now), or when a link
+ * resolved to nothing.
+ */
+export function chipsAffected(targets: ChipTargets | undefined, path: string | null): boolean {
+	return path === null || !targets || targets.unresolved || targets.paths.has(path) || targets.names.has(noteName(path));
 }
 
 export interface LinkMatch {

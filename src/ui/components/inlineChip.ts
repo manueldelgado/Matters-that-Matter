@@ -2,7 +2,6 @@
 
 import { setTooltip } from 'obsidian';
 import { chipSignature, type ChipModel } from '../../services/inlineChip';
-import { toYmd } from '../../model/dates';
 import { dueEl } from './card';
 import { tileEl, typeClasses } from './dom';
 
@@ -10,7 +9,7 @@ export const CHIP_PATH_ATTR = 'data-mtm-chip';
 
 /** Fills `chip` around `link`: classes, tile before it, due date after it. Idempotent; redraws only on a new signature. */
 export function fillChip(chip: HTMLElement, link: HTMLElement, model: ChipModel, now: Date, text: string): void {
-	const signature = `${chipSignature(model, toYmd(now))}|${text}`;
+	const signature = `${chipSignature(model, now)}|${text}`;
 	if (chip.dataset.mtmSig === signature) return;
 	chip.dataset.mtmSig = signature;
 	chip.setAttr(CHIP_PATH_ATTR, model.path);

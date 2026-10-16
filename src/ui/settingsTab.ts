@@ -228,7 +228,7 @@ export class MattersSettingTab extends PluginSettingTab {
 
 	private renderStatuses(setting: Setting): () => void {
 		setting.settingEl.empty();
-		this.statusEditor = new StatusEditor(setting.settingEl, {
+		this.statusEditor = new StatusEditor(this.app, setting.settingEl, {
 			statuses: this.plugin.settings.statuses,
 			onChange: (statuses) => {
 				this.plugin.settings.statuses = statuses;

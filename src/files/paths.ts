@@ -1,5 +1,14 @@
 // Vault paths: `/`-separated, relative to the vault root, no leading slash. Pure.
 
+/**
+ * A name or path as file systems that ignore case compare them (macOS, Windows): Unicode form (é as one character or
+ * two) and case ignored, case folded fully enough that “Straße” and “STRASSE”, or “ﬁle” and “file”, are one name.
+ * Every check for a name already taken uses it.
+ */
+export function foldName(name: string): string {
+	return name.normalize('NFC').toUpperCase().toLowerCase();
+}
+
 /** The folder holding a path ('' at the root). */
 export function parentOf(path: string): string {
 	const i = path.lastIndexOf('/');

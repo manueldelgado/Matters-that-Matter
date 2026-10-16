@@ -9,7 +9,7 @@ import { matchDefined, matchNote } from '../services/match';
 import { matterLink, newActionFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { publicField } from './fieldNames';
-import { done, fail, fallbacks, readDate, readLink, readList, readPriority, readText, readiness, type Read } from './fields';
+import { done, fail, fallbacks, isBlank, notAPerson, readDate, readDetails, readLink, readList, readPriority, readText, readiness, type Read } from './fields';
 import { PlanBuilder } from './plan';
 import { parseText, tokenWarnings } from './quickAddText';
 import { summaryAfter } from './actionWrite';
@@ -22,7 +22,19 @@ function ambiguousError(field: string, value: string, message: string, candidate
 	return { code: 'ambiguous', field, value, message, candidates };
 }
 
-export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWrite> {
+/** The fields as given, without the empty ones: an empty optional value (or null) says nothing, so it is left out. */
+function withoutEmpty(given: AddActionInput): AddActionInput {
+	const input: Record<string, unknown> = { ...given };
+	for (const [key, value] of Object.entries(input)) if (value === undefined || value === null || isBlank(value)) delete input[key];
+	for (const key of ['people', 'checklist'] as const) {
+		const list = input[key];
+		if (Array.isArray(list)) input[key] = list.filter((v) => !isBlank(v));
+	}
+	return input;
+}
+
+export function addAction(given: AddActionInput, s: Snapshot): OpResult<ActionWrite> {
+	const input = withoutEmpty(given);
 	const ready = readiness(s, true);
 	if (ready.error) return { ok: false, error: ready.error };
 	const warnings: Warning[] = [...ready.warnings];
@@ -42,8 +54,9 @@ export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWr
 	if (input.title !== undefined && typeof input.title !== 'string') return fail({ code: 'invalid', field: 'title', message: T.badText('title') });
 	// An empty title field leaves the title to the text.
 	const rawTitle = input.title?.trim() ? input.title : (text?.title ?? '');
-	if (!rawTitle.trim()) return fail({ code: 'invalid', field: 'title', message: T.noTitle });
-	const base = sanitiseTitle(rawTitle) || STRINGS.untitledAction;
+	// A title of nothing but characters a file name can't have is no title either.
+	const base = sanitiseTitle(rawTitle);
+	if (!base) return fail({ code: 'invalid', field: 'title', ...(rawTitle.trim() ? { value: rawTitle } : {}), message: T.noTitle });
 	const folder = settings.folders.actions;
 	// A name any note has is taken, so links to that note never reach the new one.
 	const title = freeName(s, folder, base);
@@ -109,7 +122,7 @@ export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWr
 		const m = matchNote(value, view.people, (t) => s.resolve(t, path));
 		if (m.kind === 'ambiguous') return fail(ambiguousError(field, value, T.severalPeople(value), m.items.map((i) => i.path)));
 		if (m.kind === 'match') return done(m.item.path);
-		warnings.push({ code: 'unmatched-person', field, value, message: T.noPerson(value) });
+		warnings.push({ code: 'unmatched-person', field, value, message: T.noPerson(value, true, notAPerson(value, s, path) ?? undefined) });
 		return done(null);
 	};
 	let people = text?.people ?? [];
@@ -137,13 +150,14 @@ export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWr
 	// The body: details, then the checklist, then the link.
 	const bodyEdits: BodyEdit[] = [];
 	if (input.details !== undefined) {
-		const d = readText('details', input.details);
+		const d = readDetails(input.details);
 		if (!d.ok) return d;
 		if (d.value.trim()) bodyEdits.push({ kind: 'details', text: d.value });
 	}
 	const checklist = input.checklist === undefined ? done<string[]>([]) : readList('checklist', input.checklist);
 	if (!checklist.ok) return checklist;
-	const items = checklist.value.filter((i) => i.trim()).map((i) => i.trim());
+	// The same item twice is written once.
+	const items = [...new Set(checklist.value.map((i) => i.replace(/\s+/g, ' ').trim()).filter(Boolean))];
 	if (items.length) bodyEdits.push({ kind: 'checklist', items });
 	if (input.link !== undefined) {
 		const l = readLink(input.link, path, s);
@@ -168,6 +182,8 @@ export function addAction(input: AddActionInput, s: Snapshot): OpResult<ActionWr
 		view.today,
 	);
 	if (startsAfterDue(parseMtmDate(start), parseMtmDate(due))) warnings.push({ code: 'start-after-due', message: T.startAfterDue });
+	// The Action links to the Inbox all the same; the plugin creates the note again.
+	if (matterPath === inbox.path && !s.exists(inbox.path)) warnings.push({ code: 'missing-inbox', value: inbox.path, message: T.missingInbox(inbox.path) });
 
 	const builder = new PlanBuilder();
 	builder.create(path, fm, bodyEdits);

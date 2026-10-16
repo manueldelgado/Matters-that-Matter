@@ -1,6 +1,7 @@
 // A synthetic, in-memory vault for the operations' tests. Links resolve as a simple wikilink would: by path (with or
 // without `.md`), then by file name ignoring case; link text is the file name when it is unique, else the path.
 
+import { foldName } from '../../src/files/paths';
 import { DEFAULT_SETTINGS, type MattersSettings } from '../../src/settings';
 import type { Snapshot } from '../../src/ops/types';
 
@@ -54,6 +55,7 @@ export function snapshot(vault: TestVault, options: { settings?: Partial<Matters
 		// As hosts do: the content of every Action note is ready; other notes' content is never asked for.
 		content: (path) => (vault[path]?.frontmatter?.['mtm-kind'] === 'action' ? render(vault[path]) : null),
 		links: (path) => [...(vault[path]?.body ?? '').matchAll(/(?<!!)\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1] ?? ''),
+		embeds: (path) => [...(vault[path]?.body ?? '').matchAll(/!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1] ?? ''),
 		resolve: (link) => resolve(link),
 		linkText: (path) => {
 			const base = name(path);
@@ -61,8 +63,10 @@ export function snapshot(vault: TestVault, options: { settings?: Partial<Matters
 			return same.length > 1 ? path.replace(/\.md$/, '') : base;
 		},
 		exists: (path) => {
-			const lower = path.toLowerCase();
-			return paths.some((p) => p.toLowerCase() === lower) || [...folders].some((f) => f.toLowerCase() === lower);
+			// As macOS and Windows compare names: case and Unicode form ignored.
+			const fold = foldName;
+			const folded = fold(path);
+			return paths.some((p) => fold(p) === folded) || [...folders].some((f) => fold(f) === folded);
 		},
 	};
 }

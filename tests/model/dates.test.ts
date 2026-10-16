@@ -32,6 +32,14 @@ describe('parseMtmDate', () => {
 		expect(parseMtmDate(' 2026-10-16T09:00:00.000 ')).toEqual({ date: '2026-10-16', time: '09:00' });
 	});
 
+	it('rejects an impossible time, seconds included, as quick add does', () => {
+		for (const raw of ['2026-10-16T10:00:99', '2026-10-16T10:00:60', '2026-10-16T10:60', '2026-10-16T24:00']) {
+			expect(parseMtmDate(raw)).toBeNull();
+			expect(readFigureDate(raw)).toEqual({ problem: 'not-a-day' });
+		}
+		expect(parseMtmDate('2026-10-16T23:59:59')).toEqual({ date: '2026-10-16', time: '23:59' });
+	});
+
 	it('rejects invalid values', () => {
 		for (const raw of ['2026-02-30', '2026-13-01', '2026-10-15T24:00', '15/10/2026', '', 'tomorrow', 20261015, null, undefined, ['2026-10-15']]) {
 			expect(parseMtmDate(raw)).toBeNull();

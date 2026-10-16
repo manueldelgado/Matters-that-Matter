@@ -1,6 +1,7 @@
 // Note bodies: an Action's details and checklist, and the review notes at the end of a Matter note.
 // Edits change only the targeted lines, and repair damaged details markers.
 
+import { indentWidth, scanBody } from '../files/scan';
 import { parseMtmDate, type Ymd } from './dates';
 
 // As Obsidian reads it: after an optional byte-order mark (`Vault.process` keeps it), an opening line that is exactly
@@ -10,7 +11,8 @@ const LIST_RE = /^\s*(?:[-*+]|\d+[.)])(?:\s|$)/;
 const HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
 const EMBED_RE = /^\s*!\[/;
 const FENCE_RE = /^\s*(```|~~~)/;
-const TASK_RE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[(.)\]/;
+// As Obsidian reads a task: the mark and then a space or the end of the line, so "- [1](https://…)" is a link.
+const TASK_RE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[([^\]])\](?=[ \t]|$)/;
 
 /** Splits off the frontmatter block (with a byte-order mark before it, its delimiters and trailing newline). */
 export function splitFrontmatter(content: string): { frontmatter: string; body: string } {
@@ -19,8 +21,49 @@ export function splitFrontmatter(content: string): { frontmatter: string; body: 
 	return { frontmatter, body: content.slice(frontmatter.length) };
 }
 
-/** The note's line ending: notes written on Windows may use CRLF; edits keep it. */
-const eolOf = (content: string) => (content.includes('\r\n') ? '\r\n' : '\n');
+/** The frontmatter and the body joined, the body on a line of its own when the block ends the file without a line break. */
+const joinBody = (frontmatter: string, body: string) => (frontmatter && body && !frontmatter.endsWith('\n') ? `${frontmatter}\n${body}` : frontmatter + body);
+
+/**
+ * The line ending new lines get: the note's first line break, as the properties block is written. Notes written on
+ * Windows may use CRLF; a note with mixed endings follows its first line, so one stray CRLF further down never
+ * decides for the whole note.
+ */
+function eolOf(content: string): '\n' | '\r\n' {
+	const i = content.indexOf('\n');
+	return i > 0 && content[i - 1] === '\r' ? '\r\n' : '\n';
+}
+
+/** Text typed or passed in, with every line break as LF (CRLF, or a lone CR, which Obsidian also reads as one). */
+const lf = (text: string) => text.replace(/\r\n?/g, '\n');
+
+/**
+ * Runs an edit written for LF text on a note with any line endings. Lines the edit leaves alone at the start and at
+ * the end of the note keep their own ending, so only the targeted lines change; the lines it writes get the note's
+ * line ending (`eolOf`).
+ */
+function keepingEndings(content: string, edit: (content: string) => string): string {
+	if (!content.includes('\r\n')) return edit(content);
+	const eol = eolOf(content);
+	const before = content.split('\n');
+	const last = before.length - 1;
+	const crlf = before.map((line, i) => i < last && line.endsWith('\r'));
+	const plain = before.map((line, i) => (crlf[i] ? line.slice(0, -1) : line));
+	const after = edit(plain.join('\n')).split('\n');
+	let head = 0;
+	while (head < plain.length && head < after.length && plain[head] === after[head]) head++;
+	let tail = 0;
+	while (tail < plain.length - head && tail < after.length - head && plain[last - tail] === after[after.length - 1 - tail]) tail++;
+	const endingOf = (i: number) => (i < last ? (crlf[i] ? '\r\n' : '\n') : eol);
+	return after
+		.map((line, j) => {
+			if (j === after.length - 1) return line;
+			if (j < head) return line + endingOf(j);
+			if (j >= after.length - tail) return line + endingOf(j - after.length + before.length);
+			return line + eol;
+		})
+		.join('');
+}
 
 const indentOf = (line: string) => (/^\s*/.exec(line)?.[0] ?? '').length;
 
@@ -121,14 +164,22 @@ function pick(lines: readonly string[], m: Markers, from: number, to = lines.len
 	return out;
 }
 
-/** Separates task items (with the lines nested under them) from the other lines, outside code blocks. */
+/**
+ * For each line from `from` on: whether a task item there counts, as Obsidian's cache lists them: outside code
+ * blocks (fenced or indented) and comments (HTML and `%%`).
+ */
+function tasksCount(lines: readonly string[], from = 0): boolean[] {
+	return scanBody(lines, from).map((l) => !l.code && !l.inComment && !l.inObsidianComment);
+}
+
+/** Separates task items (with the lines nested under them) from the other lines, outside code blocks and comments. */
 function splitTasks(lines: readonly string[]): { text: string[]; tasks: string[] } {
-	const inCode = fenced(lines);
+	const counts = tasksCount(lines);
 	const text: string[] = [];
 	const tasks: string[] = [];
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i] ?? '';
-		if (inCode[i] || !TASK_RE.test(line)) {
+		if (!counts[i] || !TASK_RE.test(line)) {
 			text.push(line);
 			continue;
 		}
@@ -169,7 +220,7 @@ function assemble(head: readonly string[], tasks: readonly string[], rest: reado
  * the body text before the first list item, heading, embed or code block.
  */
 export function getDetails(content: string): string {
-	const lines = splitFrontmatter(content).body.replace(/\r\n/g, '\n').split('\n');
+	const lines = lf(splitFrontmatter(content).body).split('\n');
 	const m = findMarkers(lines);
 	if (!m) return lines.slice(0, detailsEnd(lines)).join('\n').trim();
 	return splitTasks(pick(lines, m, m.start, m.end)).text.join('\n').trim();
@@ -183,8 +234,10 @@ export function getDetails(content: string): string {
  * there from the last save, so they are replaced rather than added again.
  */
 export function setDetails(content: string, details: string, previous?: string): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return setDetails(content.replace(/\r\n/g, '\n'), details, previous).replace(/\n/g, eol);
+	return keepingEndings(content, (note) => detailsSet(note, lf(details), previous === undefined ? undefined : lf(previous)));
+}
+
+function detailsSet(content: string, details: string, previous?: string): string {
 	const { frontmatter, body } = splitFrontmatter(content);
 	const lines = body.split('\n');
 	const typed = splitTasks(details.trim().split('\n'));
@@ -195,7 +248,7 @@ export function setDetails(content: string, details: string, previous?: string):
 	if (!m) {
 		const rest = dropPrefix(lines.slice(detailsEnd(lines)), previousTasks);
 		const head = textLines.some(endsDetails) ? [DETAILS_OPEN, ...textLines, DETAILS_CLOSE] : textLines;
-		return frontmatter + assemble(head, typed.tasks, rest);
+		return joinBody(frontmatter, assemble(head, typed.tasks, rest));
 	}
 	const before = pick(lines, m, 0, m.open ?? 0);
 	const inside = splitTasks(pick(lines, m, m.start, m.end)).tasks;
@@ -204,8 +257,8 @@ export function setDetails(content: string, details: string, previous?: string):
 	const raw = pick(lines, m, m.close !== null ? m.close + 1 : m.end);
 	const after = dropPrefix(raw, previousTasks);
 	// Nothing moves after the details: the rest of the body stays exactly as it was.
-	if (!tasks.length && after.length === dropLeadingBlanks(raw).length) return frontmatter + [...head, ...raw].join('\n');
-	return frontmatter + assemble(head, tasks, after);
+	if (!tasks.length && after.length === dropLeadingBlanks(raw).length) return joinBody(frontmatter, [...head, ...raw].join('\n'));
+	return joinBody(frontmatter, assemble(head, tasks, after));
 }
 
 /**
@@ -213,8 +266,10 @@ export function setDetails(content: string, details: string, previous?: string):
  * standard wording. Notes without markers, or with correct ones, are returned unchanged.
  */
 export function repairDetailsMarkers(content: string): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return repairDetailsMarkers(content.replace(/\r\n/g, '\n')).replace(/\n/g, eol);
+	return keepingEndings(content, markersRepaired);
+}
+
+function markersRepaired(content: string): string {
 	const { frontmatter, body } = splitFrontmatter(content);
 	const lines = body.split('\n');
 	const m = findMarkers(lines);
@@ -226,43 +281,56 @@ export function repairDetailsMarkers(content: string): string {
 		if (i === lines.length || m.stray.has(i)) continue;
 		out.push(i === m.open ? DETAILS_OPEN : i === m.close ? DETAILS_CLOSE : (lines[i] ?? ''));
 	}
-	return frontmatter + out.join('\n');
+	return joinBody(frontmatter, out.join('\n'));
 }
 
-/** Line numbers (in the whole file) of task items outside code blocks, between the details markers too. */
+/** Line numbers (in the whole file) of task items outside code blocks and comments, between the details markers too. */
 export function taskLines(content: string): number[] {
-	const lines = content.split('\n');
+	const lines = content.split('\n').map((line) => line.replace(/\r$/, ''));
 	const start = splitFrontmatter(content).frontmatter.split('\n').length - 1;
-	const inCode = fenced(lines.slice(start));
+	const counts = tasksCount(lines, start);
 	const out: number[] = [];
-	for (let i = start; i < lines.length; i++) if (!inCode[i - start] && TASK_RE.test(lines[i] ?? '')) out.push(i);
+	for (let i = start; i < lines.length; i++) if (counts[i - start] && TASK_RE.test(lines[i] ?? '')) out.push(i);
 	return out;
 }
 
 /**
- * Adds "- [ ] text" after the last task item (and any lines nested under it),
- * or at the end of the body if there is none. `lastTaskLine` may come from metadataCache.
- * Damaged details markers are repaired in the same write.
+ * Adds "- [ ] text" after the last top-level task item (and any lines nested under it, sub-items included), at its
+ * indentation, or at the end of the body if there is none. Top-level items are the least indented ones, so a
+ * checklist under a plain list item ("- Shopping") stays there. `lastTaskLine` (from metadataCache) puts it after
+ * that item instead, at its indentation. Damaged details markers are repaired in the same write.
  */
 export function insertTask(content: string, text: string, lastTaskLine?: number): string {
 	return repairDetailsMarkers(addTask(content, text, lastTaskLine));
 }
 
 function addTask(content: string, text: string, lastTaskLine?: number): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return addTask(content.replace(/\r\n/g, '\n'), text, lastTaskLine).replace(/\n/g, eol);
+	return keepingEndings(content, (note) => taskAdded(note, text, lastTaskLine));
+}
+
+function taskAdded(content: string, text: string, lastTaskLine?: number): string {
 	const item = `- [ ] ${text.replace(/\s+/g, ' ').trim()}`;
-	const last = lastTaskLine ?? taskLines(content).at(-1);
 	const lines = content.split('\n');
+	const width = (i: number) => indentWidth(lines[i] ?? '');
+	let last = lastTaskLine;
+	if (last === undefined) {
+		const tasks = taskLines(content);
+		const top = Math.min(...tasks.map(width));
+		last = tasks.filter((i) => width(i) === top).at(-1);
+	}
 	if (last === undefined || last >= lines.length) {
 		const { frontmatter, body } = splitFrontmatter(content);
 		const trimmed = body.replace(/\s+$/, '');
-		return trimmed ? `${frontmatter}${trimmed}\n\n${item}\n` : `${frontmatter}${item}\n`;
+		return joinBody(frontmatter, trimmed ? `${trimmed}\n\n${item}\n` : `${item}\n`);
 	}
-	const indent = indentOf(lines[last] ?? '');
+	// After the lines nested under it, across blank lines between them.
 	let at = last + 1;
-	while (at < lines.length && (lines[at] ?? '').trim() !== '' && indentOf(lines[at] ?? '') > indent) at++;
-	lines.splice(at, 0, (lines[last] ?? '').slice(0, indent) + item);
+	for (let i = last + 1; i < lines.length; i++) {
+		if ((lines[i] ?? '').trim() === '') continue;
+		if (width(i) <= width(last)) break;
+		at = i + 1;
+	}
+	lines.splice(at, 0, (lines[last] ?? '').slice(0, indentOf(lines[last] ?? '')) + item);
 	return lines.join('\n');
 }
 
@@ -285,7 +353,7 @@ export interface ChecklistItem {
 	text: string;
 }
 
-const TASK_TEXT_RE = /^\s*(?:[-*+]|\d+[.)])\s+\[(.)\]\s?(.*)$/;
+const TASK_TEXT_RE = /^\s*(?:[-*+]|\d+[.)])\s+\[([^\]])\](?:[ \t](.*))?$/;
 
 /** The task on a line, or null. Any mark other than a space counts as checked, as Obsidian renders it. */
 export function parseTask(line: string): { checked: boolean; text: string } | null {
@@ -358,7 +426,7 @@ export function parseReviewNote(line: string): ReviewNote | null {
 /** The latest review note in the body (by date, then the later line), or null. Frontmatter and code blocks never count. */
 export function latestReviewNote(content: string): ReviewNote | null {
 	let latest: ReviewNote | null = null;
-	const lines = splitFrontmatter(content).body.replace(/\r\n/g, '\n').split('\n');
+	const lines = lf(splitFrontmatter(content).body).split('\n');
 	const inCode = fenced(lines);
 	for (let i = 0; i < lines.length; i++) {
 		if (inCode[i]) continue;
@@ -371,22 +439,19 @@ export function latestReviewNote(content: string): ReviewNote | null {
 /** Adds a line after the body's last non-empty line: a blank line first unless that line is a review note; one trailing newline. */
 function appendReviewLine(content: string, line: string): string {
 	const { frontmatter, body } = splitFrontmatter(content);
-	const head = frontmatter && !frontmatter.endsWith('\n') ? `${frontmatter}\n` : frontmatter;
 	const lines = body.split('\n');
 	let end = lines.length;
 	while (end > 0 && (lines[end - 1] ?? '').trim() === '') end--;
-	if (!end) return `${head}${line}\n`;
+	if (!end) return joinBody(frontmatter, `${line}\n`);
 	const kept = lines.slice(0, end);
 	const gap = parseReviewNote(kept[end - 1] ?? '') ? [] : [''];
-	return `${head}${[...kept, ...gap, line].join('\n')}\n`;
+	return joinBody(frontmatter, `${[...kept, ...gap, line].join('\n')}\n`);
 }
 
 /** Appends "- Reviewed <ymd>: <text>" at the end of the note. Empty text leaves the note unchanged. */
 export function appendReviewNote(content: string, ymd: Ymd, text: string): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return appendReviewNote(content.replace(/\r\n/g, '\n'), ymd, text).replace(/\n/g, eol);
 	const line = reviewNoteLine(ymd, text);
-	return line ? appendReviewLine(content, line) : content;
+	return line ? keepingEndings(content, (note) => appendReviewLine(note, line)) : content;
 }
 
 /**
@@ -395,8 +460,10 @@ export function appendReviewNote(content: string, ymd: Ymd, text: string): strin
  * (edited or deleted by hand), the new note is appended instead.
  */
 export function replaceReviewNote(content: string, previous: string, ymd: Ymd, text: string): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return replaceReviewNote(content.replace(/\r\n/g, '\n'), previous, ymd, text).replace(/\n/g, eol);
+	return keepingEndings(content, (note) => reviewNoteReplaced(note, previous, ymd, text));
+}
+
+function reviewNoteReplaced(content: string, previous: string, ymd: Ymd, text: string): string {
 	const line = reviewNoteLine(ymd, text);
 	const { frontmatter, body } = splitFrontmatter(content);
 	const lines = body.split('\n');
@@ -405,14 +472,14 @@ export function replaceReviewNote(content: string, previous: string, ymd: Ymd, t
 	if (at < 0) return line ? appendReviewLine(content, line) : content;
 	if (line) {
 		lines[at] = line;
-		return frontmatter + lines.join('\n');
+		return joinBody(frontmatter, lines.join('\n'));
 	}
 	lines.splice(at, 1);
 	// Removing the last note leaves no trailing blank lines behind.
 	let end = lines.length;
 	while (end > 0 && (lines[end - 1] ?? '').trim() === '') end--;
-	if (end === lines.length || at < end) return frontmatter + lines.join('\n');
-	return end ? `${frontmatter}${lines.slice(0, end).join('\n')}\n` : frontmatter;
+	if (end === lines.length || at < end) return joinBody(frontmatter, lines.join('\n'));
+	return end ? joinBody(frontmatter, `${lines.slice(0, end).join('\n')}\n`) : frontmatter;
 }
 
 /**
@@ -420,10 +487,10 @@ export function replaceReviewNote(content: string, previous: string, ymd: Ymd, t
  * keeping the frontmatter and the note's line ending.
  */
 export function appendLine(content: string, line: string): string {
-	const eol = eolOf(content);
-	if (eol !== '\n') return appendLine(content.replace(/\r\n/g, '\n'), line).replace(/\n/g, eol);
-	const { frontmatter, body } = splitFrontmatter(content);
-	const text = line.replace(/\s+/g, ' ').trim();
-	const trimmed = body.replace(/\s+$/, '');
-	return trimmed ? `${frontmatter}${trimmed}\n\n${text}\n` : `${frontmatter}${text}\n`;
+	return keepingEndings(content, (note) => {
+		const { frontmatter, body } = splitFrontmatter(note);
+		const text = line.replace(/\s+/g, ' ').trim();
+		const trimmed = body.replace(/\s+$/, '');
+		return joinBody(frontmatter, trimmed ? `${trimmed}\n\n${text}\n` : `${text}\n`);
+	});
 }

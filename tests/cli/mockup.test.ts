@@ -30,8 +30,12 @@ const HELP = `Matters that Matter, from the command line.            matters-tha
   open <action|matter>     Open it in Obsidian
   mcp                      Run as an MCP server (stdio)
 
-  --vault <path>   the vault (or MTM_VAULT)      --json      for scripts
-  --dry-run        show what would change       --help      this
+  --vault <path>        the vault (or MTM_VAULT)
+  --config-dir <dir>    its configuration folder, when not found by itself
+  --json                for scripts
+  --dry-run             show what would change
+  --help, -h            this, or one command’s: matters-that-matter <command> --help
+  --version, -V         the version
 `;
 
 describe('help', () => {
@@ -145,9 +149,10 @@ describe('dry runs and renames', () => {
 		expect(r).toEqual({
 			code: 0,
 			stderr: '',
-			stdout: `Would change MTM/Actions/Call Marco about the quote.md
+			stdout: `Would mark “Call Marco about the quote” as done
   mtm-status     next → done
   mtm-completed  (none) → 2026-10-09
+  MTM/Actions/Call Marco about the quote.md
 Nothing written (dry run).
 `,
 		});

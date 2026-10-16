@@ -6,7 +6,7 @@ import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { moveItem } from '../../model/workflow';
 import { IconPickerModal } from '../modals/iconPickerModal';
-import { appendIcon, markGenerated, tileEl } from './dom';
+import { appendIcon, markGenerated, pressable, tileEl } from './dom';
 import { reorderable } from './reorder';
 
 export interface SphereEditorOptions {
@@ -45,10 +45,10 @@ export class SphereEditor {
 	private render(): void {
 		this.listEl.empty();
 		this.spheres.forEach((sphere, i) => this.renderRow(sphere, i));
-		const add = this.listEl.createDiv({ cls: 'mtm-row-add', attr: { role: 'button', tabindex: 0 } });
+		const add = this.listEl.createDiv({ cls: 'mtm-row-add' });
 		appendIcon(add, 'plus');
 		add.appendText(STRINGS.editors.addSphere);
-		add.addEventListener('click', () => {
+		pressable(add, () => {
 			const label = STRINGS.editors.newSphere;
 			const id = idFromLabel(label, this.spheres.map((s) => s.id));
 			this.fresh.add(id);
@@ -95,6 +95,6 @@ export class SphereEditor {
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteSphere } });
 		appendIcon(del, 'trash-2');
-		del.addEventListener('click', () => this.opts.onDelete(current));
+		pressable(del, () => this.opts.onDelete(current));
 	}
 }

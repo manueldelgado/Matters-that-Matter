@@ -5,7 +5,7 @@
 import { readFrontmatter, stripBom, type Frontmatter } from './frontmatter';
 import { bodyLinks, frontmatterLinks, linkpath, type FrontmatterLinkRef, type LinkRef } from './links';
 import { fileToLinktext, linkFormat, type LinkFormat } from './linkText';
-import { basenameOf, byCodeUnit, extensionOf, parentOf } from './paths';
+import { basenameOf, byCodeUnit, extensionOf, foldName, parentOf } from './paths';
 import { LinkResolver } from './resolve';
 import { scanBody, splitLines } from './scan';
 import { taskLines, type TaskLine } from './tasks';
@@ -56,6 +56,9 @@ export interface IndexWarning {
 	message: string;
 }
 
+/** A path as macOS and Windows compare them (see `foldName`). */
+const foldPath = foldName;
+
 /** Whether Obsidian lists a file: not in the configuration folder, `.trash` or any folder or file starting with a dot. */
 export function isVaultFile(path: string, configDir: string): boolean {
 	if (path === '' || path === configDir || path.startsWith(`${configDir}/`)) return false;
@@ -101,7 +104,7 @@ export class VaultIndex {
 		this.notePaths = this.files.filter((path) => extensionOf(path) === 'md');
 		this.resolver = new LinkResolver(this.files);
 		for (const path of this.files) {
-			for (let folder = path; folder !== ''; folder = parentOf(folder)) this.lowerPaths.add(folder.toLowerCase());
+			for (let folder = path; folder !== ''; folder = parentOf(folder)) this.lowerPaths.add(foldPath(folder));
 		}
 		for (const path of this.notePaths) {
 			const content = this.readText(reader, path);
@@ -141,9 +144,9 @@ export class VaultIndex {
 		return body;
 	}
 
-	/** Whether a file or folder uses this path, ignoring case. */
+	/** Whether a file or folder uses this path, ignoring case and Unicode form (as macOS and Windows do). */
 	existsIgnoringCase(path: string): boolean {
-		return this.lowerPaths.has(path.toLowerCase());
+		return this.lowerPaths.has(foldPath(path));
 	}
 
 	/** Whether a file is at exactly this path. */

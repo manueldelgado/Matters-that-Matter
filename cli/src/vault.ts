@@ -5,8 +5,8 @@
 // plugin's own migrations, as the plugin reads them; settings from a newer version are read as they are (the
 // operations then warn on reads and refuse writes).
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { isAbsolute, join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { migrateSettings } from '../../src/services/migrations';
 import type { MattersSettings } from '../../src/settings';
 import { CLI } from './strings';
@@ -31,6 +31,31 @@ const isDir = (path: string) => {
 		return false;
 	}
 };
+
+const real = (path: string): string | null => {
+	try {
+		return realpathSync(path);
+	} catch {
+		return null;
+	}
+};
+
+/**
+ * A note named by its full path (from tab completion, `find` or `ls`) as a path in the vault, when it lies inside
+ * it; anything else as it was given.
+ */
+export function inVault(ref: string, root: string): string {
+	if (!isAbsolute(ref)) return ref;
+	const roots = [root, real(root)].filter((r): r is string => r !== null);
+	const refs = [resolve(ref), real(ref)].filter((r): r is string => r !== null);
+	for (const base of roots) {
+		for (const full of refs) {
+			const rel = relative(base, full);
+			if (rel && rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)) return rel.split(sep).join('/');
+		}
+	}
+	return ref;
+}
 
 /** `~/Notes` → the home folder's Notes; relative paths from `cwd`. */
 export function vaultPath(given: string, cwd: string, home: string): string {

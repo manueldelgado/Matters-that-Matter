@@ -13,6 +13,10 @@ describe('effectiveSphere', () => {
 		expect(effectiveSphere('garden', spheres, false)).toEqual({ id: null, orphan: 'garden' });
 	});
 
+	it('treats an empty or blank value as absent, with no orphan', () => {
+		for (const raw of [null, '', ' ', '\t  ']) expect(effectiveSphere(raw, spheres, false)).toEqual({ id: null, orphan: null });
+	});
+
 	it('ignores a Sphere on the Inbox', () => {
 		expect(effectiveSphere('work', spheres, true)).toEqual({ id: null, orphan: null });
 	});

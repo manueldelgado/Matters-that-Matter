@@ -91,6 +91,8 @@ body{
 .mtm-toolbar-note.mod-toggle{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:var(--radius-s);cursor:pointer}
 .mtm-toolbar-note.mod-toggle:hover,.mtm-toolbar-note.mod-toggle:focus-visible{color:var(--text-normal);background:var(--background-modifier-hover)}
 .mtm-toolbar-note.mod-toggle > .svg-icon{width:14px;height:14px}
+/* The count, the switches, help and "+": one group that wraps together and stays at the end. */
+.mtm-toolbar-end{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;min-width:0;margin-left:auto}
 .mtm-spacer{flex:1}
 .mtm-divider{flex:none;width:1px;height:16px;margin:0 4px;background:var(--mtm-line)}
 .mtm-seg{display:inline-flex;gap:2px;padding:2px;border-radius:9px;background:var(--background-modifier-hover);box-shadow:inset 0 1px 2px rgba(27,27,34,.06)}
@@ -279,6 +281,7 @@ body .mtm-button-done:not(.clickable-icon):active{filter:brightness(.94);transfo
 .mtm-tl-group{height:34px;background:var(--mtm-cell-muted-bg)}
 .mtm-tl-row{height:32px}
 .mtm-tl-label{position:sticky;left:0;z-index:2;flex:none;display:flex;align-items:center;gap:8px;width:var(--mtm-tl-label);min-width:0;padding:0 12px 0 42px;box-sizing:border-box;background:var(--mtm-cell-bg);border-right:1px solid var(--mtm-line);font-size:12px;font-weight:600;color:var(--text-normal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.mtm-tl-label-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mtm-tl-row.is-selected .mtm-tl-label{background:var(--mtm-soft)}
 .mtm-tl-row.is-done .mtm-tl-label{color:var(--text-faint)}
 .mtm-tl-group .mtm-tl-label{padding-left:16px;background:var(--mtm-lane-bg);font-family:var(--mtm-font-display);font-size:14px;font-weight:400}
@@ -1411,3 +1414,9 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .is-phone .mtm-settings .setting-item > .mtm-settings-hero{flex-wrap:wrap;row-gap:10px}
 .is-phone .mtm-settings-hero > div:first-child{flex:1 1 100%}
 .is-phone .mtm-settings-hero > .mtm-spacer{display:none}
+/* Keyboard focus for controls that hide until hover, and a ring for the plugin's own controls (Obsidian's buttons and icons bring theirs). */
+.mtm-lane-handle:focus-visible,.mtm-sphere-head .mtm-lane-menu:focus-visible{opacity:1}
+:is(.mtm-lane-handle,.mtm-drag-handle,.mtm-row-add,.mtm-icon-cell,.mtm-destination):focus-visible{outline:none;box-shadow:0 0 0 2px var(--background-modifier-border-focus)}
+:is(.mtm-lane-handle,.mtm-drag-handle){border-radius:var(--radius-s)}
+.mtm-swatch:focus-visible{outline:none;box-shadow:0 0 0 2px var(--background-primary),0 0 0 4px var(--background-modifier-border-focus)}
+.mtm-swatch.is-active:focus-visible{box-shadow:0 0 0 2px var(--background-primary),0 0 0 4px var(--mtm-strong),0 0 0 6px var(--background-modifier-border-focus)}

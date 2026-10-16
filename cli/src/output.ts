@@ -19,7 +19,7 @@ import type {
 } from '../../src/ops/types';
 import { STRINGS } from '../../src/strings';
 import type { FileOutcome } from './filesLayer';
-import { CLI } from './strings';
+import { CLI, type WriteVerb } from './strings';
 
 // ——— Shared by the command line and the MCP server ———
 
@@ -37,7 +37,7 @@ export function shownPath(root: string, home: string): string {
  * naming the Action as it was before a rename.
  */
 export function formatActionWrite(
-	verb: string | null,
+	verb: WriteVerb | null,
 	r: { value: { action: ActionSummary }; plan: Plan; changes: readonly Change[]; warnings: readonly Warning[] },
 	outcome: FileOutcome | null,
 	today: Ymd,
@@ -97,11 +97,48 @@ export function markup(text: string, st: Style): string {
 /** A cell: plain text, or text with its paint (padding stays outside the paint). */
 type Cell = string | [text: string, paint: Paint];
 
-/** Rows as aligned columns: each column as wide as its widest cell plus its gap; trailing spaces dropped. */
-function columns(rows: readonly Cell[][], gaps: readonly number[], indent = '  '): string[] {
+/** The narrowest a column cut to fit a terminal gets. */
+const MIN_FIT = 12;
+
+/** Text cut to `width` characters, ending in “…” when cut. */
+const cut = (t: string, width: number) => {
+	const chars = [...t];
+	return chars.length <= width ? t : `${chars.slice(0, Math.max(1, width - 1)).join('').trimEnd()}…`;
+};
+
+/** A column cut so the first `fits` columns stay within `width` characters (a terminal's), as far as it can be. */
+interface Fit {
+	column: number;
+	width: number | undefined;
+	/** How many columns must fit; those after them (notes of any length) may wrap. All when absent. */
+	fits?: number;
+}
+
+/**
+ * Rows as aligned columns: each column as wide as its widest cell plus its gap; trailing spaces dropped. With `fit`,
+ * one column is cut to fit a terminal.
+ */
+function columns(given: readonly Cell[][], gaps: readonly number[], indent = '  ', fit?: Fit): string[] {
+	let rows = given;
 	const text = (c: Cell | undefined) => (c === undefined ? '' : typeof c === 'string' ? c : c[0]);
 	const widths: number[] = [];
 	for (const row of rows) row.forEach((c, i) => (widths[i] = Math.max(widths[i] ?? 0, [...text(c)].length)));
+	if (fit?.width) {
+		const fits = Math.min(fit.fits ?? widths.length, widths.length);
+		const used = indent.length + widths.slice(0, fits).reduce((n, w, i) => n + (w ? w + (i === fits - 1 ? 0 : (gaps[i] ?? 2)) : 0), 0);
+		const over = used - fit.width;
+		const own = widths[fit.column] ?? 0;
+		if (over > 0 && own > MIN_FIT) {
+			const width = Math.max(MIN_FIT, own - over);
+			widths[fit.column] = width;
+			rows = rows.map((row) =>
+				row.map((c, i) => {
+					if (i !== fit.column || c === undefined) return c;
+					return typeof c === 'string' ? cut(c, width) : ([cut(c[0], width), c[1]] as Cell);
+				}),
+			);
+		}
+	}
 	return rows.map((row) => {
 		let line = indent;
 		row.forEach((c, i) => {
@@ -182,13 +219,14 @@ function orphanText(a: ActionSummary): string {
 
 // ——— Reads ———
 
-export function formatToday(v: TodayValue, vaultShown: string, tones: ReadonlyMap<string, string>, st: Style): string[] {
+/** `width`: the terminal's, when the output is one; the title column is cut to fit it. */
+export function formatToday(v: TodayValue, vaultShown: string, tones: ReadonlyMap<string, string>, st: Style, width?: number): string[] {
 	const out = [`${st.b(STRINGS.today.question)}  ${st.d(`${longDate(v.date)} · ${vaultShown}`)}`, ''];
 	const row = (a: ActionSummary): Cell[] => [typeCell(a, tones, st), a.title, [a.matter.name, st.d], dateCell(a, v.date, st), [priorityWord(a.priority), st.d]];
 	if (v.due.length) {
-		out.push(st.y(CLI.dueTodayOrLate), ...columns(v.due.map(row), [2, 3, 3, 2]));
+		out.push(st.y(CLI.dueTodayOrLate), ...columns(v.due.map(row), [2, 3, 3, 2], '  ', { column: 1, width }));
 	} else if (v.next.length) {
-		out.push(st.y(STRINGS.today.nextUp), ...columns(v.next.map(row), [2, 3, 3, 2]));
+		out.push(st.y(STRINGS.today.nextUp), ...columns(v.next.map(row), [2, 3, 3, 2], '  ', { column: 1, width }));
 	} else {
 		out.push(STRINGS.today.emptyTitle, st.d(STRINGS.today.emptyText));
 	}
@@ -197,7 +235,8 @@ export function formatToday(v: TodayValue, vaultShown: string, tones: ReadonlyMa
 	return out;
 }
 
-export function formatList(list: readonly ActionSummary[], today: Ymd, tones: ReadonlyMap<string, string>, st: Style): string[] {
+/** `width`: the terminal's, when the output is one; the title column is cut to fit it. */
+export function formatList(list: readonly ActionSummary[], today: Ymd, tones: ReadonlyMap<string, string>, st: Style, width?: number): string[] {
 	if (!list.length) return [CLI.noActions];
 	const rows: Cell[][] = list.map((a) => {
 		const waiting = a.waitingOn ? CLI.waitingOn(a.waitingOn.name, a.waitingSince ? waitAge(a.waitingSince, today).long : '').replace(/, $/, '') : '';
@@ -205,7 +244,8 @@ export function formatList(list: readonly ActionSummary[], today: Ymd, tones: Re
 		const note: Cell = orphans ? [[waiting, orphans].filter(Boolean).join(' · '), st.y] : [waiting, st.d];
 		return [typeCell(a, tones, st), a.title, a.status.label, dateCell(a, today, st, true), [priorityWord(a.priority), st.d], note];
 	});
-	const lines = columns(rows, [2, 3, 2, 2, 2]);
+	// The notes after the priority may wrap; the columns before them fit.
+	const lines = columns(rows, [2, 3, 2, 2, 2], '  ', { column: 1, width, fits: 5 });
 	const out: string[] = [];
 	let matter: string | null = null;
 	list.forEach((a, i) => {
@@ -242,6 +282,10 @@ export function formatShow(a: ActionDetail, today: Ymd, st: Style): string[] {
 		for (const item of a.checklist) out.push(`    [${item.checked ? 'x' : ' '}] ${item.text}`);
 	}
 	if (a.linkedNotes.length) out.push('', `  ${STRINGS.card.linkedNotes}: ${a.linkedNotes.map((n) => n.name).join(', ')}`);
+	if (a.attachments.length) {
+		if (!a.linkedNotes.length) out.push('');
+		out.push(`  ${STRINGS.inspector.attachments}: ${a.attachments.map((n) => n.name).join(', ')}`);
+	}
 	return out;
 }
 
@@ -383,7 +427,7 @@ export function formatMatterAdded(m: MatterSummary, warnings: readonly Warning[]
 
 /** An existing Action changed: properties and body, then a rename with the links it updated. */
 export function formatChanged(
-	verb: string,
+	verb: WriteVerb,
 	before: { title: string; path: string },
 	after: ActionSummary,
 	changes: readonly Change[],
@@ -397,9 +441,9 @@ export function formatChanged(
 	const props = changes.filter((c) => c.kind !== 'rename' && c.kind !== 'create');
 	const out: string[] = [];
 	if (props.length) {
-		out.push(dryRun ? `${st.b(CLI.wouldChange)} ${before.path}` : `${st.g(verb)} ${quote(before.title)}`);
+		out.push(dryRun ? verb.would(quote(before.title), st.b) : verb.done(quote(before.title), st.g));
 		out.push(...changeLines(props, st));
-		if (!dryRun && !rename) out.push(`  ${st.d(after.path)}`);
+		if (!rename) out.push(`  ${st.d(after.path)}`);
 	}
 	if (rename) {
 		out.push(`${dryRun ? st.b(CLI.wouldRenameTo) : st.g(CLI.renamedTo)} ${quote(after.title)}`);

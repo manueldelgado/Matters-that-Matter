@@ -1,7 +1,7 @@
 // The `matters` code block: a light list of Actions inside a note. Its query is quick add's tokens plus a few words
 // (services/embedQuery.ts); an empty block reads the note it's in. Cards behave as everywhere; the block never writes.
 
-import { debounce, Keymap, MarkdownRenderChild, Notice, setTooltip } from 'obsidian';
+import { debounce, Keymap, MarkdownRenderChild, Notice, setTooltip, type CachedMetadata } from 'obsidian';
 import type MattersPlugin from '../../main';
 import { STRINGS } from '../../strings';
 import { toYmd } from '../../model/dates';
@@ -26,6 +26,10 @@ export function registerMattersEmbed(plugin: MattersPlugin): void {
 class MattersEmbed extends MarkdownRenderChild {
 	private signature = '';
 	private renderSoon = debounce(() => this.render(), 150, true);
+	/** Notes the last render read besides the one it sits in: every Action and Matter, and the people and Matters it names. */
+	private seen = new Set<string>();
+	/** True until a render has run, and while the query has tokens that match nothing (a new note may make them match). */
+	private loose = true;
 
 	constructor(
 		el: HTMLElement,
@@ -39,17 +43,36 @@ class MattersEmbed extends MarkdownRenderChild {
 	onload(): void {
 		const { app } = this.plugin;
 		this.render();
-		this.registerEvent(app.metadataCache.on('changed', () => this.renderSoon()));
+		// Edits cause a render only in notes the block reads; any other note is left alone. Renames and deletions are
+		// rare and can change what links resolve to (a card's linked notes, a missing Matter), so they always do.
+		this.registerEvent(
+			app.metadataCache.on('changed', (file, _data, cache) => {
+				if (this.touches(file.path, cache) || this.seen.has(file.path)) this.renderSoon();
+			}),
+		);
 		this.registerEvent(app.vault.on('rename', () => this.renderSoon()));
 		this.registerEvent(app.vault.on('delete', () => this.renderSoon()));
 		this.registerEvent(this.plugin.events.on('settings-changed', () => this.renderSoon()));
-		this.registerEvent(this.plugin.selection.on('changed', () => this.render()));
+		this.registerEvent(this.plugin.selection.on('changed', () => this.markSelection()));
 		// Today and late change with the clock.
 		this.registerInterval(window.setInterval(() => this.render(), 60_000));
 	}
 
 	onunload(): void {
 		this.renderSoon.cancel();
+	}
+
+	/** Whether a change to this note may change the block: always while loose, its own note, or an Action or Matter now. */
+	private touches(path: string, cache: CachedMetadata): boolean {
+		if (this.loose || path === this.sourcePath) return true;
+		const kind: unknown = cache.frontmatter?.['mtm-kind'];
+		return kind === 'action' || kind === 'matter';
+	}
+
+	/** A new selection only moves the highlight; the cards stay. */
+	private markSelection(): void {
+		const selected = this.plugin.selection.path;
+		this.containerEl.querySelectorAll<HTMLElement>('.mtm-card[data-path]').forEach((el) => el.toggleClass('is-selected', el.dataset.path === selected));
 	}
 
 	private note(): EmbedNote {
@@ -78,7 +101,10 @@ class MattersEmbed extends MarkdownRenderChild {
 		const today = toYmd(now);
 		const candidates = loadCandidates(app, settings);
 		const q = parseEmbedQuery(this.source, { now, ...candidates, languages: settings.dateLanguages }, this.note(), today);
-		const { items, total } = embedItems(this.subjects(q), q, settings.statuses, now);
+		const subjects = this.subjects(q);
+		const { items, total } = embedItems(subjects, q, settings.statuses, now);
+		this.seen = new Set([...subjects.map((s) => s.item.path), ...candidates.matters.map((m) => m.path), ...q.people, ...q.matters]);
+		this.loose = q.invalid.length > 0;
 		const baseName = (path: string) => app.vault.getFileByPath(path)?.basename ?? path.split('/').pop()?.replace(/\.md$/i, '') ?? path;
 		const title = embedTitle(
 			q,
@@ -105,7 +131,6 @@ class MattersEmbed extends MarkdownRenderChild {
 			q.invalid,
 			total,
 			today,
-			selected,
 			items.map((i) => [i.path, i.title, i.category, i.effective.type, i.effective.orphans, i.due, i.priority, i.waitingOn, i.waitingSince, i.linkedCount, i.effective.matterPath]),
 		]);
 		if (signature === this.signature) return;
@@ -114,9 +139,8 @@ class MattersEmbed extends MarkdownRenderChild {
 		const el = this.containerEl;
 		el.empty();
 		const add = (parent: HTMLElement) => {
-			const button = parent.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.embed.newAction } });
+			const button = pressable(parent.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.embed.newAction } }), () => this.newAction(q));
 			appendIcon(button, 'plus');
-			button.addEventListener('click', () => this.newAction(q));
 		};
 		const invalid = (parent: HTMLElement) => {
 			for (const text of q.invalid) setTooltip(parent.createSpan({ cls: ['mtm-token', 'mod-invalid'], text }), STRINGS.embed.invalid);

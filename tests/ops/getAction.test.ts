@@ -40,6 +40,7 @@ describe('getAction', () => {
 				{ path: 'Notes/Some note.md', name: 'Some note' },
 				{ path: 'MTM/People/Marco Rossi.md', name: 'Marco Rossi' },
 			],
+			attachments: [],
 			people: [],
 			startsAfterDue: false,
 		});
@@ -67,6 +68,17 @@ describe('getAction', () => {
 			],
 			raw: { 'mtm-type': 'fax', 'mtm-status': 'someday', 'mtm-matter': '[[Nowhere]]' },
 		});
+	});
+
+	it('names the attachments: embedded files that aren’t notes, each once', () => {
+		const s2 = vault(
+			{ 'MTM/Actions/Plans.md': { frontmatter: { 'mtm-kind': 'action' }, body: 'See ![[Floor plan.svg]] and ![[Some note]].\n\n![[Files/Quote.pdf]]\n![[Floor plan.svg]]\n' } },
+			{ files: ['Attachments/Floor plan.svg', 'Files/Quote.pdf'] },
+		);
+		expect(ok(getAction('Plans', s2)).value.attachments).toEqual([
+			{ path: 'Attachments/Floor plan.svg', name: 'Floor plan.svg' },
+			{ path: 'Files/Quote.pdf', name: 'Quote.pdf' },
+		]);
 	});
 
 	it('only mtm- properties are returned', () => {

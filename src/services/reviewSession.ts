@@ -19,9 +19,9 @@ export interface QueueOptions {
 	sphere: string | null;
 }
 
-/** Never reviewed first, then the longest since the last review; ties by name. */
-function overdueFirst(a: MatterInfo, b: MatterInfo): number {
-	return (b.review?.daysSince ?? Infinity) - (a.review?.daysSince ?? Infinity) || a.name.localeCompare(b.name);
+/** Never reviewed first, then the most overdue (the earliest day the review fell due); ties by name. */
+export function overdueFirst(a: MatterInfo, b: MatterInfo): number {
+	return (a.review?.nextDue ?? '').localeCompare(b.review?.nextDue ?? '') || a.name.localeCompare(b.name);
 }
 
 /**

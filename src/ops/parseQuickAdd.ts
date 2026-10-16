@@ -1,6 +1,8 @@
 // Parse quick add text without writing: what adding it would make, with a warning for every name that matched nothing.
 
+import { sanitiseTitle } from '../model/titles';
 import { draftOf } from '../services/quickAdd';
+import { STRINGS } from '../strings';
 import { fallbacks, readText, readiness } from './fields';
 import { emptyPlan } from './plan';
 import { parseText, tokenWarnings } from './quickAddText';
@@ -36,5 +38,7 @@ export function parseQuickAdd(text: string, s: Snapshot): OpResult<ParsedQuickAd
 		})),
 	};
 	const warnings = [...ready.warnings, ...tokenWarnings(result, { type: false, matter: false, people: false }, fallbackType.label, false)];
+	// Adding needs a title: say so before it is refused.
+	if (!sanitiseTitle(draft.title)) warnings.push({ code: 'no-title', field: 'text', message: STRINGS.ops.parseNoTitle });
 	return { ok: true, value, plan: emptyPlan(), changes: [], warnings };
 }

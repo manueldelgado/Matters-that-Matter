@@ -6,7 +6,7 @@ import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { addType, canDeleteType, moveItem, setDefaultType } from '../../model/workflow';
 import { IconPickerModal } from '../modals/iconPickerModal';
-import { appendIcon, markGenerated, rowNote, swapClasses, tileEl, typeClasses, type RowNote } from './dom';
+import { appendIcon, markGenerated, pressable, rowNote, swapClasses, tileEl, typeClasses, type RowNote } from './dom';
 import { reorderable } from './reorder';
 import { swatches } from './tonePopover';
 
@@ -52,7 +52,7 @@ export class TypeEditor {
 		const add = this.listEl.createDiv({ cls: 'mtm-row-add' });
 		appendIcon(add, 'plus');
 		add.appendText(STRINGS.editors.addType);
-		add.addEventListener('click', () => {
+		pressable(add, () => {
 			const next = addType(this.types, STRINGS.editors.newType, 'circle-dot', 'ink');
 			const created = next[next.length - 1];
 			if (created) this.fresh.add(created.id);
@@ -111,7 +111,7 @@ export class TypeEditor {
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteType } });
 		appendIcon(del, 'trash-2');
-		del.addEventListener('click', () => {
+		pressable(del, () => {
 			if (!canDeleteType(current)) new Notice(STRINGS.notices.cannotDeleteFlagged);
 			else this.opts.onDelete(current);
 		});

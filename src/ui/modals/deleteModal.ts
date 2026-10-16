@@ -2,7 +2,10 @@
 
 import { Modal, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
-import { tileEl } from '../components/dom';
+import { tileEl, reportWriteFailed } from '../components/dom';
+
+/** How far each arrow key moves the choice. */
+const ARROWS: Partial<Record<string, number>> = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
 
 export interface Destination {
 	id: string;
@@ -45,25 +48,39 @@ export class DeleteModal extends Modal {
 			body.createSpan({ text: STRINGS.modals.deleteNone(opts.kind) });
 		} else {
 			body.createSpan({ text: STRINGS.modals.deleteCount(opts.count, opts.kind) });
-			const list = body.createDiv({ cls: 'mtm-destinations' });
+			const list = body.createDiv({ cls: 'mtm-destinations', attr: { role: 'radiogroup' } });
 			const rows: [string, HTMLElement, HTMLElement][] = [];
 			const refresh = () => {
 				for (const [id, row, meta] of rows) {
-					row.toggleClass('is-active', id === this.choice);
-					meta.setText(id === this.choice ? STRINGS.modals.willMove(opts.count) : '');
+					const active = id === this.choice;
+					row.toggleClass('is-active', active);
+					// One stop in the tab order: the chosen destination; the arrow keys move between them.
+					row.setAttrs({ 'aria-checked': String(active), tabindex: active ? 0 : -1 });
+					meta.setText(active ? STRINGS.modals.willMove(opts.count) : '');
 				}
 			};
-			for (const dest of opts.destinations) {
+			const choose = (index: number) => {
+				const entry = rows[(index + rows.length) % rows.length];
+				if (!entry) return;
+				this.choice = entry[0];
+				refresh();
+				entry[1].focus();
+			};
+			opts.destinations.forEach((dest, index) => {
 				const row = list.createDiv({ cls: ['mtm-destination', ...(dest.classes ?? [])], attr: { role: 'radio' } });
 				row.createSpan({ cls: 'mtm-destination-radio' });
 				dest.render(row);
 				const meta = row.createSpan({ cls: 'mtm-destination-meta' });
 				rows.push([dest.id, row, meta]);
-				row.addEventListener('click', () => {
-					this.choice = dest.id;
-					refresh();
+				row.addEventListener('click', () => choose(index));
+				row.addEventListener('keydown', (e) => {
+					const step = ARROWS[e.key];
+					if (step !== undefined) choose(index + step);
+					else if (e.key === 'Enter' || e.key === ' ') choose(index);
+					else return;
+					e.preventDefault();
 				});
-			}
+			});
 			refresh();
 		}
 
@@ -75,7 +92,10 @@ export class DeleteModal extends Modal {
 		});
 		confirm.addEventListener('click', () => {
 			confirm.disabled = true;
-			void opts.onConfirm(this.choice).finally(() => this.close());
+			void Promise.resolve()
+				.then(() => opts.onConfirm(this.choice))
+				.catch(reportWriteFailed)
+				.finally(() => this.close());
 		});
 	}
 

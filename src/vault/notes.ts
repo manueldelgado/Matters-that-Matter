@@ -2,6 +2,7 @@
 
 import { normalizePath, TFile, type App, type TAbstractFile } from 'obsidian';
 import { plainFences } from '../files/fences';
+import { foldName } from '../files/paths';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import type { Frontmatter } from '../services/notesModel';
@@ -26,9 +27,12 @@ export function maxLaneOrder(app: App): number | null {
 	return orders.length ? Math.max(...orders) : null;
 }
 
+/** A name or path as macOS and Windows compare them (see `foldName`). */
+const fold = foldName;
+
 /**
- * Whether a file already uses this path, ignoring case: macOS and Windows treat "Call Bob.md" and "call bob.md"
- * as the same file, so creating or renaming onto it fails. `except` is the file being renamed.
+ * Whether a file already uses this path, ignoring case and Unicode form: macOS and Windows treat "Call Bob.md" and
+ * "call bob.md" as the same file, so creating or renaming onto it fails. `except` is the file being renamed.
  */
 export function pathTaken(app: App, path: string, except?: TAbstractFile): boolean {
 	const target = normalizePath(path);
@@ -36,22 +40,22 @@ export function pathTaken(app: App, path: string, except?: TAbstractFile): boole
 	if (exact) return exact !== except;
 	const slash = target.lastIndexOf('/');
 	const parent = slash < 0 ? app.vault.getRoot() : app.vault.getFolderByPath(target.slice(0, slash));
-	const lower = target.toLowerCase();
-	return !!parent?.children.some((child) => child !== except && child.path.toLowerCase() === lower);
+	const folded = fold(target);
+	return !!parent?.children.some((child) => child !== except && fold(child.path) === folded);
 }
 
 /**
- * Whether a Markdown note anywhere in the vault already has this name, ignoring case. A new note with that name
+ * Whether a Markdown note anywhere in the vault already has this name, ignoring case and Unicode form. A new note with that name
  * would receive every link written to the other one by name. `except` is a note whose name may be shared.
  */
 export function nameTaken(app: App, name: string, except?: TAbstractFile): boolean {
 	return notesNamed(app, name, except).length > 0;
 }
 
-/** The Markdown notes anywhere in the vault with this name, ignoring case (see `nameTaken`). */
+/** The Markdown notes anywhere in the vault with this name, ignoring case and Unicode form (see `nameTaken`). */
 export function notesNamed(app: App, name: string, except?: TAbstractFile): TFile[] {
-	const lower = name.toLowerCase();
-	return app.vault.getMarkdownFiles().filter((f) => f !== except && f.basename.toLowerCase() === lower);
+	const folded = fold(name);
+	return app.vault.getMarkdownFiles().filter((f) => f !== except && fold(f.basename) === folded);
 }
 
 /**

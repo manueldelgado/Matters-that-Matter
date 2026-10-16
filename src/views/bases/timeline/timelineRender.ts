@@ -83,7 +83,7 @@ export function renderTimeline(view: HTMLElement, input: TimelineInput, h: Timel
 		const row = timeline.createDiv({ cls: 'mtm-tl-group' });
 		const label = pressable(row.createDiv({ cls: 'mtm-tl-label' }), () => h.openMatter(group.matter.path));
 		setIcon(label.createSpan({ cls: 'mtm-matter-icon' }), group.matter.icon);
-		label.appendText(group.matter.name);
+		label.createSpan({ cls: 'mtm-tl-label-text', text: group.matter.name });
 		row.createDiv({ cls: 'mtm-tl-track' });
 		for (const r of group.rows) renderRow(timeline, r, input, h);
 	};
@@ -136,7 +136,9 @@ function renderRow(timeline: HTMLElement, r: TimelineRow, input: TimelineInput, 
 	const flags = [...(done ? ['is-done'] : []), ...(selected ? ['is-selected'] : [])];
 	const row = timeline.createDiv({ cls: ['mtm-tl-row', ...typeClasses(type), ...flags], attr: { 'data-path': item.path } });
 
-	const label = row.createDiv({ cls: 'mtm-tl-label', text: item.title, attr: { tabindex: 0 } });
+	const label = row.createDiv({ cls: 'mtm-tl-label', attr: { tabindex: 0 } });
+	// The title in a span of its own: the label is a flex box, where only a child can end in an ellipsis.
+	label.createSpan({ cls: 'mtm-tl-label-text', text: item.title });
 	label.addEventListener('click', (e) => {
 		if (Keymap.isModEvent(e)) h.open(item.path, e);
 		else h.select(item.path);

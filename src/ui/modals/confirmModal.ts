@@ -2,6 +2,7 @@
 
 import { Modal, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
+import { reportWriteFailed } from '../components/dom';
 
 export interface ConfirmOptions {
 	title: string;
@@ -28,7 +29,11 @@ export class ConfirmModal extends Modal {
 		const ok = footer.createEl('button', { cls: opts.danger ? 'mod-warning' : 'mod-cta', text: opts.confirm });
 		ok.addEventListener('click', () => {
 			ok.disabled = true;
-			void Promise.resolve(opts.onConfirm()).finally(() => this.close());
+			// Through `then`, so a synchronous throw is caught too.
+			void Promise.resolve()
+				.then(() => opts.onConfirm())
+				.catch(reportWriteFailed)
+				.finally(() => this.close());
 		});
 	}
 

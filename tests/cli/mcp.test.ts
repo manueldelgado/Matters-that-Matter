@@ -77,7 +77,8 @@ describe('the server', () => {
 			const reads = READS.includes(t.name);
 			expect(t.annotations?.readOnlyHint, t.name).toBe(reads);
 			expect(t.annotations?.openWorldHint, t.name).toBe(false);
-			expect(t.annotations?.destructiveHint, t.name).toBe(reads ? undefined : false);
+			// Only update_action replaces or removes values; the other writes add, or move a status that moves back.
+			expect(t.annotations?.destructiveHint, t.name).toBe(reads ? undefined : t.name === 'update_action');
 			expect(t.annotations?.idempotentHint, t.name).toBe(reads ? undefined : ['mark_as_done', 'reopen_action'].includes(t.name));
 			expect(t.inputSchema).toMatchObject({ type: 'object', additionalProperties: false });
 			expect(t.outputSchema, t.name).toMatchObject({ type: 'object' });
@@ -103,7 +104,17 @@ describe('the server', () => {
 		]);
 		expect(byName.update_action?.inputSchema.required).toEqual(['action']);
 		expect(byName.update_action?.inputSchema.properties?.['waiting-on']).toMatchObject({ anyOf: [{ type: 'string' }, { type: 'null' }] });
-		expect(byName.update_action?.inputSchema.properties?.priority).toMatchObject({ enum: [1, 2, 3, 'high', 'medium', 'low', null] });
+		// Enums of one type each, which every host reads.
+		expect(byName.add_action?.inputSchema.properties?.priority).toMatchObject({
+			anyOf: [
+				{ type: 'integer', enum: [1, 2, 3] },
+				{ type: 'string', enum: ['high', 'medium', 'low'] },
+			],
+		});
+		expect(byName.update_action?.inputSchema.properties?.priority).toMatchObject({
+			anyOf: [{ type: 'integer', enum: [1, 2, 3] }, { type: 'string', enum: ['high', 'medium', 'low'] }, { type: 'null' }],
+		});
+		expect(client.getInstructions()).not.toContain('dry run');
 		expect(Object.keys(byName.add_matter?.inputSchema.properties ?? {})).toEqual(['name', 'icon', 'sphere', 'state', 'outcome', 'review-every']);
 		expect(Object.keys(byName.list_actions?.inputSchema.properties ?? {})).toContain('due-from');
 		expect(byName.get_today?.inputSchema.properties).toEqual({});
@@ -189,6 +200,16 @@ describe('writing', () => {
 		expect(text(updated)).toMatch(/^Changed “Send Marco the revised quote”\n {2}mtm-due\s+2026-10-16 → 2026-10-15T10:00\n {2}mtm-priority\s+\(none\) → 1/);
 		expect(read(root, PATH)).toContain('mtm-due: 2026-10-15T10:00\nmtm-priority: 1\n');
 
+		// Details: empty is refused, null removes them.
+		await call(client, 'update_action', { action: PATH, details: 'Ask about the worktop too.' });
+		const empty = await call(client, 'update_action', { action: PATH, status: 'next', details: '' });
+		expect(empty.isError).toBe(true);
+		expect(text(empty)).toBe('“details” is empty. Give a value, or null to remove it.\nNothing was changed.');
+		expect(read(root, PATH)).toContain('Ask about the worktop too.');
+		const cleared = await call(client, 'update_action', { action: PATH, details: null });
+		expect(cleared.isError).toBeFalsy();
+		expect(read(root, PATH)).not.toContain('Ask about the worktop too.');
+
 		const doneR = await call(client, 'mark_as_done', { action: PATH });
 		expect(data(doneR)).toMatchObject({ action: { status: { id: 'done' }, completed: '2026-10-09' }, changed: true });
 		expect(read(root, PATH)).toContain('mtm-status: done');
@@ -226,6 +247,7 @@ describe('writing', () => {
 		const root = keep(fixtureCopy());
 		const before = hashes(root);
 		const { client } = await connect(['--vault', root, '--dry-run']);
+		expect(client.getInstructions()).toContain('This server runs as a dry run: tools that write say what they would change, and nothing is written.');
 		const r = await call(client, 'add_action', { title: 'Book the skip' });
 		expect(text(r)).toMatch(/^Would add “Book the skip”[\s\S]*Nothing written \(dry run\)\.$/);
 		expect(data(r)).toMatchObject({ dryRun: true, written: false, changed: true });

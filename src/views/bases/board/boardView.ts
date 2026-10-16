@@ -8,6 +8,7 @@ import { moveLane, startsCollapsed } from '../../../model/matters';
 import { buildBoard, orderMatters, type BoardBand, type BoardLane, type BoardModel, type BoardOptions, type MatterInfo } from '../../../services/boardModel';
 import { focusedSphere, NO_SPHERE } from '../../../services/spheres';
 import { showNoNextActionMenu, showSphereMenu, showStatusMenu } from '../../../ui/components/menus';
+import { menuPoint, reportWriteFailed } from '../../../ui/components/dom';
 import { nextStepStatus } from '../../../services/nextAction';
 import { VIEW_TYPES } from '../../../services/baseFile';
 import { allActionItems, allMatters } from '../../../vault/index';
@@ -521,7 +522,8 @@ export class BoardView extends CollectionView {
 		if (options.spheres.length && sphereKey !== undefined) {
 			const sphereId = sphereKey === NO_SPHERE ? null : sphereKey;
 			if (sphereId !== matter.sphere) {
-				await this.write(path, (f) => setMatterSphere(app, f, sphereId));
+				// A lane whose Sphere couldn't be set stays where it was (the write's notice says why).
+				if (!(await this.write(path, (f) => setMatterSphere(app, f, sphereId)))) return;
 				// Order as it will be once the Matter is in its new Sphere.
 				ordered = orderMatters(
 					this.matters.map((m) => (m.path === path ? { ...m, sphere: sphereId } : m)),
@@ -535,7 +537,15 @@ export class BoardView extends CollectionView {
 		let index = rest.length;
 		if (before?.isInbox) index = options.inboxPosition === 'top' ? 0 : rest.length;
 		else if (beforePath) index = Math.max(0, rest.findIndex((m) => m.path === beforePath));
-		await writeLaneOrders(app, moveLane(ordered, path, index));
+		await this.writeLanes(moveLane(ordered, path, index));
+	}
+
+	private async writeLanes(writes: Parameters<typeof writeLaneOrders>[1]): Promise<void> {
+		try {
+			await writeLaneOrders(this.plugin.app, writes);
+		} catch (e) {
+			reportWriteFailed(e);
+		}
 	}
 
 	/** Moves a lane up or down within its band. */
@@ -546,16 +556,17 @@ export class BoardView extends CollectionView {
 		const neighbour = band[i + delta];
 		if (!neighbour) return;
 		const to = ordered.findIndex((x) => x.path === neighbour.path);
-		await writeLaneOrders(this.plugin.app, moveLane(ordered, m.path, to));
+		await this.writeLanes(moveLane(ordered, m.path, to));
 	}
 
-	private openLaneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void {
+	private openLaneMenu(lane: BoardLane, e: MouseEvent | KeyboardEvent, button: HTMLElement): void {
 		const b = STRINGS.board;
 		const m = lane.matter;
 		const options = this.options();
 		const band = this.nonInboxOrder(options).filter((x) => x.sphere === m.sphere || !options.spheres.length);
 		const index = band.findIndex((x) => x.path === m.path);
 		const file = this.plugin.app.vault.getFileByPath(m.path);
+		const at = menuPoint(e, button);
 		const menu = new Menu();
 		menu.addItem((i) => i.setTitle(b.moveUp).setIcon('arrow-up').setDisabled(index <= 0).onClick(() => void this.moveWithinBand(m, -1, options)));
 		menu.addItem((i) =>
@@ -572,7 +583,7 @@ export class BoardView extends CollectionView {
 					.setIcon('orbit')
 					.setDisabled(!file)
 					.onClick(() =>
-						showSphereMenu({ x: e.clientX, y: e.clientY }, options.spheres, m.sphere, (sphereId) => {
+						showSphereMenu(at, options.spheres, m.sphere, (sphereId) => {
 							if (file) void this.write(m.path, (f) => setMatterSphere(this.plugin.app, f, sphereId));
 						}),
 					),
@@ -594,7 +605,7 @@ export class BoardView extends CollectionView {
 				.setTitle(b.markReviewed)
 				.setIcon('check')
 				.setDisabled(!m.review || !file)
-				.onClick(() => file && void markReviewed(this.plugin.app, file)),
+				.onClick(() => void this.write(m.path, (f) => markReviewed(this.plugin.app, f))),
 		);
 		const closed = m.state === 'closed';
 		menu.addItem((i) =>
@@ -602,15 +613,15 @@ export class BoardView extends CollectionView {
 				.setTitle(closed ? b.reopen : b.close)
 				.setIcon(closed ? 'archive-restore' : 'archive')
 				.setDisabled(!file)
-				.onClick(() => file && void setMatterState(this.plugin.app, file, closed ? 'active' : 'closed')),
+				.onClick(() => void this.write(m.path, (f) => setMatterState(this.plugin.app, f, closed ? 'active' : 'closed'))),
 		);
 		button.addClass('is-active');
 		menu.onHide(() => button.removeClass('is-active'));
-		menu.showAtMouseEvent(e);
+		menu.showAtPosition(at, button.doc);
 	}
 
 	/** Show only this Sphere (or all again), move it up or down in settings, and a new Matter in it. */
-	private openBandMenu(band: BoardBand, e: MouseEvent, button: HTMLElement): void {
+	private openBandMenu(band: BoardBand, e: MouseEvent | KeyboardEvent, button: HTMLElement): void {
 		const sp = STRINGS.spheres;
 		const b = STRINGS.board;
 		const key = band.sphere?.id ?? NO_SPHERE;
@@ -653,7 +664,7 @@ export class BoardView extends CollectionView {
 		);
 		button.addClass('is-active');
 		menu.onHide(() => button.removeClass('is-active'));
-		menu.showAtMouseEvent(e);
+		menu.showAtPosition(menuPoint(e, button), button.doc);
 	}
 
 	private handlers: BoardHandlers = {
@@ -685,8 +696,7 @@ export class BoardView extends CollectionView {
 			});
 		},
 		markReviewed: (path) => {
-			const file = this.plugin.app.vault.getFileByPath(normalizePath(path));
-			if (file) void markReviewed(this.plugin.app, file);
+			void this.write(normalizePath(path), (f) => markReviewed(this.plugin.app, f));
 		},
 		select: (path) => this.select(path),
 		open: (path, e) => this.open(path, e),

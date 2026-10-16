@@ -87,3 +87,24 @@ describe('todayModel on the sample package', () => {
 		expect(SAMPLE_MATTERS.filter((x) => x.state !== 'active').every((x) => !m.reviews.some((r) => r.name === x.name))).toBe(true);
 	});
 });
+
+describe('todayModel reviews order', () => {
+	it('lists never-reviewed Matters first, then the most overdue by the day the review fell due', () => {
+		const later = new Date(2026, 9, 15, 12, 0);
+		const matter = (name: string, every: string, last: string | null): MatterInfo => ({
+			path: `MTM/Matters/${name}.md`,
+			name,
+			laneOrder: 0,
+			isInbox: false,
+			icon: 'circle-dot',
+			state: 'active',
+			review: reviewInfo(every, last ?? undefined, toYmd(later)),
+			sphere: null,
+			sphereOrphan: null,
+			outcome: null,
+		});
+		const list = [matter('Quarterly', '3m', '2026-07-12'), matter('Weekly', '1w', '2026-09-15'), matter('Never', '1m', null)];
+		const m = todayModel({ items: [], matters: list, statuses: DEFAULT_SETTINGS.statuses, inboxPath, now: later });
+		expect(m.reviews.map((r) => r.name)).toEqual(['Never', 'Weekly', 'Quarterly']);
+	});
+});

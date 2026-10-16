@@ -232,7 +232,7 @@ describe('writing', () => {
 			{
 			  "code": 0,
 			  "stderr": "",
-			  "stdout": "Marked as done “Send the invoice”
+			  "stdout": "“Send the invoice” marked as done
 			  mtm-status     doing → done
 			  mtm-completed  (none) → 2026-10-09
 			  MTM/Actions/Send the invoice.md

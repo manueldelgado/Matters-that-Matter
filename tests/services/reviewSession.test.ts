@@ -51,7 +51,7 @@ const named = (name: string) => {
 const titles = (list: readonly { title: string }[]) => list.map((i) => i.title);
 
 describe('reviewQueue on the sample package', () => {
-	it('takes the active Matters due, never reviewed first, then the longest since the last review', () => {
+	it('takes the active Matters due, never reviewed first, then the most overdue', () => {
 		expect(reviewQueue(matters, { scope: 'due', sphere: null }).map((m) => m.name)).toEqual(['Advisory practice', 'Household admin', 'Half marathon']);
 	});
 
@@ -74,6 +74,33 @@ describe('reviewQueue on the sample package', () => {
 		const withSail = matters.map((m) => (m.name === 'Learn to sail' ? sail : m));
 		expect(reviewQueue(withSail, { scope: 'due', sphere: null }).map((m) => m.name)).toEqual(['Advisory practice', 'Household admin', 'Half marathon', 'Learn to sail']);
 		expect(reviewQueue(matters, { scope: 'all', sphere: null }).map((m) => m.name)).not.toContain('Learn to sail');
+	});
+});
+
+describe('reviewQueue order', () => {
+	const today = '2026-10-15';
+	const matter = (name: string, every: string | null, last: string | null): MatterInfo => ({
+		path: `MTM/Matters/${name}.md`,
+		name,
+		laneOrder: 0,
+		isInbox: false,
+		icon: 'circle-dot',
+		state: 'active',
+		review: every ? reviewInfo(every, last ?? undefined, today) : null,
+		sphere: null,
+		sphereOrphan: null,
+		outcome: null,
+	});
+
+	it('puts the most overdue first by the day the review fell due, not by the days since the last one', () => {
+		// Weekly fell due on 22 Sep (23 days late); Quarterly on 12 Oct (3 days late), though reviewed longer ago.
+		const list = [matter('Quarterly', '3m', '2026-07-12'), matter('Weekly', '1w', '2026-09-15'), matter('Never', '1m', null)];
+		expect(reviewQueue(list, { scope: 'due', sphere: null }).map((m) => m.name)).toEqual(['Never', 'Weekly', 'Quarterly']);
+	});
+
+	it('breaks ties by name', () => {
+		const list = [matter('Beta', '1w', '2026-10-01'), matter('Alpha', '2w', '2026-09-24')];
+		expect(reviewQueue(list, { scope: 'due', sphere: null }).map((m) => m.name)).toEqual(['Alpha', 'Beta']);
 	});
 });
 

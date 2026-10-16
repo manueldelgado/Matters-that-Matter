@@ -179,7 +179,7 @@ export function renderWorkflow(app: App, body: HTMLElement, state: SetupState): 
 	const statusesField = field(body, w.statuses, STRINGS.editors.dragHint);
 	const used = (counts: Record<string, number> | undefined, id: string, added = false): RowNote | null =>
 		!r ? null : added ? { text: rw.added, added: true } : { text: rw.used(counts?.[id] ?? 0) };
-	const editor = new StatusEditor(statusesField, {
+	const editor = new StatusEditor(app, statusesField, {
 		statuses: state.statuses,
 		onChange: (statuses) => {
 			state.statuses = statuses;

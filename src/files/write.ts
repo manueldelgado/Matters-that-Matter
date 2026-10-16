@@ -7,7 +7,7 @@ import type { Plan } from '../ops/types';
 import { editFrontmatter, FrontmatterError, keepingBom, newNoteContent } from './frontmatterEdit';
 import { isVaultFile, readLinkConfig, type LinkConfig, type VaultReader } from './index';
 import { changedLines, type LineChange } from './lineDiff';
-import { byCodeUnit } from './paths';
+import { byCodeUnit, foldName } from './paths';
 import { renameLinks, type LinkChange } from './rename';
 
 export type { LineChange } from './lineDiff';
@@ -114,7 +114,9 @@ export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOpt
 		if (content === null) throw new WriteError('missing', path, `${path} doesn't exist`);
 		return content;
 	};
-	const taken = (path: string) => [...files].some((p) => p.toLowerCase() === path.toLowerCase());
+	// As file systems that ignore case and Unicode form compare names (macOS, Windows).
+	const fold = foldName;
+	const taken = (path: string) => [...files].some((p) => fold(p) === fold(path));
 
 	/** New paths must be notes inside the vault: not absolute, not climbing out, not in the configuration folder. */
 	const checkPath = (path: string) => {
@@ -142,7 +144,7 @@ export function contentsAfter(plan: Plan, reader: VaultReader, options: WriteOpt
 	for (const body of plan.bodies) update(body.path, keepingBom(existing(body.path), (content) => applyBodyEdit(content, body.edit)));
 	for (const { from, to } of plan.renames) {
 		existing(from);
-		if (from.toLowerCase() !== to.toLowerCase() && taken(to)) throw new WriteError('exists', to, `${to} already exists`);
+		if (fold(from) !== fold(to) && taken(to)) throw new WriteError('exists', to, `${to} already exists`);
 		const result = renameLinks({ files: [...files], content: read }, from, to, { updateLinks: links.alwaysUpdateLinks, format: links.newLinkFormat });
 		for (const [path, content] of result.contents) update(path, content);
 		const moved = (path: string) => (path === from ? to : path);

@@ -12,7 +12,6 @@ export function listMatters(s: Snapshot): OpResult<MatterSummary[]> {
 	const ready = readiness(s, false);
 	if (ready.error) return { ok: false, error: ready.error };
 	const view = vaultView(s);
-	const items = view.actions.map((a) => a.item);
-	const value = orderMatters(view.matters, s.settings.spheres, s.settings.defaultInboxPosition).map((m) => matterSummary(m, items, s));
+	const value = orderMatters(view.matters, s.settings.spheres, s.settings.defaultInboxPosition).map((m) => matterSummary(m, view.actionsByMatter.get(m.path) ?? [], s));
 	return { ok: true, value, plan: emptyPlan(), changes: [], warnings: ready.warnings };
 }

@@ -111,7 +111,7 @@ Plain Markdown, which the plugin never restructures. It reads four things from i
 
   The markers are recognised by `<!-- mtm-details` and `<!-- /mtm-details` at the start of a line; text outside them is not part of the details. Keep them where they are. To write details that contain a list or heading, use the markers; otherwise plain lines are enough.
 - **Checklist**: Markdown checklist items (`- [ ] Ask for the revised quote`, ticked `- [x] …`) anywhere in the body. Add new items after the last existing one, or at the end of the body when there is none.
-- **Linked notes**: the body's links to other notes, apart from the Matter and the people. A tool that links an Action to a note adds a line with the wikilink (in the shortest link text) at the end of the body; a web address is added the same way.
+- **Linked notes**: the body's links to other notes, apart from the Matter and the people. A tool that links an Action to a note adds a line with the wikilink (in the shortest link text) at the end of the body; a web address goes on its own line in angle brackets, such as `<https://matters-that-matter.app/docs/>`.
 - **Attachments**: embedded files that aren't notes.
 
 When editing a body, change only the lines you mean to change.
@@ -172,7 +172,7 @@ mtm-outcome: A working kitchen by Christmas
 ---
 ```
 
-Matters are not deleted: they are closed (`mtm-state: closed`). The Inbox is always active; don't change its state, and don't remove its `mtm-kind`.
+Matters are not deleted: they are closed (`mtm-state: closed`). The Inbox is always active; don't change its state, and don't remove its `mtm-kind`. Don't create a Matter named like the Inbox ("Inbox", "Inbox 2"): the plugin takes it for a copy of the Inbox.
 
 ## Person notes
 

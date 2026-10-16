@@ -16,21 +16,22 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-function daysInMonth(year: number, month: number): number {
+/** Days in a month (1–12) of a year. */
+export function daysInMonth(year: number, month: number): number {
 	return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-/** Parses a raw frontmatter value. Accepts seconds and a space separator; anything else is null. */
+/** Parses a raw frontmatter value. Accepts seconds and a space separator; anything else, or no real day or time, is null. */
 export function parseMtmDate(raw: unknown): MtmDate | null {
 	if (typeof raw !== 'string') return null;
 	const m = DATE_RE.exec(raw.trim());
 	if (!m) return null;
-	const [, y, mo, d, h, mi] = m;
+	const [, y, mo, d, h, mi, s] = m;
 	const year = Number(y), month = Number(mo), day = Number(d);
 	if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
 	const date = `${y}-${mo}-${d}`;
 	if (h === undefined || mi === undefined) return { date };
-	if (Number(h) > 23 || Number(mi) > 59) return null;
+	if (Number(h) > 23 || Number(mi) > 59 || Number(s ?? 0) > 59) return null;
 	return { date, time: `${h}:${mi}` };
 }
 

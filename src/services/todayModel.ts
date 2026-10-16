@@ -6,6 +6,7 @@ import { compareCards, isToday, waitAge } from '../model/actions';
 import type { ActionItem } from './actionItems';
 import type { MatterInfo } from './boardModel';
 import { nextStepStatus } from './nextAction';
+import { overdueFirst } from './reviewSession';
 
 /** Cards shown before "N more on the board". */
 export const TODAY_CARDS = 6;
@@ -50,7 +51,7 @@ export function todayModel(input: TodayInput): TodayModel {
 
 	const reviews = input.matters
 		.filter((m) => !m.isInbox && m.state === 'active' && m.review?.due)
-		.sort((a, b) => (b.review?.daysSince ?? Infinity) - (a.review?.daysSince ?? Infinity) || a.name.localeCompare(b.name));
+		.sort(overdueFirst);
 
 	const waiting = open
 		.filter((i) => i.waitingOn)

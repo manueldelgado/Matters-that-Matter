@@ -1,6 +1,7 @@
 // Matching what other tools name (a status, a type, a Sphere, a Matter, a person or an Action) against the workflow
 // and the vault. Pure. One match, none, or several equally good ones (never a silent pick among equals).
 
+import { foldName } from '../files/paths';
 import { linkText } from './effective';
 import { matchScore, normalise, rank, STRONG_MATCH } from './fuzzy';
 
@@ -72,6 +73,8 @@ export interface MatchNoteOptions {
 	 * where picking the wrong one would be worse than asking.
 	 */
 	anyStrong?: boolean;
+	/** Only a path, a name or link text that matches exactly; no fuzzy match. */
+	exact?: boolean;
 }
 
 /**
@@ -88,12 +91,14 @@ export function matchNote<T extends NamedNote>(
 ): Match<T> {
 	const text = linkText(query);
 	if (!text) return none;
-	const lower = withoutMd(text).toLowerCase();
+	// Case and Unicode form ignored, as macOS and Windows compare file names.
+	const fold = foldName;
+	const lower = fold(withoutMd(text));
 
-	const byPath = fromList(notes.filter((n) => withoutMd(n.path).toLowerCase() === lower));
+	const byPath = fromList(notes.filter((n) => fold(withoutMd(n.path)) === lower));
 	if (byPath) return byPath;
 
-	const named = notes.filter((n) => n.name.toLowerCase() === lower);
+	const named = notes.filter((n) => fold(n.name) === lower);
 	const byName = fromList(named.length ? lowestRank(named) : []);
 	if (byName) return byName;
 
@@ -101,6 +106,7 @@ export function matchNote<T extends NamedNote>(
 	const target = resolved ? notes.find((n) => n.path === resolved) : undefined;
 	if (target) return { kind: 'match', item: target };
 
+	if (options.exact) return none;
 	if (options.anyStrong) {
 		const strong = notes.filter((n) => matchScore(text, n.name) >= STRONG_MATCH);
 		return fromList(strong.length ? lowestRank(strong) : []) ?? none;

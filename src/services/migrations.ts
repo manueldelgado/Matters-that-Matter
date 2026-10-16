@@ -1,4 +1,4 @@
-// Settings loading: schema migrations, defaults for missing keys, and flag repair.
+// Settings loading: schema migrations, defaults for missing keys, and repair of values and flags.
 
 import { DATE_LANGUAGES, DEFAULT_SETTINGS, TONES, type DateLanguage, type MattersSettings, type SphereDef, type StatusCategory, type StatusDef, type TypeDef } from '../settings';
 import { normaliseFlags } from '../model/workflow';
@@ -70,6 +70,30 @@ function repairDateLanguages(saved: unknown): DateLanguage[] {
 	return languages.length ? languages : [...DATE_LANGUAGES];
 }
 
+type ScalarKey = { [K in keyof MattersSettings]: MattersSettings[K] extends string | boolean ? K : never }[keyof MattersSettings];
+
+/** The allowed values of settings that are a choice; any other string or boolean setting only needs the right type. */
+const CHOICES: Partial<Record<ScalarKey, readonly unknown[]>> = {
+	defaultInboxPosition: ['top', 'bottom'],
+	weekStart: ['monday', 'sunday'],
+	todayInNewTabs: ['every', 'alone', 'off'],
+};
+
+/** Scalar settings of the wrong type, or outside their choices, back to their defaults. */
+function repairScalars(settings: MattersSettings, defaults: MattersSettings): void {
+	const target = settings as unknown as Data;
+	for (const key of Object.keys(defaults) as (keyof MattersSettings)[]) {
+		const fallback = defaults[key];
+		if (typeof fallback !== 'string' && typeof fallback !== 'boolean') continue;
+		const value = target[key];
+		const choices = CHOICES[key as ScalarKey];
+		if (typeof value !== typeof fallback || (choices && !choices.includes(value))) target[key] = fallback;
+	}
+	for (const key of Object.keys(defaults.folders) as (keyof MattersSettings['folders'])[]) {
+		if (typeof settings.folders[key] !== 'string') settings.folders[key] = defaults.folders[key];
+	}
+}
+
 /** Turns whatever loadData returned into valid settings. Data from a newer schema is kept as is. */
 export function migrateSettings(saved: unknown): MattersSettings {
 	const defaults = structuredClone(DEFAULT_SETTINGS);
@@ -95,11 +119,9 @@ export function migrateSettings(saved: unknown): MattersSettings {
 		icon: typeof t.icon === 'string' && t.icon ? t.icon : 'circle-dot',
 		tone: TONES.includes(t.tone) ? t.tone : 'ink',
 	}));
-	if (!['every', 'alone', 'off'].includes(settings.todayInNewTabs)) settings.todayInNewTabs = defaults.todayInNewTabs;
-	if (typeof settings.inlineChips !== 'boolean') settings.inlineChips = defaults.inlineChips;
-	if (typeof settings.linksAddActions !== 'boolean') settings.linksAddActions = defaults.linksAddActions;
+	repairScalars(settings, defaults);
 	settings.dateLanguages = repairDateLanguages(settings.dateLanguages);
-	settings.spheres = (validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
+	settings.spheres = unique(validItems<SphereDef>(settings.spheres) ?? []).map((sp) => ({ ...sp, icon: typeof sp.icon === 'string' && sp.icon ? sp.icon : 'circle-dot' }));
 
 	return { ...settings, ...normaliseFlags(settings.statuses, settings.types) };
 }

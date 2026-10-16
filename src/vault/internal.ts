@@ -28,7 +28,10 @@ export function ensureDateTimeTypes(app: App): void {
 		const setType = method(manager, 'setType');
 		if (!getAssigned || !setType) return;
 		for (const key of DATETIME_KEYS) {
-			if (getAssigned(key) == null) void setType(key, 'datetime');
+			// A rejected promise would escape the try: catch it the same way.
+			if (getAssigned(key) == null) {
+				void Promise.resolve(setType(key, 'datetime')).catch((e: unknown) => console.warn('Matters that Matter: could not set property types', e));
+			}
 		}
 	} catch (e) {
 		console.warn('Matters that Matter: could not set property types', e);

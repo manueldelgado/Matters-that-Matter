@@ -48,8 +48,8 @@ export interface ToolbarHandlers {
  * A toolbar note that switches something on this view: an icon, a label, a tooltip. Same element in both states.
  * The label and icon say what a click does; the tooltip says what is shown now.
  */
-function toggleNote(bar: HTMLElement, icon: string, label: string, title: string, onToggle: () => void): void {
-	const note = bar.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
+function toggleNote(parent: HTMLElement, icon: string, label: string, title: string, onToggle: () => void): void {
+	const note = parent.createSpan({ cls: 'mtm-toolbar-note mod-toggle', attr: { role: 'button', tabindex: 0 } });
 	appendIcon(note, icon);
 	note.appendText(label);
 	setTooltip(note, title);
@@ -95,17 +95,19 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 		}
 	}
 	bar.createSpan({ cls: 'mtm-spacer' });
-	if (input.openCount !== null) bar.createSpan({ cls: 'mtm-toolbar-note', text: STRINGS.board.open(input.openCount) });
+	// The count, the switches, help and "+" wrap as one group, so a narrow toolbar never leaves "+" on a row of its own.
+	const end = bar.createDiv({ cls: 'mtm-toolbar-end' });
+	if (input.openCount !== null) end.createSpan({ cls: 'mtm-toolbar-note', text: STRINGS.board.open(input.openCount) });
 	const b = STRINGS.board;
 	const backlog = input.backlog;
 	if (backlog && h.toggleBacklog) {
 		const { label, shown } = backlog;
-		toggleNote(bar, eye(shown), shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
+		toggleNote(end, eye(shown), shown ? b.hideBacklog(label) : b.showBacklog(label), shown ? b.backlogShownHere(label) : b.backlogHiddenHere(label), h.toggleBacklog);
 	}
 	if (input.cardOrder && h.toggleCardOrder) {
 		const byHand = input.cardOrder === 'manual';
 		toggleNote(
-			bar,
+			end,
 			byHand ? 'arrow-down-wide-narrow' : 'hand',
 			byHand ? b.sortAutomatically : b.orderByHand,
 			byHand ? b.orderedByHand : b.orderedAutomatically,
@@ -114,10 +116,10 @@ export function renderToolbar(view: HTMLElement, input: ToolbarInput, h: Toolbar
 	}
 	const closed = closedStatuses(input.statuses).map((s) => s.label);
 	const done = closed[0] ?? '';
-	toggleNote(bar, eye(input.showDone), input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
-	const help = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': input.help.label } }), () => void window.open(input.help.url));
+	toggleNote(end, eye(input.showDone), input.showDone ? b.hideDone(done) : b.showDone(done), input.showDone ? b.doneShownHere(closed) : b.doneHiddenHere(closed), () => h.toggleDone());
+	const help = pressable(end.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': input.help.label } }), () => void window.open(input.help.url));
 	setIcon(help, helpIcon());
 	setTooltip(help, input.help.label);
-	const add = pressable(bar.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
+	const add = pressable(end.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.newAction } }), () => h.newAction());
 	setIcon(add, 'plus');
 }

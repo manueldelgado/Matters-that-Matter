@@ -4,7 +4,7 @@ import { Modal, setIcon, type App } from 'obsidian';
 import { STRINGS } from '../../strings';
 import { linkText } from '../../services/effective';
 import type { OrphanGroup, OrphanSummary } from '../../services/orphanSummary';
-import { appendIcon, statusChip, tileEl, typeClasses } from '../components/dom';
+import { appendIcon, statusChip, tileEl, typeClasses, reportWriteFailed } from '../components/dom';
 
 const ICONS = { status: 'circle-dashed', type: 'shapes', matter: 'folder-x' } as const;
 
@@ -40,7 +40,10 @@ export class FixOrphansModal extends Modal {
 		const ok = footer.createEl('button', { cls: 'mod-cta', text: f.confirm(n) });
 		ok.addEventListener('click', () => {
 			ok.disabled = true;
-			void this.onConfirm().finally(() => this.close());
+			void Promise.resolve()
+				.then(() => this.onConfirm())
+				.catch(reportWriteFailed)
+				.finally(() => this.close());
 		});
 	}
 

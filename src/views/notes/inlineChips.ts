@@ -1,10 +1,10 @@
 // Links to Actions as chips in notes: reading view through a Markdown post-processor, Live Preview through an editor
 // extension (livePreviewChips.ts). Chips follow their Action: a change to it, or to the settings, redraws them.
 
-import { getLinkpath, MarkdownView, type MarkdownPostProcessorContext } from 'obsidian';
+import { getLinkpath, MarkdownView, type MarkdownPostProcessorContext, type TFile } from 'obsidian';
 import type { EditorView } from '@codemirror/view';
 import type MattersPlugin from '../../main';
-import { chipModel, type ChipModel } from '../../services/inlineChip';
+import { chipModel, chipsAffected, type ChipModel, type ChipTargets } from '../../services/inlineChip';
 import { CHIP_PATH_ATTR, fillChip } from '../../ui/components/inlineChip';
 import { actionItem } from '../../vault/index';
 import { frontmatterOf } from '../../vault/notes';
@@ -19,8 +19,8 @@ const ATTACH_GRACE_MS = 10_000;
 export class InlineChips {
 	/** Reading-view chips and when they were made. */
 	private chips = new Map<HTMLElement, number>();
-	/** Live Preview editors showing chips. */
-	readonly editors = new Set<EditorView>();
+	/** Live Preview editors showing chips, with the notes their links resolved to. */
+	readonly editors = new Map<EditorView, ChipTargets>();
 	private enabled: boolean;
 
 	constructor(private plugin: MattersPlugin) {
@@ -63,19 +63,27 @@ export class InlineChips {
 		this.rerenderPreviews();
 	}
 
-	/** The chip model for a link target, or null when it isn't an Action note. */
-	modelFor(linktext: string, sourcePath: string): ChipModel | null {
+	/** The note a link points at, or null when it resolves to none. */
+	resolve(linktext: string, sourcePath: string): TFile | null {
+		return this.plugin.app.metadataCache.getFirstLinkpathDest(getLinkpath(linktext), sourcePath);
+	}
+
+	/** The chip model for a note, or null when it isn't an Action note. */
+	modelForFile(file: TFile): ChipModel | null {
 		const { app } = this.plugin;
-		const file = app.metadataCache.getFirstLinkpathDest(getLinkpath(linktext), sourcePath);
-		if (!file || frontmatterOf(app, file)?.['mtm-kind'] !== 'action') return null;
+		if (frontmatterOf(app, file)?.['mtm-kind'] !== 'action') return null;
 		return chipModel(actionItem(app, file, this.plugin.settings));
 	}
 
+	/** The chip model for a link target, or null when it isn't an Action note. */
+	modelFor(linktext: string, sourcePath: string): ChipModel | null {
+		const file = this.resolve(linktext, sourcePath);
+		return file ? this.modelForFile(file) : null;
+	}
+
 	private modelForPath(path: string): ChipModel | null {
-		const { app } = this.plugin;
-		const file = app.vault.getFileByPath(path);
-		if (!file || frontmatterOf(app, file)?.['mtm-kind'] !== 'action') return null;
-		return chipModel(actionItem(app, file, this.plugin.settings));
+		const file = this.plugin.app.vault.getFileByPath(path);
+		return file ? this.modelForFile(file) : null;
 	}
 
 	private process(el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
@@ -97,7 +105,10 @@ export class InlineChips {
 
 	/** Redraws the chips pointing at `path` (all of them with null); unwraps those whose target is no longer an Action. */
 	private refresh(path: string | null): void {
-		if (this.isOn()) for (const view of this.editors) view.dispatch({ effects: refreshChips.of(null) });
+		// Live Preview editors redraw only when a link of theirs points at the note (or at none yet).
+		if (this.isOn()) {
+			for (const [view, targets] of this.editors) if (chipsAffected(targets, path)) view.dispatch({ effects: refreshChips.of(null) });
+		}
 		const now = new Date();
 		const models = new Map<string, ChipModel | null>();
 		for (const [chip, made] of this.chips) {
@@ -127,7 +138,7 @@ export class InlineChips {
 			if (link && chip.isConnected) this.unwrap(chip, link);
 		}
 		this.chips.clear();
-		for (const view of this.editors) view.dispatch({ effects: refreshChips.of(null) });
+		for (const view of this.editors.keys()) view.dispatch({ effects: refreshChips.of(null) });
 	}
 
 	private rerenderPreviews(): void {

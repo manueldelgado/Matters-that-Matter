@@ -21,14 +21,14 @@ export interface BoardHandlers {
 	newMatter(): void;
 	toggleLane(path: string): void;
 	openMatter(path: string): void;
-	laneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void;
+	laneMenu(lane: BoardLane, e: MouseEvent | KeyboardEvent, button: HTMLElement): void;
 	/** The "No next Action" hint's menu. */
 	noNextActionMenu(lane: BoardLane, anchor: HTMLElement): void;
 	processInbox(): void;
 	markReviewed(path: string): void;
 	/** Collapses or expands a Sphere band (NO_SPHERE for "No Sphere"). */
 	toggleBand(key: string): void;
-	bandMenu(band: BoardBand, e: MouseEvent, button: HTMLElement): void;
+	bandMenu(band: BoardBand, e: MouseEvent | KeyboardEvent, button: HTMLElement): void;
 	/** Removes an `mtm-sphere` value that names no Sphere. */
 	dismissSphere(path: string): void;
 	select(path: string): void;
@@ -86,6 +86,8 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 	if (!m.isInbox) {
 		const handle = row.createSpan({ cls: 'mtm-lane-handle', attr: { draggable: 'true', 'aria-label': b.dragLane } });
 		appendIcon(handle, 'grip-vertical');
+		// Pressed rather than dragged, the handle opens the lane menu, whose Move up and Move down are the keyboard's way to reorder.
+		pressable(handle, (e) => h.laneMenu(lane, e, handle));
 	}
 	const toggle = pressable(row.createSpan({ cls: 'mtm-lane-toggle', attr: { 'aria-label': b.collapse } }), () => h.toggleLane(m.path));
 	appendIcon(toggle, 'chevron-down');
@@ -95,7 +97,7 @@ function renderLaneHeader(board: HTMLElement, lane: BoardLane, h: BoardHandlers)
 	if (!m.isInbox) {
 		const menu = row.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': b.laneMenu } });
 		appendIcon(menu, 'ellipsis');
-		menu.addEventListener('click', (e) => h.laneMenu(lane, e, menu));
+		pressable(menu, (e) => h.laneMenu(lane, e, menu));
 	}
 
 	renderLaneMeta(header, lane, h);
@@ -255,7 +257,7 @@ function renderBand(board: HTMLElement, band: BoardBand, model: BoardModel, h: B
 	pressable(head.createSpan({ cls: 'mtm-sphere-title', text: band.sphere?.label ?? STRINGS.spheres.none }), () => h.toggleBand(key));
 	const menu = head.createDiv({ cls: 'clickable-icon mtm-lane-menu', attr: { 'aria-label': STRINGS.spheres.menu } });
 	appendIcon(menu, 'ellipsis');
-	menu.addEventListener('click', (e) => h.bandMenu(band, e, menu));
+	pressable(menu, (e) => h.bandMenu(band, e, menu));
 
 	for (const column of model.columns) {
 		const entry = band.counts.byStatus.get(column.id);

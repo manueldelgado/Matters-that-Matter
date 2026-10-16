@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	appendLine,
 	appendReviewNote,
 	checklistItems,
 	cleanReviewNote,
@@ -97,9 +98,9 @@ describe('checklist', () => {
 		expect(insertTask(note, 'Three')).toBe(`${fm}Text\n\n- [ ] One\n- [x] Two\n  More about two\n- [ ] Three\n\n## Log\n`);
 	});
 
-	it('keeps the indentation of the last task item', () => {
+	it('adds at the indentation of the top-level task items, after the last one\'s sub-items', () => {
 		const note = `${fm}- [ ] One\n  - [ ] Sub\n`;
-		expect(insertTask(note, 'Sub two')).toBe(`${fm}- [ ] One\n  - [ ] Sub\n  - [ ] Sub two\n`);
+		expect(insertTask(note, 'Two')).toBe(`${fm}- [ ] One\n  - [ ] Sub\n- [ ] Two\n`);
 	});
 
 	it('adds at the end of the body when there are no tasks', () => {
@@ -521,5 +522,90 @@ describe('review notes', () => {
 			const content = '---\nmtm-kind: matter\n- Reviewed 2026-12-01: In frontmatter\n---\n- Reviewed 2026-09-23: In body\n';
 			expect(latestReviewNote(content)).toEqual({ date: '2026-09-23', text: 'In body' });
 		});
+	});
+});
+
+describe('a properties block that ends the file without a line break', () => {
+	const bare = '---\nmtm-kind: action\n---';
+
+	it('starts the details on a line of their own', () => {
+		expect(setDetails(bare, 'Hello')).toBe(`${bare}\nHello\n`);
+		expect(setDetails('---\r\nmtm-kind: action\r\n---', 'Hello')).toBe('---\r\nmtm-kind: action\r\n---\r\nHello\r\n');
+	});
+
+	it('leaves the note alone when the details stay empty', () => {
+		expect(setDetails(bare, '')).toBe(bare);
+	});
+
+	it('starts a checklist item on a line of its own', () => {
+		expect(insertTask(bare, 'a')).toBe(`${bare}\n- [ ] a\n`);
+	});
+
+	it('starts an appended line on a line of its own', () => {
+		expect(appendLine(bare, '[[X]]')).toBe(`${bare}\n[[X]]\n`);
+	});
+});
+
+describe('line endings', () => {
+	it('writes typed details with the note\'s own line ending', () => {
+		const lf = `${fm}Old\n`;
+		expect(setDetails(lf, 'Line one\r\nLine two')).toBe(`${fm}Line one\nLine two\n`);
+		expect(setDetails(lf, 'Line one\rLine two')).toBe(`${fm}Line one\nLine two\n`);
+		const crlf = fm.replace(/\n/g, '\r\n') + 'Old\r\n';
+		expect(setDetails(crlf, 'Line one\r\nLine two')).toBe(`${fm.replace(/\n/g, '\r\n')}Line one\r\nLine two\r\n`);
+	});
+
+	it('reads the previous text whatever its line endings', () => {
+		const note = `${fm}Notes\n\n- [ ] Step\n`;
+		expect(setDetails(note, 'Notes\r\n- [ ] Step', 'Notes\r\n- [ ] Step')).toBe(`${fm}Notes\n\n- [ ] Step\n`);
+	});
+
+	it('keeps the line ending of each line it doesn\'t change in a note with mixed endings', () => {
+		const mixed = `${fm}Old details\n\n- [ ] a\r\n\r\nMore\n`;
+		expect(setDetails(mixed, 'New')).toBe(`${fm}New\n\n- [ ] a\r\n\r\nMore\n`);
+		expect(insertTask(mixed, 'b')).toBe(`${fm}Old details\n\n- [ ] a\r\n- [ ] b\n\r\nMore\n`);
+		expect(appendLine(mixed, '[[X]]')).toBe(`${fm}Old details\n\n- [ ] a\r\n\r\nMore\n\n[[X]]\n`);
+	});
+
+	it('writes new lines with the ending of the note\'s first line', () => {
+		const mostlyCrlf = `${fm.replace(/\n/g, '\r\n')}Old\n\n- [ ] a\r\n`;
+		expect(insertTask(mostlyCrlf, 'b')).toBe(`${fm.replace(/\n/g, '\r\n')}Old\n\n- [ ] a\r\n- [ ] b\r\n`);
+	});
+});
+
+describe('task items as Obsidian reads them', () => {
+	it('ignores task items inside comments', () => {
+		const obsidian = `${fm}- [ ] real\n\n%%\n- [ ] template\n%%\n`;
+		expect(taskLines(obsidian)).toEqual([4]);
+		expect(insertTask(obsidian, 'new')).toBe(`${fm}- [ ] real\n- [ ] new\n\n%%\n- [ ] template\n%%\n`);
+		const html = `${fm}- [ ] real\n\n<!--\n- [ ] template\n-->\n`;
+		expect(taskLines(html)).toEqual([4]);
+		expect(insertTask(html, 'new')).toBe(`${fm}- [ ] real\n- [ ] new\n\n<!--\n- [ ] template\n-->\n`);
+	});
+
+	it('adds after the comment when there is no task outside it', () => {
+		const note = `${fm}Text\n\n%%\n- [ ] template\n%%\n`;
+		expect(insertTask(note, 'new')).toBe(`${note}\n- [ ] new\n`);
+	});
+
+	it('keeps task items in comments within the details', () => {
+		const typed = 'Text\n## Heading\n%%\n- [ ] hidden\n%%';
+		expect(setDetails(`${fm}Old\n`, typed)).toBe(`${fm}${O}\n${typed}\n${C}\n`);
+	});
+
+	it('does not take a link with one character for a task', () => {
+		const note = `${fm}- [ ] real\n\nSources:\n- [1](https://x.y) first\n`;
+		expect(taskLines(note)).toEqual([4]);
+		expect(parseTask('- [1](https://x.y) first')).toBeNull();
+		expect(parseTask('- [x]')).toEqual({ checked: true, text: '' });
+		expect(insertTask(note, 'new')).toBe(`${fm}- [ ] real\n- [ ] new\n\nSources:\n- [1](https://x.y) first\n`);
+	});
+
+	it('adds a new item at the indentation of the top-level task items, after their sub-items', () => {
+		expect(insertTask(`${fm}- [ ] parent\n    - [ ] child\n`, 'new')).toBe(`${fm}- [ ] parent\n    - [ ] child\n- [ ] new\n`);
+		expect(insertTask(`${fm}- [ ] parent\n\n    - [ ] child\n\nAfter\n`, 'new')).toBe(`${fm}- [ ] parent\n\n    - [ ] child\n- [ ] new\n\nAfter\n`);
+		expect(insertTask(`${fm}- Shopping\n  - [ ] eggs\n    - [ ] free range\n  - [ ] milk\n`, 'bread')).toBe(
+			`${fm}- Shopping\n  - [ ] eggs\n    - [ ] free range\n  - [ ] milk\n  - [ ] bread\n`,
+		);
 	});
 });

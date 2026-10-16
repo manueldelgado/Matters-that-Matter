@@ -15,6 +15,8 @@ import { now } from './clock';
 import { resolverFor, targetResolver } from './index';
 import { createNote, ensureFolder, frontmatterOf, notesOfKind, processFrontMatter, type Frontmatter } from './notes';
 
+const writeFailedNotice = (e: unknown) => new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e)));
+
 const INBOX_RESTORE_DELAY = 4000;
 /** Time for the re-created Inbox's own changes to pass before the guard watches it again. */
 const INBOX_SETTLE = 1500;
@@ -27,6 +29,9 @@ export class Watchers {
 	/** Notes created while a deleted Inbox may still come back; null when no restore is pending. */
 	private createdWhileInboxMissing: string[] | null = null;
 	private updateRibbon = debounce(() => this.renderRibbon(), 300, true);
+	/** Timers still pending (the Inbox restore), cleared when the plugin unloads. */
+	private timers = new Set<number>();
+	private stopped = false;
 
 	constructor(private plugin: MattersPlugin) {}
 
@@ -37,8 +42,23 @@ export class Watchers {
 		this.seedStatuses();
 		this.warnInboxDuplicates();
 		this.renderRibbon();
+		// Nothing runs once the plugin is off: no Inbox re-created, no ribbon redrawn.
+		this.plugin.register(() => {
+			this.stopped = true;
+			for (const id of this.timers) window.clearTimeout(id);
+			this.timers.clear();
+			this.updateRibbon.cancel();
+		});
 
-		this.plugin.registerEvent(app.metadataCache.on('changed', (file, _data, cache) => void this.onChanged(file, cache)));
+		this.plugin.registerEvent(
+			app.metadataCache.on('changed', (file, _data, cache) => {
+				void this.onChanged(file, cache).catch((e: unknown) => {
+					console.error('Matters that Matter: could not update the note after a change', e);
+					// A note deleted or renamed meanwhile needs no notice.
+					if (app.vault.getFileByPath(file.path)) writeFailedNotice(e);
+				});
+			}),
+		);
 		this.plugin.registerEvent(
 			app.vault.on('delete', (file) => {
 				this.statuses.forget(file.path);
@@ -125,13 +145,22 @@ export class Watchers {
 		new Notice(STRINGS.notices.inboxRestoredProperties);
 	}
 
+	/** A timeout that unloading the plugin clears. */
+	private later(fn: () => void, ms: number): void {
+		const id = window.setTimeout(() => {
+			this.timers.delete(id);
+			if (!this.stopped) fn();
+		}, ms);
+		this.timers.add(id);
+	}
+
 	/**
 	 * Waits for a sync restore; re-creates the Inbox if it does not come back. A rename on another device can arrive as a
 	 * deletion plus a new note before the settings that name it: that note becomes the Inbox instead.
 	 */
 	private restoreInboxLater(path: string): void {
 		this.createdWhileInboxMissing = [];
-		window.setTimeout(() => {
+		this.later(() => {
 			const { app, settings } = this.plugin;
 			const created = this.createdWhileInboxMissing ?? [];
 			this.createdWhileInboxMissing = null;
@@ -155,8 +184,8 @@ export class Watchers {
 				await createNote(app, path, { 'mtm-kind': 'matter', 'mtm-icon': 'inbox', 'mtm-state': 'active' });
 				new Notice(STRINGS.notices.inboxRecreated);
 			})()
-				.catch((e) => new Notice(STRINGS.notices.writeFailed(e instanceof Error ? e.message : String(e))))
-				.finally(() => window.setTimeout(() => (this.restoringInbox = false), INBOX_SETTLE));
+				.catch(writeFailedNotice)
+				.finally(() => this.later(() => (this.restoringInbox = false), INBOX_SETTLE));
 		}, INBOX_RESTORE_DELAY);
 	}
 

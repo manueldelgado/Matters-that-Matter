@@ -74,12 +74,12 @@ export interface Ran {
 }
 
 /** Runs the command line with these arguments; `--now 2026-10-09T12:00` unless another time is given. */
-export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean } = {}): Promise<Ran> {
+export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean; columns?: number } = {}): Promise<Ran> {
 	let stdout = '';
 	let stderr = '';
 	const args = argv.includes('--now') ? argv : [...argv, '--now', '2026-10-09T12:00'];
 	const code = await run(args, {
-		stdout: { write: (t: string) => (stdout += t), isTTY: io.tty },
+		stdout: { write: (t: string) => (stdout += t), isTTY: io.tty, columns: io.columns },
 		stderr: { write: (t: string) => (stderr += t), isTTY: io.tty },
 		env: {},
 		cwd: tmpdir(),

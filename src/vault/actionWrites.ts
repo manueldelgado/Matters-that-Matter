@@ -15,7 +15,7 @@ import { matterLink as matterLinkFor, newActionFrontmatter, personKey } from '..
 import { STRINGS } from '../strings';
 import { now } from './clock';
 import { resolverFor, targetResolver } from './index';
-import { createNote, ensureFolder, frontmatterOf, linkTo, nameTaken, pathTaken, processFrontMatter, type Frontmatter } from './notes';
+import { createNote, ensureFolder, linkTo, nameTaken, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 export interface ActionTarget {
 	statusId?: string;
@@ -35,16 +35,19 @@ function matterLink(app: App, matterPath: string, sourcePath: string): string {
  * Edits an Action's frontmatter. Status, Matter and type are always written (the target's, or as they are shown),
  * so every edit also clears orphan badges; other fields change only when `fields` names them. A move to another
  * cell (status or Matter) removes mtm-order unless the target gives the new position.
+ * The values before the edit are read from the properties being edited, not the metadata cache: right after another
+ * write (Done, then Undo) the cache may not have caught up, and the completion date would miss the change.
  */
 export async function editAction(app: App, file: TFile, settings: MattersSettings, target: ActionTarget, fields: FieldEdit = {}): Promise<void> {
-	const current = effectiveAction(frontmatterOf(app, file), settings, resolverFor(app, file.path));
-	const status = settings.statuses.find((s) => s.id === (target.statusId ?? current.status.id)) ?? current.status;
-	const typeId = target.typeId ?? current.type.id;
-	const matterPath = target.matterPath ?? current.matterPath;
+	const resolveLink = resolverFor(app, file.path);
 	const today = toYmd(now());
 	const resolve = targetResolver(app, file.path);
 	const keyOf = (raw: unknown) => personKey(raw, resolve);
 	await processFrontMatter(app, file, (fm: Frontmatter) => {
+		const current = effectiveAction(fm, settings, resolveLink);
+		const status = settings.statuses.find((s) => s.id === (target.statusId ?? current.status.id)) ?? current.status;
+		const typeId = target.typeId ?? current.type.id;
+		const matterPath = target.matterPath ?? current.matterPath;
 		applyStatus(fm, status, current.category, today);
 		fm['mtm-type'] = typeId;
 		fm['mtm-matter'] = matterLink(app, matterPath, file.path);

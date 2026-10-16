@@ -1,6 +1,7 @@
 // What the operations read from a snapshot: Actions as items, Matters with the Inbox, people, and how links resolve.
 // Built once per snapshot.
 
+import { foldName } from '../files/paths';
 import { toYmd, type Ymd } from '../model/dates';
 import { uniqueTitle } from '../model/titles';
 import { toActionItem, type ActionItem } from '../services/actionItems';
@@ -19,6 +20,10 @@ export interface VaultView {
 	byPath: Map<string, NoteData>;
 	actions: ActionNote[];
 	matters: MatterInfo[];
+	/** Each Matter by its path. */
+	matterByPath: Map<string, MatterInfo>;
+	/** The Actions of each Matter (by its effective Matter's path), in the order of `actions`. */
+	actionsByMatter: Map<string, ActionItem[]>;
 	people: PersonCandidate[];
 	resolveLink(fromPath: string): ResolveLink;
 	/** Resolves link text from a note: the target's path, or null. */
@@ -44,14 +49,16 @@ export const folderOfPath = (path: string): string => {
 
 export const baseName = (path: string): string => (path.split('/').pop() ?? path).replace(/\.md$/i, '');
 
+export { foldName };
+
 /**
- * The Markdown note anywhere in the vault whose name is `name`, ignoring case (other than `except`), or null. A new
- * note with such a name would share its links: `[[name]]` could reach either.
+ * The Markdown note anywhere in the vault whose name is `name`, ignoring case and Unicode form (other than
+ * `except`), or null. A new note with such a name would share its links: `[[name]]` could reach either.
  */
 export function noteNamed(s: Snapshot, name: string, except?: string): string | null {
-	const lower = name.toLowerCase();
-	const skip = except?.toLowerCase();
-	return s.notes.find((n) => n.basename.toLowerCase() === lower && n.path.toLowerCase() !== skip)?.path ?? null;
+	const folded = foldName(name);
+	const skip = except === undefined ? undefined : foldName(except);
+	return s.notes.find((n) => foldName(n.basename) === folded && foldName(n.path) !== skip)?.path ?? null;
 }
 
 /** A free name for a new note in `folder`: taken when a file there or a Markdown note anywhere has it. */
@@ -91,9 +98,17 @@ export function vaultView(s: Snapshot): VaultView {
 	const matterNotes = s.notes.filter((n) => kind(n) === 'matter');
 	const inboxNote = byPath.get(s.settings.inboxPath) ?? null;
 	const matters = matterList(matterNotes, inboxNote, s.settings, today);
+	const matterByPath = new Map<string, MatterInfo>();
+	for (const m of matters) if (!matterByPath.has(m.path)) matterByPath.set(m.path, m);
+	const actionsByMatter = new Map<string, ActionItem[]>();
+	for (const { item } of actions) {
+		const list = actionsByMatter.get(item.effective.matterPath);
+		if (list) list.push(item);
+		else actionsByMatter.set(item.effective.matterPath, [item]);
+	}
 	const people = personCandidates(s.notes, cleanFolder(s.settings.folders.people));
 
-	const view: VaultView = { today, byPath, actions, matters, people, resolveLink, resolvePath };
+	const view: VaultView = { today, byPath, actions, matters, matterByPath, actionsByMatter, people, resolveLink, resolvePath };
 	views.set(s, view);
 	return view;
 }

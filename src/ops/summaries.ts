@@ -19,7 +19,7 @@ export function noteRef(raw: unknown, fromPath: string, s: Snapshot): NoteRef | 
 }
 
 export function matterName(path: string, s: Snapshot): string {
-	return vaultView(s).matters.find((m) => m.path === path)?.name ?? baseName(path);
+	return vaultView(s).matterByPath.get(path)?.name ?? baseName(path);
 }
 
 export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unknown>> | undefined, s: Snapshot): ActionSummary {
@@ -49,8 +49,8 @@ export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unkn
 	};
 }
 
-export function matterSummary(matter: MatterInfo, items: readonly ActionItem[], s: Snapshot): MatterSummary {
-	const mine = items.filter((i) => i.effective.matterPath === matter.path);
+/** A Matter with counts over `mine`, its own Actions (see `VaultView.actionsByMatter`). */
+export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s: Snapshot): MatterSummary {
 	const sphere = matter.sphere === null ? null : (s.settings.spheres.find((x) => x.id === matter.sphere) ?? null);
 	const review = matter.review;
 	return {

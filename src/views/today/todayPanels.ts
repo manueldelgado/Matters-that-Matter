@@ -24,6 +24,7 @@ export class TodayPanels {
 	/** Every empty view showing the panel, in any window. */
 	private decorated = new Set<HTMLElement>();
 	private refreshSoon = debounce(() => this.refresh(), 250, true);
+	private stopped = false;
 
 	constructor(private plugin: MattersPlugin) {}
 
@@ -38,11 +39,17 @@ export class TodayPanels {
 		this.plugin.registerEvent(this.plugin.events.on('settings-changed', soon));
 		this.plugin.registerEvent(this.plugin.selection.on('changed', soon));
 		this.plugin.registerInterval(window.setInterval(soon, TICK));
-		this.plugin.register(() => this.removeAll());
+		// A refresh still pending would put panels back after they were removed.
+		this.plugin.register(() => {
+			this.stopped = true;
+			this.refreshSoon.cancel();
+			this.removeAll();
+		});
 		app.workspace.onLayoutReady(soon);
 	}
 
 	refresh(): void {
+		if (this.stopped) return;
 		try {
 			this.render();
 		} catch (e) {

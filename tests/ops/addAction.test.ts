@@ -176,7 +176,7 @@ describe('addAction: fields', () => {
 		expect(fm['mtm-matter']).toBe('[[MTM/Matters/Kitchen renovation]]');
 	});
 
-	it.each(['javascript:alert(1)', 'obsidian://open?vault=x', 'file:///etc/passwd', 'data:text/html,x', 'No such note', 'https://exa mple.com', 'https://a.com/x y', 'MTM/People'])(
+	it.each(['javascript:alert(1)', 'obsidian://open?vault=x', 'file:///etc/passwd', 'data:text/html,x', 'No such note', 'https://exa mple.com', 'MTM/People'])(
 		'link %j is refused',
 		(link) => {
 			const r = addAction({ title: 'L', link }, s);
@@ -349,8 +349,8 @@ describe('addAction: file names', () => {
 		expect(created({ text: 'Marco Rossi' }).create.path).toBe('MTM/Actions/Marco Rossi 2.md');
 	});
 
-	it('a title made only of forbidden characters becomes "Untitled Action"', () => {
-		expect(created({ title: '###' }).create.path).toBe('MTM/Actions/Untitled Action.md');
+	it.each(['###', ' . ', '#', '[[]]'])('a title made only of characters a file name can’t have (%j) is refused', (title) => {
+		expect(addAction({ title }, s)).toMatchObject({ ok: false, error: { code: 'invalid', field: 'title', message: 'An Action needs a title.' } });
 	});
 
 	it('the Actions folder comes from settings', () => {

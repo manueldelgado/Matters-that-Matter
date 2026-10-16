@@ -2,7 +2,7 @@
 
 import { Menu } from 'obsidian';
 import { STRINGS } from '../../strings';
-import { appendIcon } from './dom';
+import { appendIcon, pressable, showMenuFor } from './dom';
 
 /** Each list has its own drag type, so a status row can't be dropped on the type list. */
 const rowType = (list: string) => `application/x-mtm-row-${list}`;
@@ -19,19 +19,23 @@ export function reorderable(
 	appendIcon(handle, 'grip-vertical');
 	handle.setAttr('aria-label', STRINGS.editors.dragHint);
 
-	handle.addEventListener('click', (e) => {
+	// The menu is also the keyboard's way to reorder: the handle takes focus, and keeps it across the move.
+	const moveTo = (to: number) => {
+		const list = row.parentElement;
+		move(index, to);
+		list?.querySelectorAll<HTMLElement>(':scope > * > .mtm-drag-handle').item(to)?.focus();
+	};
+	pressable(handle, (e) => {
 		const menu = new Menu();
-		menu.addItem((item) =>
-			item.setTitle(STRINGS.editors.moveUp).setIcon('arrow-up').setDisabled(index === 0).onClick(() => move(index, index - 1)),
-		);
+		menu.addItem((item) => item.setTitle(STRINGS.editors.moveUp).setIcon('arrow-up').setDisabled(index === 0).onClick(() => moveTo(index - 1)));
 		menu.addItem((item) =>
 			item
 				.setTitle(STRINGS.editors.moveDown)
 				.setIcon('arrow-down')
 				.setDisabled(index === count - 1)
-				.onClick(() => move(index, index + 1)),
+				.onClick(() => moveTo(index + 1)),
 		);
-		menu.showAtMouseEvent(e);
+		showMenuFor(menu, e, handle);
 	});
 
 	// Only the handle starts a drag, so text in the row stays selectable.

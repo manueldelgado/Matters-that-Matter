@@ -2,12 +2,11 @@
 // touches them (the raw link shows, as Obsidian does). Links are found in the text; the syntax tree, whose node names
 // are Obsidian's own and undocumented, only keeps code, math, comments and front matter out. Source mode is untouched.
 
-import { Keymap, editorInfoField, editorLivePreviewField } from 'obsidian';
+import { getLinkpath, Keymap, editorInfoField, editorLivePreviewField } from 'obsidian';
 import { syntaxTree } from '@codemirror/language';
 import { Prec, RangeSetBuilder, StateEffect, type EditorState } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
-import { toYmd } from '../../model/dates';
-import { chipSignature, findLinks, type ChipModel } from '../../services/inlineChip';
+import { chipSignature, findLinks, noteName, type ChipModel } from '../../services/inlineChip';
 import { fillChip } from '../../ui/components/inlineChip';
 import type { InlineChips } from './inlineChips';
 
@@ -64,13 +63,18 @@ function inProse(state: EditorState, pos: number): boolean {
 	return true;
 }
 
+/** Builds the chips, and records in `host.editors` which notes they were drawn from, so other notes' changes pass by. */
 function build(view: EditorView, host: InlineChips): DecorationSet {
 	const { state } = view;
+	const paths = new Set<string>();
+	const names = new Set<string>();
+	const targets = { paths, names, unresolved: false };
+	host.editors.set(view, targets);
 	if (!host.isOn() || !state.field(editorLivePreviewField, false)) return Decoration.none;
 	const info = state.field(editorInfoField, false);
 	const sourcePath = info?.file?.path ?? '';
 	const hoverParent = info && 'hoverPopover' in info ? info : { hoverPopover: null };
-	const today = toYmd(new Date());
+	const now = new Date();
 	const builder = new RangeSetBuilder<Decoration>();
 	let last = -1;
 	for (const { from, to } of view.visibleRanges) {
@@ -84,9 +88,13 @@ function build(view: EditorView, host: InlineChips): DecorationSet {
 				// The cursor or a selection touching the link: show it raw.
 				if (state.selection.ranges.some((r) => r.from <= end && r.to >= start)) continue;
 				if (!inProse(state, start + 1)) continue;
-				const model = host.modelFor(link.linktext, sourcePath);
+				const target = host.resolve(link.linktext, sourcePath);
+				names.add(noteName(getLinkpath(link.linktext)));
+				if (target) paths.add(target.path);
+				else targets.unresolved = true;
+				const model = target ? host.modelForFile(target) : null;
 				if (!model) continue;
-				const signature = `${chipSignature(model, today)}|${link.display}|${link.linktext}|${sourcePath}`;
+				const signature = `${chipSignature(model, now)}|${link.display}|${link.linktext}|${sourcePath}`;
 				const widget = new ChipWidget(host, model, link.display, link.linktext, sourcePath, hoverParent, signature);
 				builder.add(start, end, Decoration.replace({ widget }));
 			}
@@ -101,7 +109,6 @@ export function livePreviewChips(host: InlineChips) {
 		class {
 			decorations: DecorationSet;
 			constructor(private view: EditorView) {
-				host.editors.add(view);
 				this.decorations = build(view, host);
 			}
 			update(u: ViewUpdate) {

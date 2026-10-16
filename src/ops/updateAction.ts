@@ -1,20 +1,24 @@
 // Update an Action: any field, strictly. A value that matches nothing is an error and nothing is planned; a new title
 // renames the note (link updates are the applier's part).
 
+import { checklistItems } from '../model/body';
 import { parseMtmDate, startsAfterDue } from '../model/dates';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
 import { applyFieldEdit, type FieldEdit } from '../services/actionEdit';
 import { personKey } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { EXPLICIT_KEYS, place, summaryAfter } from './actionWrite';
-import { fail, findMatter, findPerson, findStatus, findType, readDate, readLink, readPriority, readList, readText, readiness } from './fields';
+import { fail, findMatter, findPerson, findStatus, findType, isBlank, readDate, readDetails, readLink, readPriority, readList, readText, readiness } from './fields';
 import { findAction } from './findAction';
 import { applyBodyEdit, PlanBuilder } from './plan';
 import type { ActionFields, ActionWrite, BodyEdit, OpResult, Snapshot, UpdateActionInput, Warning } from './types';
 import { publicField } from './fieldNames';
-import { folderOfPath, joinPath, noteNamed, vaultView } from './vaultView';
+import { foldName, folderOfPath, joinPath, noteNamed, vaultView } from './vaultView';
 
 const T = STRINGS.ops;
+
+/** A checklist item as it is written: one line, spaces collapsed. */
+const oneLine = (item: string) => item.replace(/\s+/g, ' ').trim();
 
 const FRONTMATTER_FIELDS: readonly (keyof ActionFields)[] = ['matter', 'status', 'type', 'priority', 'start', 'due', 'waitingOn', 'people'];
 const ALL_FIELDS: readonly (keyof ActionFields)[] = [...FRONTMATTER_FIELDS, 'title', 'details', 'checklist', 'link'];
@@ -67,7 +71,8 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 	const linkTo = (target: string) => `[[${s.linkText(target, path)}]]`;
 	if (input.waitingOn !== undefined) {
 		if (input.waitingOn !== null && typeof input.waitingOn !== 'string') return fail({ code: 'invalid', field: publicField('waitingOn'), message: T.badText(publicField('waitingOn')) });
-		if (input.waitingOn === null || input.waitingOn.trim() === '') edit.waitingOn = null;
+		if (input.waitingOn === null) edit.waitingOn = null;
+		else if (isBlank(input.waitingOn)) return fail({ code: 'invalid', field: publicField('waitingOn'), value: '', message: T.emptyValue(publicField('waitingOn')) });
 		else {
 			const r = findPerson('waitingOn', input.waitingOn, s, path);
 			if (!r.ok) return r;
@@ -86,22 +91,33 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 		}
 	}
 
+	// Asking again for a checklist item or a link the note has is already as asked: it isn't added twice.
 	const bodyEdits: BodyEdit[] = [];
-	if (input.details !== undefined) {
-		const r = readText('details', input.details);
+	const text = () => s.content(path) ?? '';
+	if (input.details === null) bodyEdits.push({ kind: 'details', text: '' });
+	else if (input.details !== undefined) {
+		// Empty details would remove them: only null does.
+		if (isBlank(input.details)) return fail({ code: 'invalid', field: 'details', value: '', message: T.emptyValue('details') });
+		const r = readDetails(input.details);
 		if (!r.ok) return r;
 		bodyEdits.push({ kind: 'details', text: r.value });
 	}
 	if (input.checklist !== undefined) {
 		const list = readList('checklist', input.checklist);
 		if (!list.ok) return list;
-		const items = list.value.filter((i) => i.trim()).map((i) => i.trim());
+		const open = new Set(checklistItems(text()).filter((i) => !i.checked).map((i) => oneLine(i.text)));
+		const items: string[] = [];
+		for (const item of list.value.map(oneLine)) {
+			if (!item || open.has(item)) continue;
+			open.add(item);
+			items.push(item);
+		}
 		if (items.length) bodyEdits.push({ kind: 'checklist', items });
 	}
 	if (input.link !== undefined) {
 		const r = readLink(input.link, path, s);
 		if (!r.ok) return r;
-		bodyEdits.push({ kind: 'link', line: r.value });
+		if (!text().split(/\r?\n/).some((line) => line.trim() === r.value)) bodyEdits.push({ kind: 'link', line: r.value });
 	}
 
 	let newPath = path;
@@ -111,12 +127,13 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 		if (!r.ok) return r;
 		const base = sanitiseTitle(r.value);
 		if (!base) return fail({ code: 'invalid', field: 'title', value: r.value, message: T.noTitle });
-		if (base !== note.basename) {
+		// The same title in another Unicode form (é as one character or two) is the same name: nothing to rename.
+		if (base.normalize('NFC') !== note.basename.normalize('NFC')) {
 			const folder = folderOfPath(path);
 			// The note itself doesn't block its own name (a change of case only renames it).
 			title = uniqueTitle(base, (t) => {
 				const candidate = joinPath(folder, `${t}.md`);
-				return candidate.toLowerCase() !== path.toLowerCase() && s.exists(candidate);
+				return foldName(candidate) !== foldName(path) && s.exists(candidate);
 			});
 			newPath = joinPath(folder, `${title}.md`);
 			// A name another note has elsewhere: when renames leave links as they are, links to that note could reach

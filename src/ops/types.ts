@@ -27,6 +27,8 @@ export interface Snapshot {
 	content(path: string): string | null;
 	/** A note's outgoing links in its body, as written (link text, headings kept; embeds left out). */
 	links(path: string): readonly string[];
+	/** A note's embeds in its body, as written (link text); a host without them shows no attachments. */
+	embeds?(path: string): readonly string[];
 	/** Resolves link text from a note as a wikilink would: the target file's path, or null. */
 	resolve(link: string, fromPath: string): string | null;
 	/** The link text that reaches `path` from `fromPath`, as Obsidian writes links, in the vault's link format. */
@@ -81,7 +83,11 @@ export type WarningCode =
 	| 'unmatched-sphere'
 	| 'unreadable-date'
 	| 'start-after-due'
-	| 'newer-settings';
+	| 'newer-settings'
+	/** Quick add text that leaves no title (parse): adding it would be refused. */
+	| 'no-title'
+	/** The Inbox note isn't there: an Action added to the Inbox links to a note that is missing. */
+	| 'missing-inbox';
 
 /** Something the operation did differently from what was asked, in the plugin's words. */
 export interface Warning {
@@ -130,7 +136,8 @@ export interface ActionFields {
 	waitingOn?: string | null;
 	/** Person notes; on update they replace the list. */
 	people?: readonly string[];
-	details?: string;
+	/** The details; null removes them (updates). */
+	details?: string | null;
 	/** Checklist items; on update they are added after the existing ones. */
 	checklist?: readonly string[];
 	/** A note in the vault or an http(s) address, written as a line at the end of the body. */
@@ -212,6 +219,8 @@ export interface ActionDetail extends ActionSummary {
 	checklist: { text: string; checked: boolean }[];
 	/** Notes the body links to (names only, never their content), without the Matter and the people. */
 	linkedNotes: NoteRef[];
+	/** Files the body embeds that aren't notes (names only, never their content). */
+	attachments: { path: string; name: string }[];
 	people: NoteRef[];
 	startsAfterDue: boolean;
 }

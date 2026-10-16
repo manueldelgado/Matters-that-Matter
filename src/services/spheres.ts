@@ -3,6 +3,7 @@
 import type { SphereDef } from '../settings';
 import { isOverdue, toYmd } from '../model/dates';
 import type { ActionItem } from './actionItems';
+import { isAbsent } from './effective';
 
 /** The key that stands for "No Sphere" in focus settings and collapse toggles. */
 export const NO_SPHERE = '';
@@ -16,7 +17,7 @@ export interface EffectiveSphere {
 
 /** Absent: no Sphere, no badge. Present but unknown: no Sphere, with the raw value as an orphan. The Inbox never has one. */
 export function effectiveSphere(raw: unknown, spheres: readonly SphereDef[], isInbox: boolean): EffectiveSphere {
-	if (isInbox || raw === undefined || raw === null || raw === '') return { id: null, orphan: null };
+	if (isInbox || isAbsent(raw)) return { id: null, orphan: null };
 	const value = typeof raw === 'string' || typeof raw === 'number' ? String(raw) : JSON.stringify(raw);
 	return spheres.some((s) => s.id === value) ? { id: value, orphan: null } : { id: null, orphan: value };
 }

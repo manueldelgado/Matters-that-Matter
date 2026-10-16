@@ -15,7 +15,7 @@ export interface SwipeHandlers extends Pick<BoardHandlers, 'openMatter' | 'noNex
 	/** Shows another Matter. */
 	choose(path: string): void;
 	/** The board's lane menu, under the header's "⋯". */
-	laneMenu(lane: BoardLane, e: MouseEvent, button: HTMLElement): void;
+	laneMenu(lane: BoardLane, e: MouseEvent | KeyboardEvent, button: HTMLElement): void;
 }
 
 export interface SwipeInput {
@@ -97,7 +97,7 @@ function renderHead(view: HTMLElement, lane: BoardLane, h: SwipeHandlers): void 
 	if (!m.isInbox) {
 		const menu = head.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.board.laneMenu } });
 		appendIcon(menu, 'ellipsis');
-		menu.addEventListener('click', (e) => h.laneMenu(lane, e, menu));
+		pressable(menu, (e) => h.laneMenu(lane, e, menu));
 	}
 }
 

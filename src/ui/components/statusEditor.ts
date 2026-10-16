@@ -1,11 +1,11 @@
 // Status editor, shared by the setup wizard and the settings tab.
 
-import { Notice, setTooltip } from 'obsidian';
+import { Notice, setTooltip, type App } from 'obsidian';
 import type { StatusCategory, StatusDef } from '../../settings';
 import { STRINGS } from '../../strings';
 import { idFromLabel } from '../../services/ids';
 import { addStatus, canDeleteStatus, moveItem, setBacklog, setCategory, setDone } from '../../model/workflow';
-import { appendIcon, markGenerated, rowNote, statusClasses, swapClasses, type RowNote } from './dom';
+import { appendIcon, markGenerated, pressable, rowNote, statusClasses, swapClasses, type RowNote } from './dom';
 import { reorderable } from './reorder';
 import { openTonePopover } from './tonePopover';
 
@@ -29,7 +29,7 @@ export class StatusEditor {
 	private fresh = new Set<string>();
 	private listEl: HTMLElement;
 
-	constructor(parent: HTMLElement, private opts: StatusEditorOptions) {
+	constructor(private app: App, parent: HTMLElement, private opts: StatusEditorOptions) {
 		this.statuses = opts.statuses;
 		this.listEl = parent.createDiv({ cls: 'mtm-editor-list' });
 		this.render();
@@ -52,7 +52,7 @@ export class StatusEditor {
 		const add = this.listEl.createDiv({ cls: 'mtm-row-add' });
 		appendIcon(add, 'plus');
 		add.appendText(STRINGS.editors.addStatus);
-		add.addEventListener('click', () => {
+		pressable(add, () => {
 			const next = addStatus(this.statuses, STRINGS.editors.newStatus, 'ink', 'open');
 			const created = next[next.length - 1];
 			if (created) this.fresh.add(created.id);
@@ -70,7 +70,7 @@ export class StatusEditor {
 		tone.createSpan({ cls: 'mtm-status-dot' });
 		appendIcon(tone, 'chevron-down');
 		tone.addEventListener('click', () =>
-			openTonePopover(tone, current.tone, (t) => this.commit(this.statuses.map((s) => (s.id === current.id ? { ...s, tone: t } : s)))),
+			openTonePopover(this.app, tone, current.tone, (t) => this.commit(this.statuses.map((s) => (s.id === current.id ? { ...s, tone: t } : s)))),
 		);
 
 		const input = row.createEl('input', { type: 'text', value: status.label, attr: { 'aria-label': STRINGS.editors.label } });
@@ -137,7 +137,7 @@ export class StatusEditor {
 
 		const del = row.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.editors.deleteStatus } });
 		appendIcon(del, 'trash-2');
-		del.addEventListener('click', () => {
+		pressable(del, () => {
 			if (!canDeleteStatus(current)) new Notice(STRINGS.notices.cannotDeleteFlagged);
 			else this.opts.onDelete(current);
 		});

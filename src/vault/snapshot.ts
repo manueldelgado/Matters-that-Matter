@@ -28,6 +28,10 @@ export async function buildSnapshot(app: App, settings: MattersSettings, options
 			const file = vault.getFileByPath(path);
 			return (file && metadataCache.getFileCache(file)?.links?.map((l) => l.link)) ?? [];
 		},
+		embeds: (path) => {
+			const file = vault.getFileByPath(path);
+			return (file && metadataCache.getFileCache(file)?.embeds?.map((e) => e.link)) ?? [];
+		},
 		resolve: (link, fromPath) => metadataCache.getFirstLinkpathDest(getLinkpath(link), fromPath)?.path ?? null,
 		linkText: (path, fromPath) => {
 			const file = vault.getFileByPath(path);

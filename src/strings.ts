@@ -211,6 +211,9 @@ export const STRINGS = {
 		due: 'Due',
 		checkBack: 'Check back',
 		datePlaceholder: 'Tomorrow, fri, 23 oct…',
+		notADate: 'Not a date.',
+		dateUnreadable: 'Write it as “fri”, “23 oct” or “2026-10-23”, or leave it empty.',
+		dateTimeZone: 'Dates are in local time: leave the time zone out.',
 		nextHint: (status: string) => `Lands in the Matter’s ${status} column`,
 		waitingOn: 'Waiting on',
 		choosePerson: 'Choose a person',
@@ -964,7 +967,8 @@ export const STRINGS = {
 		noMatter: (query: string, added = true, fromText?: string) =>
 			`No Matter matches “${query}”, so it ${added ? 'went' : 'goes'} to ${fromText ? `${fromText}, as the text says` : 'the Inbox'}.`,
 		noStatus: (query: string, backlog: string) => `No status matches “${query}”, so it starts in ${backlog}.`,
-		noPerson: (query: string, added = true) => `No note matches “${query}”, so it ${added ? 'was' : 'is'} left out.`,
+		noPerson: (query: string, added = true, kind?: 'matter' | 'action') =>
+			`${kind ? `“${query}” is ${kind === 'matter' ? 'a Matter' : 'an Action'}, not a person` : `No note matches “${query}”`}, so it ${added ? 'was' : 'is'} left out.`,
 		noSphere: (query: string) => `No Sphere matches “${query}”, so the Matter has no Sphere.`,
 		leftOut: (query: string, added = true) => `“${query}” matched nothing, so it ${added ? 'was' : 'is'} left out.`,
 		/** A date in the quick add text that isn't read; `zone` when it has a time zone. */
@@ -974,15 +978,20 @@ export const STRINGS = {
 				: `“${text}” isn’t a real date, so no date ${added ? 'was' : 'is'} set and it stays in the title.`,
 		startAfterDue: 'It starts after it’s due; it keeps both dates and is placed by the due date.',
 		newerSettings: 'These settings come from a newer version of Matters that Matter; what you read may miss something new.',
+		missingInbox: (path: string) => `The Inbox note (${path}) is missing; Matters that Matter creates it again when the vault is next open in Obsidian.`,
+		parseNoTitle: 'No title is left once the words quick add reads are taken out, so adding this text would be refused.',
 		// Changing is strict: nothing is written.
 		actionNotFound: (ref: string) => `No Action matches “${ref}”.`,
 		severalActions: (ref: string) => `Several Actions match “${ref}”.`,
+		severalActionsOrMatters: (ref: string) => `Several Actions and Matters match “${ref}”.`,
 		unmatchedStatus: (query: string, labels: readonly string[]) => `No status matches “${query}”. Statuses here: ${labels.join(', ')}.`,
 		unmatchedType: (query: string, labels: readonly string[]) => `No type matches “${query}”. Types here: ${labels.join(', ')}.`,
 		unmatchedSphere: (query: string, labels: readonly string[]) =>
 			labels.length ? `No Sphere matches “${query}”. Spheres here: ${labels.join(', ')}.` : `No Sphere matches “${query}”. There are no Spheres yet.`,
 		unmatchedMatter: (query: string) => `No Matter matches “${query}”.`,
 		unmatchedPerson: (query: string) => `No note matches “${query}”. People are notes, and they’re never created from here.`,
+		noNote: (query: string) => `No note matches “${query}”.`,
+		notAPerson: (query: string, kind: 'matter' | 'action') => `“${query}” is ${kind === 'matter' ? 'a Matter' : 'an Action'}, not a person.`,
 		severalStatuses: (query: string) => `Several statuses match “${query}”.`,
 		severalTypes: (query: string) => `Several types match “${query}”.`,
 		severalSpheres: (query: string) => `Several Spheres match “${query}”.`,
@@ -1005,6 +1014,10 @@ export const STRINGS = {
 		badRhythm: (value: string) => `“${value}” isn’t a review rhythm. Use a number of days, weeks or months, such as 2w.`,
 		badIcon: (value: string) => `“${value}” isn’t an icon name. Use a Lucide name, such as house.`,
 		badText: (field: string) => `${field} must be text.`,
+		emptyValue: (field: string) => `“${field}” is empty. Give a value, or null to remove it.`,
+		emptyFilter: (field: string) => `“${field}” is empty: give a value, or leave the filter out.`,
+		detailsMarker:
+			'The details can’t have a line that starts with “<!-- mtm-details” or “<!-- /mtm-details”: Matters that Matter marks where the details start and end with such lines. Leave those lines out.',
 		badList: (field: string) => `${field} must be a list of text.`,
 		nothingToChange: 'Nothing to change: name at least one field.',
 		// The vault isn't ready for writes.

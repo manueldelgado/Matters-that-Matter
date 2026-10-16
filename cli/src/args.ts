@@ -1,6 +1,7 @@
 // Command-line arguments: the command, its words, and flags by their public names (`--waiting-on`, `--due`). A small
 // parser with no dependency: `--flag value`, `--flag=value`, repeatable list flags, `--no-<field>` to remove a value,
-// and `--` before words that start with a dash.
+// and `--` before words that start with a dash. A word that starts with a dash but can't be an option (`-5 degrees`,
+// `- ask`, `-- see the notes`) is a word.
 
 import { CLI } from './strings';
 
@@ -34,7 +35,7 @@ export const FLAGS: Record<string, FlagSpec> = {
 	due: { kind: 'value', negatable: true },
 	'waiting-on': { kind: 'value', negatable: true },
 	people: { kind: 'list', negatable: true },
-	details: { kind: 'value' },
+	details: { kind: 'value', negatable: true },
 	checklist: { kind: 'list' },
 	link: { kind: 'value' },
 	// List filters.
@@ -92,6 +93,9 @@ export type ArgsResult = { ok: true; args: ParsedArgs } | { ok: false; message: 
 
 const isCommand = (word: string): word is Command => (COMMANDS as readonly string[]).includes(word);
 
+/** Whether a token is an option: `--name…` or `-x`, but not `-` alone, a dash before a figure or a space, or `-- words`. */
+const isOption = (token: string) => token === '--' || /^--[^\s-]/.test(token) || /^-[^\s\d-]/.test(token);
+
 export function parseArgs(argv: readonly string[]): ArgsResult {
 	const flags: Record<string, FlagValue> = {};
 	const words: string[] = [];
@@ -101,7 +105,7 @@ export function parseArgs(argv: readonly string[]): ArgsResult {
 
 	for (let i = 0; i < argv.length; i++) {
 		const token = argv[i] ?? '';
-		if (rest || token === '-' || !token.startsWith('-')) {
+		if (rest || !isOption(token)) {
 			if (command === null && unknownCommand === null && words.length === 0) {
 				if (isCommand(token)) command = token;
 				else unknownCommand = token;
@@ -146,7 +150,12 @@ export function parseArgs(argv: readonly string[]): ArgsResult {
 		let value = inline;
 		if (value === undefined) {
 			const next = argv[i + 1];
-			if (next === undefined || next.startsWith('--')) return { ok: false, message: CLI.needsValue(name) };
+			if (next === undefined || (next.startsWith('--') && isOption(next))) {
+				// Another option: the value was left out. Anything else is a value that starts with a dash.
+				const other = next?.slice(2).split('=')[0] ?? '';
+				const known = next === undefined || next === '--' || other in FLAGS || other.replace(/^no-/, '') in FLAGS;
+				return { ok: false, message: CLI.needsValue(name, known ? undefined : next) };
+			}
 			value = next;
 			i++;
 		}

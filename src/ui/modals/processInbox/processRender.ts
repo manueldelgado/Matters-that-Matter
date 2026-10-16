@@ -3,7 +3,7 @@
 import type { StatusDef, TypeDef } from '../../../settings';
 import { STRINGS } from '../../../strings';
 import { decisionIcon, type Decision, type TallyLine } from '../../../services/processInbox';
-import { appendIcon, statusClasses, tileEl, typeClasses } from '../../components/dom';
+import { appendIcon, fieldWarning, pressable, statusClasses, tileEl, typeClasses } from '../../components/dom';
 
 export function kbd(parent: HTMLElement, key: string): HTMLElement {
 	return parent.createSpan({ cls: 'mtm-kbd', text: key });
@@ -49,9 +49,8 @@ export function renderDecisions(parent: HTMLElement, onChoose: (d: Decision) => 
 /** The head of a step: back to the question, the decision's tile and name, an optional hint. */
 export function renderStepHead(parent: HTMLElement, d: Decision, hint: string | null, onBack: () => void): void {
 	const head = parent.createDiv({ cls: 'mtm-process-step-head' });
-	const back = head.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.process.backToQuestion } });
+	const back = pressable(head.createDiv({ cls: 'clickable-icon', attr: { 'aria-label': STRINGS.process.backToQuestion } }), onBack);
 	appendIcon(back, 'arrow-left');
-	back.addEventListener('click', onBack);
 	tileEl(head, decisionIcon(d), 'mod-neutral');
 	head.createSpan({ cls: 'mtm-process-step-title', text: STRINGS.process.decisions[d][0] });
 	if (hint) head.createSpan({ cls: 'mtm-field-hint', text: hint });
@@ -87,27 +86,55 @@ export function statusSegments(parent: HTMLElement, statuses: readonly StatusDef
 	}
 }
 
-/** A date in plain words, with the parsed date as a chip beside it. */
-export function dateField(parent: HTMLElement, label: string, text: string, chip: (text: string) => string | null, onInput: (text: string) => void): HTMLInputElement {
+/** What the date field reads: the date's label, or why the text is no date. */
+export type DateReading = { label: string } | { problem: string };
+
+/**
+ * A date in plain words, with the parsed date as a chip beside it. Text that is no date gets a warning
+ * once the field is left (not while typing), and `check` shows it at once, for a save to refuse.
+ */
+export function dateField(
+	parent: HTMLElement,
+	label: string,
+	text: string,
+	read: (text: string) => DateReading | null,
+	onInput: (text: string) => void,
+): { input: HTMLInputElement; check: () => boolean } {
 	const el = field(parent, label);
 	const row = el.createDiv({ cls: 'mtm-process-date' });
 	const input = iconInput(row, 'calendar', text, label, STRINGS.process.datePlaceholder);
 	const chipEl = row.createSpan({ cls: 'mtm-token mod-date' });
+	let warning: ((show: boolean) => void) | null = null;
+	const warn = (problem: string | null) => {
+		warning?.(false);
+		warning = problem === null ? null : fieldWarning(row, STRINGS.process.notADate, problem);
+		warning?.(true);
+	};
 	const update = () => {
-		const parsed = input.value.trim() ? chip(input.value) : null;
+		const reading = input.value.trim() ? read(input.value) : null;
 		chipEl.empty();
-		chipEl.toggle(!!parsed);
-		if (parsed) {
+		const label = reading && 'label' in reading ? reading.label : null;
+		chipEl.toggle(label !== null);
+		if (label !== null) {
 			appendIcon(chipEl, 'calendar');
-			chipEl.appendText(parsed);
+			chipEl.appendText(label);
 		}
+		if (!reading || 'label' in reading) warn(null);
+		return reading;
+	};
+	/** Whether the text is empty or a date; otherwise shows why not. */
+	const check = () => {
+		const reading = update();
+		warn(reading && 'problem' in reading ? reading.problem : null);
+		return !reading || 'label' in reading;
 	};
 	input.addEventListener('input', () => {
 		onInput(input.value);
 		update();
 	});
+	input.addEventListener('change', () => void check());
 	update();
-	return input;
+	return { input, check };
 }
 
 /** A destination choice (Someday): radio, tile, label and meta. */

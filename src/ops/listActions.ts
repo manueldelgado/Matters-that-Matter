@@ -6,7 +6,7 @@ import { compareCards } from '../model/actions';
 import { orderMatters } from '../services/boardModel';
 import { peoplePaths } from '../services/notesModel';
 import { STRINGS } from '../strings';
-import { fail, findMatter, findPerson, findSphere, findStatus, findType, readDate, readiness } from './fields';
+import { fail, findMatter, findPerson, findSphere, findStatus, findType, isBlank, readDate, readiness } from './fields';
 import { publicField } from './fieldNames';
 import { emptyPlan } from './plan';
 import { actionSummary } from './summaries';
@@ -21,6 +21,10 @@ export function listActions(input: ListActionsInput, s: Snapshot): OpResult<Acti
 	const view = vaultView(s);
 	const filters: Filter[] = [];
 	let includeClosed = input.done === true;
+	// An empty filter is a mistake (an unset variable), never "any".
+	for (const key of ['matter', 'status', 'type', 'sphere', 'person', 'dueFrom', 'dueTo'] as const) {
+		if (isBlank(input[key])) return fail({ code: 'invalid', field: publicField(key), value: '', message: STRINGS.ops.emptyFilter(publicField(key)) });
+	}
 
 	if (input.matter !== undefined) {
 		const r = findMatter(input.matter, s);
@@ -45,7 +49,7 @@ export function listActions(input: ListActionsInput, s: Snapshot): OpResult<Acti
 		filters.push((a) => inSphere.has(a.item.effective.matterPath));
 	}
 	if (input.person !== undefined) {
-		const r = findPerson('person', input.person, s);
+		const r = findPerson('person', input.person, s, '', true);
 		if (!r.ok) return r;
 		filters.push((a) =>
 			peoplePaths(a.note.frontmatter ?? {}, (t) => {

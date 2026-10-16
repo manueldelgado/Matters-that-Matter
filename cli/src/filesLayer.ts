@@ -13,7 +13,9 @@ export { WriteError } from '../../src/files/write';
 
 /** The operations' snapshot of a vault on disk: its notes, links and link text, as Obsidian's cache gives them. */
 export function snapshotOf(reader: VaultReader, configDir: string, settings: MattersSettings, now: Date): Snapshot {
-	return filesSnapshot(new VaultIndex(reader, { configDir }), settings, now);
+	const index = new VaultIndex(reader, { configDir });
+	// With the embeds of each note, which show an Action's attachments.
+	return { ...filesSnapshot(index, settings, now), embeds: (path) => index.body(path)?.embeds.map((ref) => ref.link) ?? [] };
 }
 
 /**
