@@ -2,7 +2,7 @@
 // properties, links, embeds and tasks, how links resolve and the link text Obsidian writes. Pure: the caller
 // passes in how to list and read files.
 
-import { readFrontmatter, stripBom, type Frontmatter, type FrontmatterInfo } from './frontmatter';
+import { readFrontmatter, stripBom, type Frontmatter } from './frontmatter';
 import { bodyLinks, frontmatterLinks, linkpath, type FrontmatterLinkRef, type LinkRef } from './links';
 import { fileToLinktext, linkFormat, type LinkFormat } from './linkText';
 import { basenameOf, byCodeUnit, extensionOf, foldName, parentOf } from './paths';
@@ -21,13 +21,6 @@ export interface VaultReader {
 export interface IndexOptions {
 	/** The vault's configuration folder (Obsidian's default is a dot-folder in the vault root; the caller names it). */
 	configDir: string;
-	/**
-	 * An earlier index of the same vault: each note whose text is the same here is taken from it as read there
-	 * (properties, body), and with the same files its link resolution too, rather than read again.
-	 */
-	reuse?: VaultIndex;
-	/** Properties read earlier, by path, for a note's text as it is now; undefined to read them here. */
-	parsed?(path: string, content: string): FrontmatterInfo | undefined;
 }
 
 /** The link settings in the configuration folder's `app.json`, with Obsidian's defaults. */
@@ -89,8 +82,6 @@ export function readLinkConfig(reader: Pick<VaultReader, 'read'>, configDir: str
 	};
 }
 
-const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
-
 export class VaultIndex {
 	/** Every file Obsidian lists, in code-unit order. */
 	readonly files: readonly string[];
@@ -104,33 +95,21 @@ export class VaultIndex {
 	private readonly contents = new Map<string, string>();
 	private readonly bodies = new Map<string, NoteBody>();
 	private readonly counts = new Map<string, { resolved: Record<string, number>; unresolved: Record<string, number> }>();
-	private readonly lowerPaths: Set<string> = new Set<string>();
+	private readonly lowerPaths = new Set<string>();
 
 	constructor(reader: VaultReader, options: IndexOptions) {
 		const { configDir } = options;
 		this.config = readLinkConfig(reader, configDir);
 		this.files = [...new Set(reader.list())].filter((path) => isVaultFile(path, configDir)).sort(byCodeUnit);
 		this.notePaths = this.files.filter((path) => extensionOf(path) === 'md');
-		const reuse = options.reuse;
-		const sameFiles = reuse !== undefined && sameList(reuse.files, this.files);
-		this.resolver = sameFiles ? reuse.resolver : new LinkResolver(this.files);
-		if (sameFiles) this.lowerPaths = reuse.lowerPaths;
-		else {
-			for (const path of this.files) {
-				for (let folder = path; folder !== ''; folder = parentOf(folder)) this.lowerPaths.add(foldPath(folder));
-			}
+		this.resolver = new LinkResolver(this.files);
+		for (const path of this.files) {
+			for (let folder = path; folder !== ''; folder = parentOf(folder)) this.lowerPaths.add(foldPath(folder));
 		}
 		for (const path of this.notePaths) {
 			const content = this.readText(reader, path);
 			this.contents.set(path, content);
-			const earlier = reuse?.notes.get(path);
-			if (earlier && reuse?.contents.get(path) === content) {
-				this.notes.set(path, earlier);
-				const body = reuse.bodies.get(path);
-				if (body) this.bodies.set(path, body);
-				continue;
-			}
-			const info = options.parsed?.(path, content) ?? readFrontmatter(content);
+			const info = readFrontmatter(content);
 			this.notes.set(path, {
 				path,
 				basename: basenameOf(path),

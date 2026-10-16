@@ -1,7 +1,5 @@
 // What the operations read from a snapshot: Actions as items, Matters with the Inbox, people, and how links resolve.
-// Built once per snapshot. What doesn't depend on the clock (every Action's item, people) is kept while a host hands
-// over snapshots that share their notes, settings and link resolution (the same objects), as a held snapshot does
-// between changes; across a change, the items of notes that didn't change can be carried over (`carryView`).
+// Built once per snapshot.
 
 import { foldName } from '../files/paths';
 import { toYmd, type Ymd } from '../model/dates';
@@ -34,29 +32,6 @@ export interface VaultView {
 }
 
 const views = new WeakMap<Snapshot, VaultView>();
-
-/** The part of a view that doesn't depend on the clock, and what it was built from. */
-interface Settled {
-	settings: Snapshot['settings'];
-	resolve: Snapshot['resolve'];
-	links: Snapshot['links'];
-	byPath: Map<string, NoteData>;
-	actions: ActionNote[];
-	actionsByMatter: Map<string, ActionItem[]>;
-	people: PersonCandidate[];
-}
-
-const settled = new WeakMap<readonly NoteData[], Settled>();
-const carried = new WeakMap<readonly NoteData[], { from: readonly NoteData[]; changed: ReadonlySet<string> }>();
-
-/**
- * Lets a view of the notes `to` take each Action's item from the view of `from`, except for the paths in `changed`.
- * Only for a host that knows nothing else an item depends on changed in between: the same files (so every link
- * resolves as before), the same settings, and no note's `mtm-kind` changed. Pure bookkeeping: nothing is built here.
- */
-export function carryView(from: readonly NoteData[], to: readonly NoteData[], changed: ReadonlySet<string>): void {
-	carried.set(to, { from, changed });
-}
 
 /** A folder path without leading, trailing or doubled slashes ('' for the vault's root). */
 export function cleanFolder(folder: string): string {
@@ -96,48 +71,20 @@ export function vaultView(s: Snapshot): VaultView {
 	if (cached) return cached;
 
 	const today = toYmd(clock(s));
-	const { byPath, actions, actionsByMatter, people } = settle(s);
-	const kind = (n: NoteData) => n.frontmatter?.['mtm-kind'];
-	const resolvePath = (link: string, fromPath: string) => s.resolve(link, fromPath);
-	const resolveLink = resolveLinkFor(s, byPath);
-
-	const matterNotes = s.notes.filter((n) => kind(n) === 'matter');
-	const inboxNote = byPath.get(s.settings.inboxPath) ?? null;
-	const matters = matterList(matterNotes, inboxNote, s.settings, today);
-	const matterByPath = new Map<string, MatterInfo>();
-	for (const m of matters) if (!matterByPath.has(m.path)) matterByPath.set(m.path, m);
-
-	const view: VaultView = { today, byPath, actions, matters, matterByPath, actionsByMatter, people, resolveLink, resolvePath };
-	views.set(s, view);
-	return view;
-}
-
-const resolveLinkFor =
-	(s: Snapshot, byPath: Map<string, NoteData>) =>
-	(fromPath: string): ResolveLink =>
-	(text) => {
-		const path = s.resolve(text, fromPath);
-		if (!path) return null;
-		return { path, isMatter: byPath.get(path)?.frontmatter?.['mtm-kind'] === 'matter' };
-	};
-
-/** The clock-free part of the view: kept for the same notes, settings and resolution, carried over a change. */
-function settle(s: Snapshot): Settled {
-	const known = settled.get(s.notes);
-	if (known && known.settings === s.settings && known.resolve === s.resolve && known.links === s.links) return known;
-
 	const byPath = new Map(s.notes.map((n) => [n.path, n]));
 	const kind = (n: NoteData) => n.frontmatter?.['mtm-kind'];
-	const resolveLink = resolveLinkFor(s, byPath);
-	const carry = carried.get(s.notes);
-	const earlier = carry ? settled.get(carry.from) : undefined;
-	const earlierItems = earlier && earlier.settings === s.settings ? new Map(earlier.actions.map((a) => [a.note.path, a.item])) : undefined;
+	const resolvePath = (link: string, fromPath: string) => s.resolve(link, fromPath);
+	const resolveLink =
+		(fromPath: string): ResolveLink =>
+		(text) => {
+			const path = s.resolve(text, fromPath);
+			if (!path) return null;
+			return { path, isMatter: byPath.get(path)?.frontmatter?.['mtm-kind'] === 'matter' };
+		};
 
 	const actions = s.notes
 		.filter((n) => kind(n) === 'action')
 		.map((note) => {
-			const kept = carry?.changed.has(note.path) ? undefined : earlierItems?.get(note.path);
-			if (kept) return { note, item: kept };
 			const fm = note.frontmatter ?? {};
 			const item = toActionItem(note.path, note.basename, fm, s.settings, resolveLink(note.path));
 			const exclude = peoplePaths(fm, (t) => {
@@ -149,6 +96,11 @@ function settle(s: Snapshot): Settled {
 			return { note, item };
 		});
 
+	const matterNotes = s.notes.filter((n) => kind(n) === 'matter');
+	const inboxNote = byPath.get(s.settings.inboxPath) ?? null;
+	const matters = matterList(matterNotes, inboxNote, s.settings, today);
+	const matterByPath = new Map<string, MatterInfo>();
+	for (const m of matters) if (!matterByPath.has(m.path)) matterByPath.set(m.path, m);
 	const actionsByMatter = new Map<string, ActionItem[]>();
 	for (const { item } of actions) {
 		const list = actionsByMatter.get(item.effective.matterPath);
@@ -157,10 +109,9 @@ function settle(s: Snapshot): Settled {
 	}
 	const people = personCandidates(s.notes, cleanFolder(s.settings.folders.people));
 
-	// eslint-disable-next-line @typescript-eslint/unbound-method -- kept to compare by identity, never called
-	const result: Settled = { settings: s.settings, resolve: s.resolve, links: s.links, byPath, actions, actionsByMatter, people };
-	settled.set(s.notes, result);
-	return result;
+	const view: VaultView = { today, byPath, actions, matters, matterByPath, actionsByMatter, people, resolveLink, resolvePath };
+	views.set(s, view);
+	return view;
 }
 
 /** A resolved path as a link target (its extension tells notes from attachments). */

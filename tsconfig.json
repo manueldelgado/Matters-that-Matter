@@ -16,5 +16,5 @@
 		"resolveJsonModule": true,
 		"lib": ["ES2021", "DOM"]
 	},
-	"include": ["src/**/*.ts", "tests/**/*.ts", "cli/src/**/*.ts", "core/src/**/*.ts", "vitest.config.ts"]
+	"include": ["src/**/*.ts", "tests/**/*.ts", "cli/src/**/*.ts", "vitest.config.ts"]
 }

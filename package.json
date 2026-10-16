@@ -14,9 +14,7 @@
 		"test:watch": "vitest",
 		"fixture": "node scripts/fixture-vault.mjs tests/fixtures/mtm-fixture --replace",
 		"perf": "node scripts/perf-files.mjs",
-		"build:cli": "node cli/build.mjs",
-		"build:core": "node core/build.mjs",
-		"schema:core": "node core/schema.mjs"
+		"build:cli": "node cli/build.mjs"
 	},
 	"keywords": [
 		"obsidian-plugin"
@@ -37,7 +35,6 @@
 		"globals": "^17.6.0",
 		"jiti": "^2.6.1",
 		"obsidian": "1.13.1",
-		"ts-json-schema-generator": "2.9.0",
 		"typescript": "~5.9.3",
 		"typescript-eslint": "^8.59.1",
 		"vitest": "^5.0.3"
