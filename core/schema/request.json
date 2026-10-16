@@ -388,7 +388,7 @@
 				"action"
 			],
 			"additionalProperties": false,
-			"description": "An Action named by its path (`.md` optional) or its title."
+			"description": "An Action named by its path (`.md` optional), its title or its `mtm-id`."
 		},
 		"ReopenActionRequest": {
 			"type": "object",

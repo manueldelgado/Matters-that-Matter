@@ -82,7 +82,7 @@ export interface SerialisedSnapshot {
 
 // ——— Requests ———
 
-/** An Action named by its path (`.md` optional) or its title. */
+/** An Action named by its path (`.md` optional), its title or its `mtm-id`. */
 export interface ActionRef {
 	action: string;
 }
