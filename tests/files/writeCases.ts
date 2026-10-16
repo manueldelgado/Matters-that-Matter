@@ -90,6 +90,12 @@ export function caseReader(c: WriteCase): VaultReader {
 	};
 }
 
+/** IDs for new notes that tests can predict: 00000000-0000-4000-8000-000000000001, then …002 and so on. */
+function sequentialIds(): () => string {
+	let n = 0;
+	return () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
+}
+
 /** Public field names to the operations' keys. */
 function inputOf(c: WriteCase): Record<string, unknown> {
 	return Object.fromEntries(Object.entries(c.input).map(([k, v]) => [inputKey(k), v]));
@@ -98,7 +104,8 @@ function inputOf(c: WriteCase): Record<string, unknown> {
 function runOp(c: WriteCase, reader: VaultReader): OpResult<unknown> {
 	const index = new VaultIndex(reader, { configDir: CONFIG_DIR });
 	const settings = migrateSettings(JSON.parse(reader.read(`${CONFIG_DIR}/plugins/matters-that-matter/data.json`) ?? '{}'));
-	const s = filesSnapshot(index, settings, new Date(c.now));
+	// IDs for new notes that tests can predict, fresh for each case, as the command line's tests give them.
+	const s = { ...filesSnapshot(index, settings, new Date(c.now)), newId: sequentialIds() };
 	const input = inputOf(c);
 	switch (c.op) {
 		case 'addAction':

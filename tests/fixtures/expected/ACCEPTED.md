@@ -14,13 +14,13 @@ There are none: the file index reproduces `cache.json` byte for byte.
 
 Differences between what Obsidian leaves after applying a write case's plan (`writes/<case>/`) and what the files layer (`src/files/write.ts`) leaves for the same plan. `tests/files/writeCases.test.ts` ignores exactly the files listed in the `json writes` block below, and fails when one of them no longer differs. Each entry is `{ "case": "…", "path": "…", "reason": "…" }`: `path` is the vault path of a file in that case's result. A style difference still has to say the same thing: the test checks that both files have the same properties, as the index reads them, and the same body once line endings are made plain; `"keys": ["…"]` names properties whose values may differ. A difference in meaning must say so with `"meaning": true`, which skips those checks; nothing else can pass as style.
 
-Five are style only: the properties read the same and every link reaches the same file. When Obsidian changes a property it writes the whole block again in its own style (comments dropped, quoting and number forms normalised, flow lists as block lists); the files layer changes only the `mtm-` keys a plan names and leaves every other byte. Seen in `update-unusual-yaml` and, for links in properties, in `rename-to-a-taken-name`. Obsidian's own `processFrontMatter` would damage two kinds of note: one that starts with a byte-order mark, and one whose closing fence line has spaces after the dashes (an opening line with spaces it doesn't read as a block at all). It doesn't see their properties, writes a new block in front, and the old block (with `mtm-kind`) stays below as text. The plugin makes such fence lines plain before it writes properties (`vault/notes.ts`), as the oracle does: it drops the mark or the spaces, and the block is edited in place. The files layer keeps both. Seen in `update-byte-order-mark`, `update-byte-order-mark-properties` and `update-fence-whitespace`.
+Seven are style only: the properties read the same and every link reaches the same file. When Obsidian changes a property it writes the whole block again in its own style (comments dropped, quoting and number forms normalised, flow lists as block lists); the files layer changes only the `mtm-` keys a plan names and leaves every other byte. Seen in `update-unusual-yaml` and, for links in properties, in `rename-to-a-taken-name`. Obsidian's own `processFrontMatter` would damage two kinds of note: one that starts with a byte-order mark, and one whose closing fence line has spaces after the dashes (an opening line with spaces it doesn't read as a block at all). It doesn't see their properties, writes a new block in front, and the old block (with `mtm-kind`) stays below as text. The plugin makes such fence lines plain before it writes properties (`vault/notes.ts`), as the oracle does: it drops the mark or the spaces, and the block is edited in place. The files layer keeps both. Seen in `update-byte-order-mark`, `update-byte-order-mark-properties`, `update-details-byte-order-mark` (whose details edit comes with the note's first `mtm-id`) and `update-fence-whitespace`. And when Obsidian adds a key to the block of a note with Windows line endings, it writes the lines inside the block with plain line breaks, leaving the fences and the body as they were; the files layer keeps the note's own endings. Seen in `update-crlf`, which adds the note's `mtm-id`.
 
 One is a difference in meaning, accepted because Obsidian's own write damages the links and the files layer is deliberately safer:
 
 - **A percent sign in a renamed note's name** (`rename-to-a-title-with-symbols`): Obsidian writes `%` as it is in Markdown links, which then don't read back; the files layer writes `%25`.
 
-Every other case matches Obsidian byte for byte: the renames with links updated and not updated, a name that becomes unique (`rename-name-becomes-unique`: the same links rewritten as Obsidian rewrites them), and a CRLF note (`update-crlf`).
+Every other case matches Obsidian byte for byte, new `mtm-id` keys included: the renames with links updated and not updated, and a name that becomes unique (`rename-name-becomes-unique`: the same links rewritten as Obsidian rewrites them).
 
 ```json writes
 [
@@ -43,6 +43,16 @@ Every other case matches Obsidian byte for byte: the renames with links updated 
 		"case": "update-byte-order-mark-properties",
 		"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
 		"reason": "Style only. The same as update-byte-order-mark, with no body edit: the plugin drops the mark before processFrontMatter; the files layer keeps it. The properties and the body read the same."
+	},
+	{
+		"case": "update-details-byte-order-mark",
+		"path": "MTM/Sample/Edge cases/More links/More - byte-order mark.md",
+		"reason": "Style only. The same as update-byte-order-mark: the details edit comes with the note's first mtm-id, so the plugin drops the mark before processFrontMatter; the files layer keeps it. The properties and the body read the same."
+	},
+	{
+		"case": "update-crlf",
+		"path": "MTM/Sample/Edge cases/Edge - Windows line endings.md",
+		"reason": "Style only. The note has Windows line endings. Adding its mtm-id, Obsidian's processFrontMatter writes the lines inside the block with plain line breaks and keeps CRLF on the fences and in the body, so the note's endings are mixed; the files layer keeps CRLF on every line. The properties and the body read the same."
 	},
 	{
 		"case": "update-fence-whitespace",

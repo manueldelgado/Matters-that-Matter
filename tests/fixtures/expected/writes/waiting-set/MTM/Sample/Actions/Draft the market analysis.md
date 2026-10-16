@@ -11,5 +11,6 @@ mtm-waiting-since: 2026-10-09
 mtm-waiting-on: "[[Bob Baker]]"
 mtm-people:
   - "[[Bob Baker]]"
+mtm-id: 00000000-0000-4000-8000-000000000001
 ---
 Three competitors, two scenarios.

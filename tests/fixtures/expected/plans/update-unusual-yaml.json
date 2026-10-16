@@ -12,7 +12,8 @@
 					"mtm-type": "call",
 					"mtm-status": "doing",
 					"mtm-matter": "[[Kitchen renovation]]",
-					"mtm-priority": 2
+					"mtm-priority": 2,
+					"mtm-id": "00000000-0000-4000-8000-000000000001"
 				},
 				"remove": []
 			}

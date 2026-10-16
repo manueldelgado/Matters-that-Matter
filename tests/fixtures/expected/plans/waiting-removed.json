@@ -11,7 +11,8 @@
 				"set": {
 					"mtm-type": "message",
 					"mtm-status": "waiting",
-					"mtm-matter": "[[Lakeside strategy review]]"
+					"mtm-matter": "[[Lakeside strategy review]]",
+					"mtm-id": "00000000-0000-4000-8000-000000000001"
 				},
 				"remove": [
 					"mtm-waiting-on",

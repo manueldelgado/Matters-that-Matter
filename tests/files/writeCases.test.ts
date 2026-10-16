@@ -26,6 +26,8 @@ const file = (name: string, path: string): string => {
 	return text;
 };
 const fixture = (name: string, path: string) => run(name).reader.read(path) ?? '';
+/** The ID a case gives the first note it writes without one (each case counts from 1). */
+const ID = '00000000-0000-4000-8000-000000000001';
 
 describe('the write cases', () => {
 	it('are at least 25, named uniquely, as plain file names', () => {
@@ -47,6 +49,7 @@ describe('what the files layer writes', () => {
 			[
 				'---',
 				'mtm-kind: action',
+				`mtm-id: ${ID}`,
 				'mtm-type: call',
 				'mtm-status: next',
 				'mtm-matter: "[[Kitchen renovation]]"',
@@ -64,6 +67,7 @@ describe('what the files layer writes', () => {
 			[
 				'---',
 				'mtm-kind: action',
+				`mtm-id: ${ID}`,
 				'mtm-type: write',
 				'mtm-status: later',
 				'mtm-matter: "[[Kitchen renovation]]"',
@@ -80,14 +84,18 @@ describe('what the files layer writes', () => {
 		);
 	});
 
-	it('marks done with the completion date after the last mtm- key', () => {
+	it('marks done with the completion date after the last mtm- key, and the note’s first ID after it', () => {
 		const path = 'MTM/Sample/Actions/Confirm the worktop measurements.md';
-		expect(file('done', path)).toBe(fixture('done', path).replace('mtm-status: next', 'mtm-status: done').replace('mtm-sample: true\n', 'mtm-sample: true\nmtm-completed: 2026-10-09\n'));
+		expect(file('done', path)).toBe(
+			fixture('done', path).replace('mtm-status: next', 'mtm-status: done').replace('mtm-sample: true\n', `mtm-sample: true\nmtm-completed: 2026-10-09\nmtm-id: ${ID}\n`),
+		);
 	});
 
 	it('reopens: the backlog status, the completion date gone', () => {
 		const path = 'MTM/Sample/Actions/Buy running shoes.md';
-		expect(file('reopen', path)).toBe(fixture('reopen', path).replace('mtm-status: done', 'mtm-status: later').replace('mtm-completed: 2026-09-29\n', ''));
+		expect(file('reopen', path)).toBe(
+			fixture('reopen', path).replace('mtm-status: done', 'mtm-status: later').replace('mtm-completed: 2026-09-29\n', '').replace('mtm-sample: true\n', `mtm-sample: true\nmtm-id: ${ID}\n`),
+		);
 	});
 
 	it('keeps CRLF line endings in the properties and the body', () => {
@@ -102,14 +110,14 @@ describe('what the files layer writes', () => {
 		const text = file('update-byte-order-mark', path);
 		expect(text.startsWith('﻿---\n')).toBe(true);
 		expect(text).toBe(
-			`${fixture('update-byte-order-mark', path).replace('mtm-status: next', 'mtm-status: doing')}\n- [ ] Check the mark is still there\n`,
+			`${fixture('update-byte-order-mark', path).replace('mtm-status: next', 'mtm-status: doing').replace('mtm-sample: true\n', `mtm-sample: true\nmtm-id: ${ID}\n`)}\n- [ ] Check the mark is still there\n`,
 		);
 	});
 
 	it('keeps comments, quoting and every other key of unusual YAML byte for byte', () => {
 		const path = 'MTM/Sample/Edge cases/Edge - unusual YAML.md';
 		expect(file('update-unusual-yaml', path)).toBe(
-			fixture('update-unusual-yaml', path).replace("mtm-status: 'next'", 'mtm-status: doing').replace('mtm-sample: true\n', 'mtm-sample: true\nmtm-priority: 2\n'),
+			fixture('update-unusual-yaml', path).replace("mtm-status: 'next'", 'mtm-status: doing').replace('mtm-sample: true\n', `mtm-sample: true\nmtm-priority: 2\nmtm-id: ${ID}\n`),
 		);
 	});
 
@@ -118,7 +126,7 @@ describe('what the files layer writes', () => {
 		const from = 'MTM/Sample/Actions/Confirm the worktop measurements.md';
 		const to = 'MTM/Sample/Actions/Measure the worktop.md';
 		expect(r.removed).toEqual([from]);
-		expect(r.written.get(to)).toBe(fixture('rename-links-on', from));
+		expect(r.written.get(to)).toBe(fixture('rename-links-on', from).replace('mtm-sample: true\n', `mtm-sample: true\nmtm-id: ${ID}\n`));
 		const links = file('rename-links-on', 'MTM/Sample/Notes/Worktop links.md');
 		expect(links).toBe(
 			[
@@ -176,13 +184,15 @@ describe('what the files layer writes', () => {
 describe('what the files layer writes in the harder cases', () => {
 	it('edits a block whose closing line has spaces after the dashes where it is, keeping the fences', () => {
 		expect(file('update-fence-whitespace', 'MTM/Sample/Edge cases/Edge - fence with spaces.md')).toBe(
-			'---\nmtm-kind: action\nmtm-type: write\nmtm-status: doing\nmtm-matter: "[[Kitchen renovation]]"\n--- \t\nFence lines with spaces after the dashes.\n',
+			`---\nmtm-kind: action\nmtm-type: write\nmtm-status: doing\nmtm-matter: "[[Kitchen renovation]]"\nmtm-id: ${ID}\n--- \t\nFence lines with spaces after the dashes.\n`,
 		);
 	});
 
 	it('keeps the byte-order mark when only properties change', () => {
 		const path = 'MTM/Sample/Edge cases/More links/More - byte-order mark.md';
-		expect(file('update-byte-order-mark-properties', path)).toBe(fixture('update-byte-order-mark-properties', path).replace('mtm-status: next', 'mtm-status: doing'));
+		expect(file('update-byte-order-mark-properties', path)).toBe(
+			fixture('update-byte-order-mark-properties', path).replace('mtm-status: next', 'mtm-status: doing').replace('mtm-sample: true\n', `mtm-sample: true\nmtm-id: ${ID}\n`),
+		);
 	});
 
 	it('encodes a percent sign and spaces in Markdown links to a renamed note; parentheses and accents stay', () => {

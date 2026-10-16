@@ -79,8 +79,8 @@ describe('the write cases, through the command line', () => {
 	it.each(cases.map((c) => [c.name, c] as [string, WriteCase]))('%s: the files written are Obsidian’s', async (name, c) => {
 		const root = caseVault(c);
 		const before = hashes(root);
-		// Obsidian's results were taken without IDs, so none are written here.
-		const r = await mtm([...argvOf(c), '--json', '--vault', root], { newId: null });
+		// The same sequential IDs for new notes as the files layer's run of the case.
+		const r = await mtm([...argvOf(c), '--json', '--vault', root]);
 		expect(r.code, `${name}: ${r.stdout}${r.stderr}`).toBe(0);
 		const after = hashes(root);
 
