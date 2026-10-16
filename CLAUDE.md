@@ -41,6 +41,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 
 - Code, identifiers, comments and UI strings in British English. UI text in sentence case.
 - Name the plugin "Matters that Matter" in full in UI strings, CLI output, READMEs and docs, never "Matters": on its own, "Matters" means several Matters. "The plugin" may stand in where the name would repeat. Details markers already in notes keep their old wording ("as edited in Matters") until the plugin next writes the body; they are recognised by their token alone.
+- The same goes for the names of things people see or type, not only copy: where a name admits spaces and capitals (a title, a display name), "Matters that Matter"; where it must be an identifier (an MCP server key, a package, a command, a file people keep), `matters-that-matter`. Never `matters` or `mtm` as a short name for the product. Setup examples add the MCP server as `matters-that-matter`.
 - Formatting follows `.editorconfig`: tabs, single quotes.
 - Use `this.app`, never the global `app`.
 - Build DOM with `createEl`/`createDiv`; never `innerHTML` with dynamic content. Icons with `setIcon`.
