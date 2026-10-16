@@ -130,13 +130,25 @@ function generated(count: number): string[] {
 	return out;
 }
 
+/**
+ * Hosts with an `xn--` label that isn't valid Punycode (`xn--`, `xn--abc`): Node 22 and Node 24 up to 24.13 refuse
+ * them, as the bundle does; later Node 24 releases take them. Where Node takes them, the bundle still refuses the
+ * hand-picked ones, and generated addresses with such a label are left out.
+ */
+const lenientPunycode = parse(URL, 'http://xn--/') !== 'TypeError';
+const VALID_PUNYCODE = ['xn--mnchen-3ya', 'xn--ls8h'];
+const unsettled = (text: string) => lenientPunycode && VALID_PUNYCODE.reduce((t, label) => t.split(label).join(''), text.toLowerCase()).includes('xn--');
+const expected = (text: string) => (unsettled(text) ? 'TypeError' : parse(URL, text));
+
 describe('the bundle’s URL parser', () => {
 	it.each(CASES)('%s', (text) => {
-		expect(parse(WebURL, text)).toBe(parse(URL, text));
+		expect(parse(WebURL, text)).toBe(expected(text));
 	});
 
 	it('agrees with the URL Standard on 5,000 generated addresses', () => {
-		const differ = generated(5000).filter((text) => parse(WebURL, text) !== parse(URL, text));
+		const differ = generated(5000)
+			.filter((text) => !unsettled(text))
+			.filter((text) => parse(WebURL, text) !== parse(URL, text));
 		expect(differ.map((text) => [text, parse(WebURL, text), parse(URL, text)])).toEqual([]);
 	});
 

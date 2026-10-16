@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, it } from 'vitest';
+import { afterAll, beforeAll, describe, it } from 'vitest';
 import type { CoreResponse } from '../../core/src/boundary';
 import { bundle } from './bundle';
 import { expectAsSources } from './compare';
@@ -21,16 +21,23 @@ const answers = readFile(requests).split('\\n').filter((line) => line !== '').ma
 writeFile(out, answers.join('\\n'));
 `;
 
-describe.skipIf(!existsSync(JSC))('the corpus in JavaScriptCore', async () => {
-	const dir = mkdtempSync(join(tmpdir(), 'mtm-core-jsc-'));
-	afterAll(() => rmSync(dir, { recursive: true, force: true }));
+// A skipped suite's body still runs while tests are collected: the shell runs in `beforeAll`, which it skips.
+describe.skipIf(!existsSync(JSC))('the corpus in JavaScriptCore', () => {
 	const entries = corpus();
-	const paths = { core: join(dir, 'mtm-core.js'), requests: join(dir, 'requests.jsonl'), out: join(dir, 'answers.jsonl'), driver: join(dir, 'driver.js') };
-	writeFileSync(paths.core, (await bundle()).code);
-	writeFileSync(paths.requests, entries.map((e) => JSON.stringify(e.request)).join('\n'));
-	writeFileSync(paths.driver, DRIVER);
-	execFileSync(JSC, [paths.driver, '--', paths.core, paths.requests, paths.out], { maxBuffer: 1 << 28 });
-	const answers = readFileSync(paths.out, 'utf8').split('\n');
+	let dir = '';
+	let answers: string[] = [];
+	beforeAll(async () => {
+		dir = mkdtempSync(join(tmpdir(), 'mtm-core-jsc-'));
+		const paths = { core: join(dir, 'mtm-core.js'), requests: join(dir, 'requests.jsonl'), out: join(dir, 'answers.jsonl'), driver: join(dir, 'driver.js') };
+		writeFileSync(paths.core, (await bundle()).code);
+		writeFileSync(paths.requests, entries.map((e) => JSON.stringify(e.request)).join('\n'));
+		writeFileSync(paths.driver, DRIVER);
+		execFileSync(JSC, [paths.driver, '--', paths.core, paths.requests, paths.out], { maxBuffer: 1 << 28 });
+		answers = readFileSync(paths.out, 'utf8').split('\n');
+	});
+	afterAll(() => {
+		if (dir) rmSync(dir, { recursive: true, force: true });
+	});
 
 	it.each(entries.map((e, i) => [e.name, e, i] as [string, CorpusEntry, number]))('%s', (_name, e, i) => {
 		expectAsSources(e, JSON.parse(answers[i] ?? 'null') as CoreResponse);
