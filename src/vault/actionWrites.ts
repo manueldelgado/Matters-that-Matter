@@ -15,7 +15,7 @@ import { matterLink as matterLinkFor, newActionFrontmatter, personKey } from '..
 import { STRINGS } from '../strings';
 import { now } from './clock';
 import { resolverFor, targetResolver } from './index';
-import { createNote, ensureFolder, linkTo, nameTaken, pathTaken, processFrontMatter, type Frontmatter } from './notes';
+import { createNote, ensureFolder, ensureNoteId, linkTo, nameTaken, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 export interface ActionTarget {
 	statusId?: string;
@@ -117,15 +117,18 @@ export async function createAction(app: App, settings: MattersSettings, init: Ne
 /** `previous` is the details text the inspector last read or wrote (see setDetails). */
 export async function writeDetails(app: App, file: TFile, details: string, previous?: string): Promise<void> {
 	await app.vault.process(file, (content) => setDetails(content, details, previous));
+	await ensureNoteId(app, file);
 }
 
 export async function setChecklistItem(app: App, file: TFile, line: number, text: string, checked: boolean): Promise<void> {
 	await app.vault.process(file, (content) => toggleTask(content, line, text, checked));
+	await ensureNoteId(app, file);
 }
 
 export async function addChecklistItem(app: App, file: TFile, text: string): Promise<void> {
 	if (!text.trim()) return;
 	await app.vault.process(file, (content) => insertTask(content, text));
+	await ensureNoteId(app, file);
 }
 
 /**

@@ -6,7 +6,7 @@ import { parseMtmDate, startsAfterDue } from '../model/dates';
 import { sanitiseTitle } from '../model/titles';
 import type { MatterInfo } from '../services/boardModel';
 import { matchDefined, matchNote } from '../services/match';
-import { matterLink, newActionFrontmatter } from '../services/notesModel';
+import { matterLink, newActionFrontmatter, noteId } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { publicField } from './fieldNames';
 import { done, fail, fallbacks, isBlank, notAPerson, readDate, readDetails, readLink, readList, readPriority, readText, readiness, type Read } from './fields';
@@ -86,7 +86,7 @@ export function addAction(given: AddActionInput, s: Snapshot): OpResult<ActionWr
 	if (input.matter !== undefined) {
 		const m = matchNote(
 			input.matter,
-			view.matters.map((x) => ({ path: x.path, name: x.name })),
+			view.matters.map((x) => ({ path: x.path, name: x.name, id: noteId(view.byPath.get(x.path)?.frontmatter) })),
 			(t) => s.resolve(t, path),
 		);
 		if (m.kind === 'ambiguous') return fail(ambiguousError('matter', input.matter, T.severalMatters(input.matter), m.items.map((i) => i.path)));
@@ -167,7 +167,7 @@ export function addAction(given: AddActionInput, s: Snapshot): OpResult<ActionWr
 
 	const linkTo = (target: string) => `[[${s.linkText(target, path)}]]`;
 	const unique = [...new Set(waitingOn && !people.includes(waitingOn) ? [...people, waitingOn] : people)];
-	const fm = newActionFrontmatter(
+	const fields = newActionFrontmatter(
 		{
 			statusId: status.id,
 			typeId: type.id,
@@ -185,7 +185,10 @@ export function addAction(given: AddActionInput, s: Snapshot): OpResult<ActionWr
 	// The Action links to the Inbox all the same; the plugin creates the note again.
 	if (matterPath === inbox.path && !s.exists(inbox.path)) warnings.push({ code: 'missing-inbox', value: inbox.path, message: T.missingInbox(inbox.path) });
 
-	const builder = new PlanBuilder();
+	const builder = new PlanBuilder(s);
+	const fm = builder.identify(fields);
 	builder.create(path, fm, bodyEdits);
+	// The Matter it is filed under decided its lane.
+	builder.rely(matterPath);
 	return { ok: true, value: { action: summaryAfter(path, title, fm, s), changed: true }, plan: builder.plan, changes: builder.changes, warnings };
 }

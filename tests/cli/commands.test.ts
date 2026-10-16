@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { ContentsAfter } from '../../cli/src/filesLayer';
-import { fixtureCopy, hashes, mtm, normalise, read, syntheticVault, tempDir, writeFiles } from './helpers';
+import { fixtureCopy, hashes, mtm, normalise, OPERATION_ID, read, SETTINGS_FILE, syntheticVault, tempDir, writeFiles } from './helpers';
+import { contentVersion as sha256 } from '../../cli/src/filesLayer';
 import { contentsAfter } from '../../cli/src/filesLayer';
 import { dryRunWording } from '../../cli/src/strings';
 import { STRINGS } from '../../src/strings';
@@ -320,11 +321,16 @@ describe('writing', () => {
 		made.push(dirname(out));
 		const r = await mtm(['done', 'Send the invoice', '--dry-run', '--plan-out', out, '--vault', root], writer);
 		expect(r.code).toBe(0);
-		expect(JSON.parse(readFileSync(out, 'utf8'))).toEqual({
+		const plan: unknown = JSON.parse(readFileSync(out, 'utf8'));
+		expect(plan).toEqual({
+			id: OPERATION_ID,
 			creates: [],
-			edits: [{ path: 'MTM/Actions/Send the invoice.md', set: { 'mtm-status': 'done', 'mtm-type': 'write', 'mtm-matter': '[[Advisory work]]', 'mtm-completed': '2026-10-09' }, remove: [] }],
+			edits: [{ path: 'MTM/Actions/Send the invoice.md', set: { 'mtm-status': 'done', 'mtm-type': 'write', 'mtm-matter': '[[Advisory work]]', 'mtm-completed': '2026-10-09', 'mtm-id': '00000000-0000-4000-8000-000000000001' }, remove: [] }],
 			bodies: [],
 			renames: [],
+			// What it was computed from: the note it writes, by a SHA-256 of its content, and the settings.
+			basis: [{ path: 'MTM/Actions/Send the invoice.md', version: sha256(read(root, 'MTM/Actions/Send the invoice.md')) }],
+			settingsVersion: sha256(read(root, SETTINGS_FILE)),
 		});
 	});
 });
@@ -363,6 +369,69 @@ describe('a file that changes while writing', () => {
 		const json = await mtm(['done', 'Send the invoice', '--json', '--vault', root], { contentsAfter: racing(root, 2) });
 		expect(json.code).toBe(3);
 		expect(JSON.parse(json.stdout)).toMatchObject({ error: { code: 'changed', path: 'MTM/Actions/Send the invoice.md' } });
+	});
+});
+
+describe('a file the plan relied on that changes while writing', () => {
+	/** A writer that changes `path` on disk after the plan is made, the first `times` times. */
+	const touching = (root: string, path: string, times: number): ContentsAfter => {
+		let n = 0;
+		return (plan, reader, options) => {
+			const outcome = contentsAfter(plan, reader, options);
+			if (n++ < times) writeFiles(root, { [path]: `${read(root, path)}\nChanged elsewhere.\n` });
+			return outcome;
+		};
+	};
+
+	it('the Matter an Action is filed under: planned again once, then written', async () => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['add', 'Order the bricks', '--matter', 'Kitchen renovation', '--vault', root], { contentsAfter: touching(root, 'MTM/Matters/Kitchen renovation.md', 1) });
+		expect(r.code).toBe(0);
+		expect(read(root, 'MTM/Actions/Order the bricks.md')).toContain('mtm-matter: "[[Kitchen renovation]]"');
+	});
+
+	it('the settings: a change is read again, and the write planned with it', async () => {
+		const root = keep(syntheticVault());
+		let n = 0;
+		const once: ContentsAfter = (plan, reader, options) => {
+			const outcome = contentsAfter(plan, reader, options);
+			if (n++ === 0) {
+				const settings = JSON.parse(read(root, SETTINGS_FILE)) as Record<string, unknown>;
+				writeFiles(root, { [SETTINGS_FILE]: JSON.stringify({ ...settings, weekStart: 'sunday' }) });
+			}
+			return outcome;
+		};
+		const r = await mtm(['done', 'Send the invoice', '--vault', root], { contentsAfter: once });
+		expect(r.code).toBe(0);
+		expect(read(root, 'MTM/Actions/Send the invoice.md')).toContain('mtm-status: done');
+		expect(n).toBe(2);
+	});
+
+	it('the settings: changing twice writes nothing', async () => {
+		const root = keep(syntheticVault());
+		const before = hashes(root);
+		let n = 0;
+		const twice: ContentsAfter = (plan, reader, options) => {
+			const outcome = contentsAfter(plan, reader, options);
+			if (n++ < 2) writeFiles(root, { [SETTINGS_FILE]: JSON.stringify({ ...(JSON.parse(read(root, SETTINGS_FILE)) as object), weekStart: n === 1 ? 'sunday' : 'monday' }) });
+			return outcome;
+		};
+		const r = await mtm(['done', 'Send the invoice', '--vault', root], { contentsAfter: twice });
+		expect(r.code).toBe(3);
+		expect(r.stderr).toContain('data.json changed just as it was about to be written');
+		const after = hashes(root);
+		expect(Object.keys(after).filter((p) => after[p] !== before[p])).toEqual([SETTINGS_FILE]);
+	});
+
+	it('the settings: unreadable once they changed, nothing written, and it says so', async () => {
+		const root = keep(syntheticVault());
+		const before = hashes(root);
+		const r = await mtm(['done', 'Send the invoice', '--vault', root], { contentsAfter: touching(root, SETTINGS_FILE, 1) });
+		expect(r.code).toBe(3);
+		expect(r.stderr).toContain('data.json');
+		expect(r.stderr).not.toContain('changed just as it was about to be written');
+		const after = hashes(root);
+		expect(Object.keys(after).filter((p) => after[p] !== before[p])).toEqual([SETTINGS_FILE]);
 	});
 });
 

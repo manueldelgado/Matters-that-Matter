@@ -55,7 +55,7 @@ export function moveToStatus(ref: string, s: Snapshot, target: (statuses: readon
 	if (!status) return { ok: false, error: { code: 'not-ready', message: STRINGS.ops.noWorkflow } };
 	const before = note.frontmatter ?? {};
 	const after: Record<string, unknown> = { ...before };
-	const builder = new PlanBuilder();
+	const builder = new PlanBuilder(s);
 	const current = item.effective;
 	if (!already(current.category, current.status.id, status.id)) {
 		place(after, { status, typeId: current.type.id, matterPath: current.matterPath }, { statusId: current.status.id, category: current.category, matterPath: current.matterPath }, note.path, s);

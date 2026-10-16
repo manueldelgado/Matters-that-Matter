@@ -15,6 +15,7 @@ export function quickAddContext(s: Snapshot): QuickAddContext {
 		matters: view.matters.map((m) => ({ path: m.path, names: [m.name], rank: m.isInbox ? 0 : 1 })),
 		people: view.people,
 		languages: s.settings.dateLanguages,
+		timeZone: s.timeZone,
 	};
 }
 

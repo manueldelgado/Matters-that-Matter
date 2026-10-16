@@ -5,7 +5,7 @@ import { plainFences } from '../files/fences';
 import { foldName } from '../files/paths';
 import { parseLaneOrder } from '../model/matters';
 import { sanitiseTitle, uniqueTitle } from '../model/titles';
-import type { Frontmatter } from '../services/notesModel';
+import { hasNoteId, IDENTIFIED_KINDS, withNoteId, type Frontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
 
 export type { Frontmatter } from '../services/notesModel';
@@ -68,7 +68,29 @@ export async function processFrontMatter(app: App, file: TFile, change: (fm: Fro
 	if (plainFences(await app.vault.adapter.read(file.path)) !== null) {
 		await app.vault.process(file, (content) => plainFences(content) ?? content);
 	}
-	await app.fileManager.processFrontMatter(file, change);
+	await app.fileManager.processFrontMatter(file, (fm: Frontmatter) => {
+		const before = JSON.stringify(fm);
+		change(fm);
+		// An Action or Matter written without a stable ID gets one with this write; a change that changed nothing writes none.
+		if (JSON.stringify(fm) !== before && IDENTIFIED_KINDS.includes(fm['mtm-kind']) && !hasNoteId(fm)) fm['mtm-id'] = newNoteId();
+	});
+}
+
+/**
+ * Gives an Action or Matter the `mtm-id` it lacks, after a write that changed only its body (`Vault.process`), as a
+ * properties write would.
+ */
+export async function ensureNoteId(app: App, file: TFile): Promise<void> {
+	const fm = frontmatterOf(app, file);
+	if (!fm || !IDENTIFIED_KINDS.includes(fm['mtm-kind']) || hasNoteId(fm)) return;
+	await processFrontMatter(app, file, (data: Frontmatter) => {
+		if (!hasNoteId(data)) data['mtm-id'] = newNoteId();
+	});
+}
+
+/** A new `mtm-id`: a random UUID. */
+export function newNoteId(): string {
+	return crypto.randomUUID();
 }
 
 export function exists(app: App, path: string): boolean {
@@ -88,8 +110,10 @@ export async function ensureFolder(app: App, path: string): Promise<void> {
 export async function createNote(app: App, path: string, frontmatter: Frontmatter, body = ''): Promise<TFile> {
 	const file = await app.vault.create(normalizePath(path), body);
 	if (Object.keys(frontmatter).length > 0) {
+		// An Action or Matter's ID right after its kind.
+		const keyed = withNoteId(frontmatter, newNoteId);
 		await processFrontMatter(app, file, (fm: Frontmatter) => {
-			Object.assign(fm, frontmatter);
+			Object.assign(fm, keyed);
 		});
 	}
 	return file;
@@ -100,10 +124,10 @@ export function linkTo(app: App, target: TFile, sourcePath: string): string {
 	return `[[${app.metadataCache.fileToLinktext(target, sourcePath, true)}]]`;
 }
 
-/** A person is a plain note in the people folder: people get no MTM properties. */
+/** A person is a note in the people folder, with a stable ID (`mtm-id`) as its only property. */
 export async function createPersonNote(app: App, peopleFolder: string, name: string): Promise<TFile> {
 	const folder = normalizePath(peopleFolder);
 	await ensureFolder(app, folder);
 	const title = uniqueTitle(sanitiseTitle(name) || STRINGS.untitledPerson, (t) => pathTaken(app, `${folder}/${t}.md`));
-	return app.vault.create(`${folder}/${title}.md`, '');
+	return createNote(app, `${folder}/${title}.md`, { 'mtm-id': newNoteId() });
 }

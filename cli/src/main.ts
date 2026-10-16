@@ -8,6 +8,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { resolve } from 'node:path';
 import type { VaultReader } from '../../src/files/index';
 import { toYmd } from '../../src/model/dates';
+import { clock } from '../../src/ops/clock';
 import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, parseQuickAdd, reopen, today, updateAction } from '../../src/ops';
 import { readiness } from '../../src/ops/fields';
 import { findActionOrMatter } from '../../src/ops/findAction';
@@ -58,6 +59,10 @@ export interface CliIo {
 	home: string;
 	/** The clock when `--now` isn't given. */
 	clock?: () => Date;
+	/** New `mtm-id`s; random UUIDs when absent, none when null. */
+	newId?: (() => string) | null;
+	/** The ID of each write's operation; random UUIDs when absent. */
+	operationId?: () => string;
 	opener?: Opener;
 	/** The plan applier; the files layer's when absent. */
 	contentsAfter?: ContentsAfter;
@@ -159,6 +164,8 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 				dryRun: boolFlag(flags, 'dry-run'),
 				now: fixedNow,
 				clock: io.clock,
+				newId: io.newId,
+				operationId: io.operationId,
 				reader: io.reader,
 				contentsAfter: io.contentsAfter,
 				fs: io.fs,
@@ -191,13 +198,13 @@ async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise
 		case 'matters':
 			return read(ctx, listMatters, (v) => formatMatters(v, ctx.out));
 		case 'list':
-			return read(ctx, (s) => listActions(listInput(ctx.flags, ctx.vault.root), s), (v, s) => formatList(v, toYmd(s.now), typeTones(s), ctx.out, width));
+			return read(ctx, (s) => listActions(listInput(ctx.flags, ctx.vault.root), s), (v, s) => formatList(v, toYmd(clock(s)), typeTones(s), ctx.out, width));
 		case 'show':
 			if (!ref) return usageError(ctx, CLI.nameAction);
-			return read(ctx, (s) => getAction(ref, s), (v, s) => formatShow(v, toYmd(s.now), ctx.out));
+			return read(ctx, (s) => getAction(ref, s), (v, s) => formatShow(v, toYmd(clock(s)), ctx.out));
 		case 'parse':
 			if (!words) return usageError(ctx, CLI.noParseText);
-			return read(ctx, (s) => parseQuickAdd(words, s), (v, s, w) => formatParse(v, w, toYmd(s.now), ctx.out), true);
+			return read(ctx, (s) => parseQuickAdd(words, s), (v, s, w) => formatParse(v, w, toYmd(clock(s)), ctx.out), true);
 		case 'add':
 			return writeAction(ctx, (s) => addAction({ ...(words ? { text: words } : {}), ...fieldInput(ctx.flags, ctx.vault.root) }, s), null);
 		case 'update': {
@@ -275,7 +282,7 @@ function listInput(flags: Record<string, FlagValue>, root: string): ListActionsI
 // ——— Reading ———
 
 function snapshot(ctx: Context): { snap: Snapshot; reader: VaultReader } {
-	return takeSnapshot(ctx.vault, ctx.now, ctx.io.reader);
+	return takeSnapshot(ctx.vault, ctx.now, ctx.io.reader, ctx.io.newId);
 }
 
 /** Warnings about the vault as a whole go to stderr, so stdout stays the answer. */
@@ -331,6 +338,8 @@ function write<T>(ctx: Context, op: (s: Snapshot) => OpResult<T>): Written<T> | 
 			now: ctx.now,
 			dryRun: ctx.dryRun,
 			reader: ctx.io.reader,
+			newId: ctx.io.newId,
+			operationId: ctx.io.operationId?.(),
 			contentsAfter: ctx.io.contentsAfter,
 			fs: ctx.io.fs,
 			onPlan: planOut
@@ -363,7 +372,7 @@ function writeAction(ctx: Context, op: (s: Snapshot) => OpResult<ActionWrite>, v
 		print(ctx.io.stdout, stringify(writeJson({ action: r.value.action }, r, outcome, ctx.dryRun, written)));
 		return EXIT.done;
 	}
-	print(ctx.io.stdout, formatActionWrite(verb, r, outcome, toYmd(snap.now), ctx.dryRun, ctx.out));
+	print(ctx.io.stdout, formatActionWrite(verb, r, outcome, toYmd(clock(snap)), ctx.dryRun, ctx.out));
 	return EXIT.done;
 }
 

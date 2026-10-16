@@ -8,6 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError, type CallToolResult, type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { toYmd } from '../../src/model/dates';
+import { clock } from '../../src/ops/clock';
 import { addAction, addMatter, getAction, getWorkflow, inputKey, listActions, listMatters, markAsDone, reopen, today, updateAction } from '../../src/ops';
 import type { ActionWrite, MatterSummary, OpError, OpResult, Snapshot, Warning } from '../../src/ops/types';
 import { STRINGS } from '../../src/strings';
@@ -228,6 +229,7 @@ const noteRef = obj({ path: strOrNull, name: str });
 
 const ACTION = obj({
 	path: str,
+	id: strOrNull,
 	title: str,
 	matter: obj({ path: str, name: str, isInbox: bool }),
 	status: obj({ id: str, label: str, category: { enum: ['open', 'active', 'closed'] } }),
@@ -260,6 +262,7 @@ const ACTION_DETAIL: JsonSchema = {
 
 const MATTER = obj({
 	path: str,
+	id: strOrNull,
 	name: str,
 	icon: str,
 	isInbox: bool,
@@ -353,6 +356,10 @@ export interface McpConfig {
 	/** A fixed time (`--now`); otherwise the clock at each call. */
 	now: Date | null;
 	clock?: () => Date;
+	/** New `mtm-id`s; random UUIDs when absent, none when null. */
+	newId?: (() => string) | null;
+	/** The ID of each write's operation; random UUIDs when absent. */
+	operationId?: () => string;
 	reader?: ReaderFactory;
 	contentsAfter?: ContentsAfter;
 	fs?: ApplyFs;
@@ -390,7 +397,7 @@ function vaultNotes(vault: Vault, warnings: readonly Warning[], read: boolean): 
 
 /** A read: the human output as text, the `--json` value as structured content (lists inside an object). */
 function read<T>(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) => OpResult<T>, human: (value: T, s: Snapshot) => string[], wrap?: string): CallToolResult {
-	const { snap } = takeSnapshot(vault, now, config.reader);
+	const { snap } = takeSnapshot(vault, now, config.reader, config.newId);
 	const r = op(snap);
 	if (!r.ok) return opError(r.error, false);
 	return {
@@ -400,7 +407,7 @@ function read<T>(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) =
 }
 
 function writeSource(vault: Vault, now: Date, config: McpConfig) {
-	return { vault, now, dryRun: config.dryRun, reader: config.reader, contentsAfter: config.contentsAfter, fs: config.fs };
+	return { vault, now, dryRun: config.dryRun, reader: config.reader, newId: config.newId, operationId: config.operationId?.(), contentsAfter: config.contentsAfter, fs: config.fs };
 }
 
 function failed<T>(w: Exclude<WriteFlow<T>, { ok: true }>): CallToolResult {
@@ -412,7 +419,7 @@ function writeAction(vault: Vault, now: Date, config: McpConfig, op: (s: Snapsho
 	const w = planAndWrite(writeSource(vault, now, config), op);
 	if (!w.ok) return failed(w);
 	const { r, snap, outcome, written } = w;
-	const lines = [...formatActionWrite(verb, r, outcome, toYmd(snap.now), config.dryRun, plain), ...warningPointers(r.warnings)];
+	const lines = [...formatActionWrite(verb, r, outcome, toYmd(clock(snap)), config.dryRun, plain), ...warningPointers(r.warnings)];
 	return {
 		content: [{ type: 'text', text: textResult([...vaultNotes(vault, r.warnings, false), ...lines]) }],
 		structuredContent: writeJson({ action: r.value.action }, r, outcome, config.dryRun, written) as unknown as Record<string, unknown>,
@@ -449,9 +456,9 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
 		case 'list_matters':
 			return read(vault, now, config, listMatters, (v) => formatMatters(v, plain), 'matters');
 		case 'list_actions':
-			return read(vault, now, config, (s) => listActions(input, s), (v, s) => formatList(v, toYmd(s.now), typeTones(s), plain), 'actions');
+			return read(vault, now, config, (s) => listActions(input, s), (v, s) => formatList(v, toYmd(clock(s)), typeTones(s), plain), 'actions');
 		case 'get_action':
-			return read(vault, now, config, (s) => getAction(ref, s), (v, s) => formatShow(v, toYmd(s.now), plain));
+			return read(vault, now, config, (s) => getAction(ref, s), (v, s) => formatShow(v, toYmd(clock(s)), plain));
 		case 'add_action':
 			return writeAction(vault, now, config, (s) => addAction(input, s), null);
 		case 'update_action':

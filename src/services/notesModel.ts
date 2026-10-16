@@ -18,6 +18,39 @@ export type Frontmatter = Record<string, unknown>;
 export const DEFAULT_MATTER_ICON = 'circle-dot';
 
 /** A note as these rules need it: its path, its name without the extension, and its frontmatter. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A note's stable ID (`mtm-id`) when it is a UUID, as tools write it; null otherwise, so a stray value names nothing. */
+export function noteId(fm: Readonly<Frontmatter> | undefined): string | null {
+	const raw = fm?.['mtm-id'];
+	return typeof raw === 'string' && UUID.test(raw.trim()) ? raw.trim() : null;
+}
+
+/** Whether a note has any `mtm-id` value at all: one written by hand is kept, never replaced. */
+export function hasNoteId(fm: Readonly<Frontmatter> | undefined): boolean {
+	const raw = fm?.['mtm-id'];
+	if (raw === undefined || raw === null) return false;
+	return typeof raw === 'string' ? raw.trim() !== '' : true;
+}
+
+/** The kinds of note that carry an `mtm-id`. */
+export const IDENTIFIED_KINDS: readonly unknown[] = ['action', 'matter'];
+
+/**
+ * Frontmatter with an `mtm-id` from `newId` right after `mtm-kind`, when it is an Action or a Matter without one;
+ * otherwise as it is. Other keys keep their order.
+ */
+export function withNoteId(fm: Readonly<Frontmatter>, newId: () => string): Frontmatter {
+	if (!IDENTIFIED_KINDS.includes(fm['mtm-kind']) || hasNoteId(fm)) return { ...fm };
+	const out: Frontmatter = {};
+	for (const [key, value] of Object.entries(fm)) {
+		if (key === 'mtm-id') continue;
+		out[key] = value;
+		if (key === 'mtm-kind') out['mtm-id'] = newId();
+	}
+	return out;
+}
+
 export interface NoteData {
 	path: string;
 	basename: string;
@@ -211,6 +244,8 @@ export interface PersonCandidate extends NoteCandidate {
 	name: string;
 	folder: string;
 	inPeople: boolean;
+	/** Its `mtm-id`, when it has one. */
+	id?: string | null;
 }
 
 /** The folder of a path, '' at the vault's root. */
@@ -229,7 +264,7 @@ export function personCandidates(notes: readonly NoteData[], peopleFolder: strin
 		.filter((n) => n.frontmatter?.['mtm-kind'] === undefined)
 		.map((n) => {
 			const inPeople = n.path.startsWith(prefix);
-			return { path: n.path, name: n.basename, names: [n.basename], rank: inPeople ? 0 : 1, inPeople, folder: folderOf(n.path) };
+			return { path: n.path, name: n.basename, names: [n.basename], rank: inPeople ? 0 : 1, inPeople, folder: folderOf(n.path), ...(noteId(n.frontmatter) ? { id: noteId(n.frontmatter) } : {}) };
 		});
 }
 

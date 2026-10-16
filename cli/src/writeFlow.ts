@@ -1,6 +1,7 @@
 // Reading a vault and writing an operation's plan, shared by the command line and the MCP server: a fresh snapshot for
 // every read and every attempt at a write, and writes all or nothing through the safe writer (apply.ts).
 
+import { randomUUID } from 'node:crypto';
 import type { VaultReader } from '../../src/files/index';
 import type { OpError, OpResult, Plan, Snapshot, Warning } from '../../src/ops/types';
 import { applyOutcome, refusal, type ApplyFs, type ApplyResult } from './apply';
@@ -8,15 +9,15 @@ import { contentsAfter as defaultContentsAfter, snapshotOf, WriteError, type Con
 import { cachingReader, fsVaultReader } from './fsVault';
 import type { ErrorJson } from './json';
 import { CLI, dryRunWording } from './strings';
-import type { Vault } from './vault';
+import { settingsPath, withFreshSettings, type Vault } from './vault';
 
 export type ReaderFactory = (root: string, configDir: string) => VaultReader;
 
 /** The vault as the operations see it now, and the reader that saw it. */
-export function takeSnapshot(vault: Vault, now: Date, readerFactory: ReaderFactory = fsVaultReader): { snap: Snapshot; reader: VaultReader } {
+export function takeSnapshot(vault: Vault, now: Date, readerFactory: ReaderFactory = fsVaultReader, newId?: (() => string) | null): { snap: Snapshot; reader: VaultReader } {
 	// One read per file per attempt, so a plan's `before` is exactly what the snapshot saw.
 	const reader = cachingReader(readerFactory(vault.root, vault.configDir));
-	return { snap: snapshotOf(reader, vault.configDir, vault.settings, now), reader };
+	return { snap: snapshotOf(reader, vault.configDir, vault.settings, now, newId, vault.settingsVersion), reader };
 }
 
 export interface WriteSource {
@@ -24,6 +25,10 @@ export interface WriteSource {
 	now: Date;
 	dryRun: boolean;
 	reader?: ReaderFactory;
+	/** New `mtm-id`s; random UUIDs when absent, none when null. */
+	newId?: (() => string) | null;
+	/** The operation's ID, stamped on its plan (every attempt at it); a random UUID when absent. */
+	operationId?: string;
 	/** The plan applier; the files layer's when absent. */
 	contentsAfter?: ContentsAfter;
 	/** The file operations writes use; Node's when absent. */
@@ -78,13 +83,15 @@ function pause(): void {
  */
 export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<T>): WriteFlow<T> {
 	const writer = src.contentsAfter ?? defaultContentsAfter;
+	const operationId = src.operationId ?? randomUUID();
+	let vault = src.vault;
 	/** A new note's path found taken by the last attempt, though the snapshot saw it free. */
 	let appeared: string | null = null;
 	for (let attempt = 1; ; attempt++) {
-		const { snap, reader } = takeSnapshot(src.vault, src.now, src.reader);
+		const { snap, reader } = takeSnapshot(vault, src.now, src.reader, src.newId);
 		const result = op(snap);
 		if (!result.ok) return { ok: false, kind: 'op', error: result.error };
-		const r = { ...result, warnings: reportedWarnings(result.warnings, src.dryRun) };
+		const r = { ...result, plan: { id: operationId, ...result.plan }, warnings: reportedWarnings(result.warnings, src.dryRun) };
 		const stop = src.onPlan?.(r.plan);
 		if (stop) return { ok: false, kind: 'write', error: stop, changed: false };
 		if (planIsEmpty(r.plan)) return { ok: true, r, snap, outcome: null, written: false };
@@ -108,7 +115,10 @@ export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<
 			if (refused !== null) return { ok: false, kind: 'write', error: writeFailure(refused), changed: true };
 			return { ok: true, r, snap, outcome, written: false };
 		}
-		const applied = applyOutcome(src.vault.root, outcome, src.fs);
+		// What the plan was computed from, the settings included, must still hold when it is written.
+		const settingsFile = settingsPath(vault.configDir);
+		const basis = [...(p.basis ?? []), ...(p.settingsVersion !== undefined ? [{ path: settingsFile, version: p.settingsVersion }] : [])];
+		const applied = applyOutcome(src.vault.root, { ...outcome, basis }, src.fs);
 		if (applied.ok) return { ok: true, r, snap, outcome, written: true };
 		if (applied.reason === 'changed' && applied.appeared) {
 			// Taken twice running though the vault, read afresh, has it free: the file system counts a file there as
@@ -118,6 +128,12 @@ export function planAndWrite<T>(src: WriteSource, op: (s: Snapshot) => OpResult<
 		}
 		if (again && applied.reason === 'changed') {
 			if (applied.appeared || applied.held) pause();
+			// The settings changed: plan again with them as they are now, unless they can't be read any more.
+			if (applied.path === settingsFile) {
+				const fresh = withFreshSettings(vault);
+				if ('message' in fresh) return { ok: false, kind: 'write', error: { code: 'changed', message: fresh.message, path: settingsFile }, changed: true };
+				vault = fresh;
+			}
 			continue;
 		}
 		return { ok: false, kind: 'write', error: writeFailure(applied), changed: true };

@@ -5,6 +5,7 @@
 // plugin's own migrations, as the plugin reads them; settings from a newer version are read as they are (the
 // operations then warn on reads and refuse writes).
 
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { migrateSettings } from '../../src/services/migrations';
@@ -20,6 +21,8 @@ export interface Vault {
 	root: string;
 	configDir: string;
 	settings: MattersSettings;
+	/** A SHA-256 of the settings file as read, so a write can tell they changed since. */
+	settingsVersion?: string;
 }
 
 export type VaultResult = { ok: true; vault: Vault } | { ok: false; message: string };
@@ -159,18 +162,34 @@ export function openVault(given: string | undefined, configDirFlag: string | und
 	if (!found.ok) return found;
 	const configDir = found.configDir;
 
+	const loaded = loadSettings(root, configDir);
+	if (loaded === 'missing') return { ok: false, message: CLI.noSettings(given, settingsPath(configDir)) };
+	if (loaded === 'bad') return { ok: false, message: CLI.badSettings(settingsPath(configDir)) };
+	return { ok: true, vault: { root, configDir, ...loaded } };
+}
+
+/** The plugin's settings as they are on disk now, with a SHA-256 of the file. */
+function loadSettings(root: string, configDir: string): Pick<Vault, 'settings' | 'settingsVersion'> | 'missing' | 'bad' {
 	let text: string;
 	try {
 		text = readFileSync(join(root, ...settingsPath(configDir).split('/')), 'utf8');
 	} catch {
-		return { ok: false, message: CLI.noSettings(given, settingsPath(configDir)) };
+		return 'missing';
 	}
 	let raw: unknown;
 	try {
 		raw = JSON.parse(text);
 	} catch {
-		return { ok: false, message: CLI.badSettings(settingsPath(configDir)) };
+		return 'bad';
 	}
-	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, message: CLI.badSettings(settingsPath(configDir)) };
-	return { ok: true, vault: { root, configDir, settings: migrateSettings(raw) } };
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return 'bad';
+	return { settings: migrateSettings(raw), settingsVersion: createHash('sha256').update(text, 'utf8').digest('hex') };
+}
+
+/** The vault with its settings read again (after they changed under a write), or why they can't be read now. */
+export function withFreshSettings(vault: Vault): Vault | { message: string } {
+	const loaded = loadSettings(vault.root, vault.configDir);
+	if (loaded === 'missing') return { message: CLI.noSettings(vault.root, settingsPath(vault.configDir)) };
+	if (loaded === 'bad') return { message: CLI.badSettings(settingsPath(vault.configDir)) };
+	return { ...vault, ...loaded };
 }

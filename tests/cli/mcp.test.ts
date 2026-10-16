@@ -11,7 +11,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { run } from '../../cli/src/main';
-import { fixtureCopy, hashes, read, SETTINGS_FILE } from './helpers';
+import { fixtureCopy, hashes, OPERATION_ID, read, sequentialIds, SETTINGS_FILE } from './helpers';
 
 const made: string[] = [];
 const keep = (root: string) => (made.push(dirname(root)), root);
@@ -34,6 +34,8 @@ async function connect(argv: string[]): Promise<{ client: Client; done: Promise<
 		cwd: tmpdir(),
 		home: '/home/nobody',
 		obsidianDir: null,
+		newId: sequentialIds(),
+		operationId: () => OPERATION_ID,
 		mcpTransport: serverSide,
 	});
 	const client = new Client({ name: 'test', version: '1.0.0' });
@@ -189,10 +191,10 @@ describe('writing', () => {
 		expect(text(added)).toBe(
 			['Added “Send Marco the revised quote by friday”', '  Kitchen renovation · Later · Message · due Fri 16 Oct', `  ${PATH}`].join('\n'),
 		);
-		expect(data(added)).toMatchObject({ action: { path: PATH, due: '2026-10-16' }, changed: true, written: true, dryRun: false });
+		expect(data(added)).toMatchObject({ action: { path: PATH, id: '00000000-0000-4000-8000-000000000001', due: '2026-10-16' }, changed: true, written: true, dryRun: false });
 		expect(data<{ changes: unknown[] }>(added).changes[0]).toEqual({ kind: 'create', path: PATH });
 		expect(read(root, PATH)).toBe(
-			['---', 'mtm-kind: action', 'mtm-type: message', 'mtm-status: later', 'mtm-matter: "[[Kitchen renovation]]"', 'mtm-due: 2026-10-16', '---', ''].join('\n'),
+			['---', 'mtm-kind: action', 'mtm-id: 00000000-0000-4000-8000-000000000001', 'mtm-type: message', 'mtm-status: later', 'mtm-matter: "[[Kitchen renovation]]"', 'mtm-due: 2026-10-16', '---', ''].join('\n'),
 		);
 
 		const updated = await call(client, 'update_action', { action: 'Send Marco the revised quote by friday', due: '2026-10-15T10:00', priority: 'high', 'waiting-on': null });

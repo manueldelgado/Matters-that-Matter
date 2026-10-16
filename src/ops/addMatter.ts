@@ -68,11 +68,10 @@ export function addMatter(input: AddMatterInput, s: Snapshot): OpResult<MatterSu
 	const title = freeName(s, folder, base);
 	const path = joinPath(folder, `${title}.md`);
 	const lanes = s.notes.filter((n) => n.frontmatter?.['mtm-kind'] === 'matter').map((n) => laneOf(n, settings.inboxPath));
-	const fm = newMatterFrontmatter({ icon, state, reviewEvery, sphereId, outcome }, nextLaneOrder(lanes));
-
-	const builder = new PlanBuilder();
+	const builder = new PlanBuilder(s);
+	const fm = builder.identify(newMatterFrontmatter({ icon, state, reviewEvery, sphereId, outcome }, nextLaneOrder(lanes)));
 	builder.create(path, fm, []);
 	const view = vaultView(s);
 	const matter = matterInfo({ path, basename: title, frontmatter: fm }, settings, view.today);
-	return { ok: true, value: matterSummary(matter, [], s), plan: builder.plan, changes: builder.changes, warnings };
+	return { ok: true, value: matterSummary(matter, [], s, fm), plan: builder.plan, changes: builder.changes, warnings };
 }

@@ -73,7 +73,19 @@ export interface Ran {
 	stderr: string;
 }
 
-/** Runs the command line with these arguments; `--now 2026-10-09T12:00` unless another time is given. */
+/** The operation ID writes stamp on their plans in tests. */
+export const OPERATION_ID = 'ffffffff-ffff-4fff-bfff-000000000001';
+
+/** IDs for new notes that tests can predict: 00000000-0000-4000-8000-000000000001, then …002 and so on. */
+export function sequentialIds(): () => string {
+	let n = 0;
+	return () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
+}
+
+/**
+ * Runs the command line with these arguments; `--now 2026-10-09T12:00` unless another time is given, sequential IDs
+ * for new notes unless `newId` is given (null for none), and `OPERATION_ID` for every write's operation.
+ */
 export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean; columns?: number } = {}): Promise<Ran> {
 	let stdout = '';
 	let stderr = '';
@@ -86,6 +98,8 @@ export async function mtm(argv: string[], io: Partial<CliIo> & { tty?: boolean; 
 		home: '/home/nobody',
 		// No list of vaults: links name the vault by its folder.
 		obsidianDir: null,
+		newId: sequentialIds(),
+		operationId: () => OPERATION_ID,
 		...io,
 	});
 	return { code, stdout, stderr };

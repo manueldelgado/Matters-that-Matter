@@ -1,6 +1,7 @@
 {
   "action": {
     "path": "MTM/Actions/Send the invoice.md",
+    "id": "00000000-0000-4000-8000-000000000001",
     "title": "Send the invoice",
     "matter": {
       "path": "MTM/Matters/Advisory work.md",
@@ -31,7 +32,8 @@
       "mtm-status": "done",
       "mtm-matter": "[[Advisory work]]",
       "mtm-due": "2026-10-20",
-      "mtm-completed": "2026-10-09"
+      "mtm-completed": "2026-10-09",
+      "mtm-id": "00000000-0000-4000-8000-000000000001"
     }
   },
   "changed": true,
@@ -51,6 +53,13 @@
       "key": "mtm-completed",
       "from": null,
       "to": "2026-10-09"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-id",
+      "from": null,
+      "to": "00000000-0000-4000-8000-000000000001"
     }
   ],
   "warnings": [],

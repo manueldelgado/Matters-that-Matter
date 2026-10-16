@@ -1,6 +1,7 @@
 {
   "action": {
     "path": "MTM/Actions/Ring the bank.md",
+    "id": "00000000-0000-4000-8000-000000000001",
     "title": "Ring the bank",
     "matter": {
       "path": "MTM/Matters/Inbox.md",
@@ -27,6 +28,7 @@
     "orphans": [],
     "raw": {
       "mtm-kind": "action",
+      "mtm-id": "00000000-0000-4000-8000-000000000001",
       "mtm-type": "write",
       "mtm-status": "later",
       "mtm-matter": "[[Inbox]]"
@@ -46,6 +48,13 @@
       "key": "mtm-kind",
       "from": null,
       "to": "action"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Ring the bank.md",
+      "key": "mtm-id",
+      "from": null,
+      "to": "00000000-0000-4000-8000-000000000001"
     },
     {
       "kind": "property",

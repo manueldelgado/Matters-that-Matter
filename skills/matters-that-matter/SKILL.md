@@ -77,7 +77,7 @@ Only when neither the MCP server nor the command line is available, read and wri
 1. **Settings.** Read `<vault>/.obsidian/plugins/matters-that-matter/data.json` (the configuration folder can have another name; look for `plugins/matters-that-matter/data.json`). If it is missing or `setupDone` is not `true`, don't write: ask the user to run setup in Obsidian. If `schemaVersion` is above 7, the format may have changed: read, but don't write. Take IDs from `statuses`, `types` and `spheres`; the backlog status has `backlog: true`, the done status `done: true`, the default type `default: true`. A status whose `category` is `closed` means done.
 2. **Finding notes.** Actions are notes with `mtm-kind: action`, Matters notes with `mtm-kind: matter`, wherever they are. The Inbox is the note at `inboxPath`.
 3. **A new Action** is a note in `folders.actions`. Its file name is its title: replace each of `/ \ : * ? " < > | # ^ [ ]` with a space (a time's colon becomes a full stop: "10:00" → "10.00"), collapse runs of whitespace to one space, trim, drop leading dots, at most 100 characters. If any note in the vault already has the name (ignoring case), add " 2", " 3"…, as the tools do, so the new note doesn't take over links to the other one.
-4. **Frontmatter.** Always set `mtm-kind: action`, `mtm-type`, `mtm-status` and `mtm-matter` explicitly. `mtm-matter` is a quoted wikilink to the Matter note (`"[[Kitchen renovation]]"`; the Inbox's own link when there is no Matter), in the shortest form that is unique in the vault. Dates are `YYYY-MM-DD` (all day) or `YYYY-MM-DDTHH:mm` (local time). `mtm-priority` is 1 (high), 2 or 3. People are quoted wikilinks; `mtm-people` is always a list.
+4. **Frontmatter.** Always set `mtm-kind: action`, `mtm-type`, `mtm-status` and `mtm-matter` explicitly, and `mtm-id` (a new random UUID, right after `mtm-kind`). `mtm-matter` is a quoted wikilink to the Matter note (`"[[Kitchen renovation]]"`; the Inbox's own link when there is no Matter), in the shortest form that is unique in the vault. Dates are `YYYY-MM-DD` (all day) or `YYYY-MM-DDTHH:mm` (local time). `mtm-priority` is 1 (high), 2 or 3. People are quoted wikilinks; `mtm-people` is always a list.
 5. **Body.** Plain Markdown: the details first, then checklist items (`- [ ] …`).
 
 **The writer's duties**, which the plugin would otherwise do:
@@ -85,6 +85,7 @@ Only when neither the MCP server nor the command line is available, read and wri
 - Entering a closed status from one that isn't: set `mtm-completed` to today (if absent). Leaving the closed category: remove `mtm-completed`. Never add it to Actions that were already done.
 - Setting `mtm-waiting-on`, or changing it to another person: set `mtm-waiting-since` to today and add the same link to `mtm-people`. Removing it: remove `mtm-waiting-since`.
 - Moving an Action to another status or Matter: remove `mtm-order`.
+- Writing to an Action or a Matter without `mtm-id`: add one (a new random UUID). Never change or copy an ID.
 - When editing, change only the `mtm-` lines you mean to change. Leave every other property, the body and the formatting as they are.
 - Don't rename Action or Matter files: links to them would break. Use the tools, or ask the user to rename in Obsidian, which updates links.
 - "Mark as done" sets the done status; "Reopen" sets the backlog status.
@@ -94,6 +95,7 @@ A minimal example, `MTM/Actions/Call Marco about the quote.md`:
 ```markdown
 ---
 mtm-kind: action
+mtm-id: 6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40
 mtm-type: call
 mtm-status: later
 mtm-matter: "[[Kitchen renovation]]"

@@ -15,10 +15,12 @@ import {
 	missingInbox,
 	newActionFrontmatter,
 	newMatterFrontmatter,
+	noteId,
 	peopleIndex,
 	peoplePaths,
 	personCandidates,
 	personKey,
+	withNoteId,
 	type LinkTarget,
 	type NoteData,
 	type ResolveTarget,
@@ -384,5 +386,29 @@ describe('links in an Action\'s body', () => {
 	it('returns the resolver\'s own targets', () => {
 		const target = { path: 'Notes/Plan.md', extension: 'md', extra: true };
 		expect(linkedNotes(['Plan'], source, () => target, new Set())[0]).toBe(target);
+	});
+});
+
+describe('stable IDs', () => {
+	const id = () => 'fixed-id';
+	it('adds one right after mtm-kind, to Actions and Matters only', () => {
+		expect(Object.entries(withNoteId({ 'mtm-kind': 'action', 'mtm-type': 'call' }, id))).toEqual([
+			['mtm-kind', 'action'],
+			['mtm-id', 'fixed-id'],
+			['mtm-type', 'call'],
+		]);
+		expect(withNoteId({ 'mtm-kind': 'matter' }, id)['mtm-id']).toBe('fixed-id');
+		expect(withNoteId({ tags: ['x'] }, id)).toEqual({ tags: ['x'] });
+	});
+
+	it('keeps one already there, and replaces a blank one', () => {
+		expect(withNoteId({ 'mtm-kind': 'action', 'mtm-id': 'kept' }, id)['mtm-id']).toBe('kept');
+		expect(Object.entries(withNoteId({ 'mtm-kind': 'action', 'mtm-type': 'call', 'mtm-id': ' ' }, id))).toEqual([
+			['mtm-kind', 'action'],
+			['mtm-id', 'fixed-id'],
+			['mtm-type', 'call'],
+		]);
+		expect(noteId({ 'mtm-id': ' ' })).toBeNull();
+		expect(noteId({ 'mtm-id': 7 })).toBeNull();
 	});
 });

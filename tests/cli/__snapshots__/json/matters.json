@@ -1,6 +1,7 @@
 [
   {
     "path": "MTM/Matters/Inbox.md",
+    "id": null,
     "name": "Inbox",
     "icon": "inbox",
     "isInbox": true,
@@ -21,6 +22,7 @@
   },
   {
     "path": "MTM/Matters/Kitchen renovation.md",
+    "id": null,
     "name": "Kitchen renovation",
     "icon": "cooking-pot",
     "isInbox": false,
@@ -50,6 +52,7 @@
   },
   {
     "path": "MTM/Matters/Advisory work.md",
+    "id": null,
     "name": "Advisory work",
     "icon": "briefcase",
     "isInbox": false,
@@ -73,6 +76,7 @@
   },
   {
     "path": "MTM/Matters/Garden.md",
+    "id": null,
     "name": "Garden",
     "icon": "flower",
     "isInbox": false,

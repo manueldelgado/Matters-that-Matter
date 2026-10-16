@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { scanBody } from '../../src/files/scan';
+import { taskLines as taskLinesOfIndex } from '../../src/files/tasks';
 import {
 	appendLine,
 	appendReviewNote,
@@ -608,4 +610,26 @@ describe('task items as Obsidian reads them', () => {
 			`${fm}- Shopping\n  - [ ] eggs\n    - [ ] free range\n  - [ ] milk\n  - [ ] bread\n`,
 		);
 	});
+
+	it('reads a task item in a blockquote, as Obsidian and the files layer do', () => {
+		const note = `${fm}Notes\n\n> - [ ] quoted\n> - [x] done\n`;
+		expect(taskLines(note)).toEqual([6, 7]);
+		expect(checklistItems(note).map((i) => [i.text, i.checked])).toEqual([['quoted', false], ['done', true]]);
+		expect(toggleTask(note, 6, 'quoted', true)).toBe(`${fm}Notes\n\n> - [x] quoted\n> - [x] done\n`);
+		expect(insertTask(note, 'new')).toBe(`${fm}Notes\n\n> - [ ] quoted\n> - [x] done\n> - [ ] new\n`);
+		expect(getDetails(note)).toBe('Notes');
+	});
+
+	it('takes no task after a non-breaking space, as Obsidian and the files layer do', () => {
+		expect(parseTask('-\u00a0[ ] not a task')).toBeNull();
+		expect(taskLines(`${fm}-\u00a0[ ] not a task\n`)).toEqual([]);
+	});
+
+	it('reads every task the same way as the index does', () => {
+		const lines = ['- [ ] a', '> - [ ] b', '>> 1. [x] c', '-\u00a0[ ] d', '- [1](https://x.y)', '\t* [-] e', '  -  [ ]'];
+		const note = `${fm}${lines.join('\n')}\n`;
+		const indexed = taskLinesOfIndex(scanBody(note.split('\n'), 4)).map((t) => t.line);
+		expect(taskLines(note)).toEqual(indexed);
+	});
 });
+

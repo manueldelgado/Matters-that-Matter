@@ -11,7 +11,7 @@ import { laneOf, newMatterFrontmatter } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { now } from './clock';
 import { noteData } from './index';
-import { createNote, ensureFolder, nameTaken, notesOfKind, pathTaken, processFrontMatter, type Frontmatter } from './notes';
+import { createNote, ensureFolder, ensureNoteId, nameTaken, notesOfKind, pathTaken, processFrontMatter, type Frontmatter } from './notes';
 
 export async function writeLaneOrders(app: App, writes: readonly LaneOrderWrite[]): Promise<void> {
 	for (const w of writes) {
@@ -73,6 +73,7 @@ export async function setMatterOutcome(app: App, file: TFile, text: string | nul
  */
 export async function writeReviewNote(app: App, file: TFile, ymd: Ymd, text: string, replaceLine?: string | null): Promise<string | null> {
 	await app.vault.process(file, (content) => (replaceLine ? replaceReviewNote(content, replaceLine, ymd, text) : appendReviewNote(content, ymd, text)));
+	await ensureNoteId(app, file);
 	return reviewNoteLine(ymd, text);
 }
 

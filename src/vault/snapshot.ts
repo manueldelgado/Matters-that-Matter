@@ -4,7 +4,7 @@ import { getLinkpath, type App } from 'obsidian';
 import type { Snapshot } from '../ops/types';
 import type { MattersSettings } from '../settings';
 import { now } from './clock';
-import { frontmatterOf, pathTaken } from './notes';
+import { frontmatterOf, newNoteId, pathTaken } from './notes';
 
 /**
  * Takes a snapshot for the operations. The content of every Action note is read ahead (`cachedRead`), so `content`
@@ -38,5 +38,6 @@ export async function buildSnapshot(app: App, settings: MattersSettings, options
 			return file ? metadataCache.fileToLinktext(file, fromPath, true) : path.replace(/\.md$/i, '');
 		},
 		exists: (path) => pathTaken(app, path),
+		newId: newNoteId,
 	};
 }

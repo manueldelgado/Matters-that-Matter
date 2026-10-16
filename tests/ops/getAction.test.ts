@@ -16,6 +16,7 @@ describe('getAction', () => {
 		expect(r.plan).toEqual({ creates: [], edits: [], bodies: [], renames: [] });
 		expect(r.value).toEqual({
 			path: 'MTM/Actions/Confirm the worktop measurements.md',
+			id: null,
 			title: 'Confirm the worktop measurements',
 			matter: { path: 'MTM/Matters/Kitchen renovation.md', name: 'Kitchen renovation', isInbox: false },
 			status: { id: 'next', label: 'Next', category: 'open' },

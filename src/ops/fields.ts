@@ -6,7 +6,7 @@ import { backlogStatus, checkFlags, defaultType } from '../model/workflow';
 import { linkText } from '../services/effective';
 import { matchDefined, matchNote, type Defined, type Match, type NamedNote } from '../services/match';
 import type { MatterInfo } from '../services/boardModel';
-import type { PersonCandidate } from '../services/notesModel';
+import { noteId, type PersonCandidate } from '../services/notesModel';
 import { parseDateText } from '../services/quickAddParser';
 import { DEFAULT_SETTINGS, type SphereDef, type StatusDef, type TypeDef } from '../settings';
 import { STRINGS } from '../strings';
@@ -80,7 +80,7 @@ export function readDate(key: string, value: string | null, s: Snapshot): Read<s
 	const figure = readFigureDate(value);
 	if (figure && 'problem' in figure && figure.problem === 'time-zone') return fail({ code: 'invalid', field, value, message: T.zonedDate(value) });
 	if (LOOKS_STORED.test(value)) return fail({ code: 'invalid', field, value, message: T.badStoredDate(value) });
-	const words = parseDateText(value, s.now, s.settings.dateLanguages);
+	const words = parseDateText(value, s.now, s.settings.dateLanguages, s.timeZone);
 	if (!words) return fail({ code: 'invalid', field, value, message: T.badDate(value) });
 	if ('problem' in words) return fail({ code: 'invalid', field, value, message: words.problem === 'time-zone' ? T.zonedDate(value) : T.badDate(value) });
 	if (words.start) return fail({ code: 'invalid', field, value, message: T.dateRange(value) });
@@ -198,7 +198,10 @@ export function findSphere(value: string, s: Snapshot): Read<SphereDef> {
 }
 
 /** Matters as notes to match: every Matter, the Inbox included. */
-const matterNotes = (s: Snapshot): (NamedNote & { matter: MatterInfo })[] => vaultView(s).matters.map((m) => ({ path: m.path, name: m.name, matter: m }));
+const matterNotes = (s: Snapshot): (NamedNote & { matter: MatterInfo })[] => {
+	const view = vaultView(s);
+	return view.matters.map((m) => ({ path: m.path, name: m.name, id: noteId(view.byPath.get(m.path)?.frontmatter), matter: m }));
+};
 
 export function findMatter(value: string, s: Snapshot, fromPath = ''): Read<MatterInfo> {
 	return strict(matchNote(value, matterNotes(s), (t) => s.resolve(t, fromPath)), 'matter', value, T.severalMatters(value), (i) => i.path, () => ({

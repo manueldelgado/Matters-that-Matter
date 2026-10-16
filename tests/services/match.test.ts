@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { matchDefined, matchNote, type Match, type NamedNote } from '../../src/services/match';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 
-const picked = <T extends { id?: string; path?: string }>(m: Match<T>) =>
+const picked = <T extends { id?: string | null; path?: string }>(m: Match<T>) =>
 	m.kind === 'match' ? (m.item.id ?? m.item.path) : m.kind === 'ambiguous' ? m.items.map((i) => i.id ?? i.path) : null;
 
 describe('matchDefined: statuses, types and Spheres', () => {

@@ -1,6 +1,7 @@
 {
   "matter": {
     "path": "MTM/Matters/Garden shed.md",
+    "id": "00000000-0000-4000-8000-000000000001",
     "name": "Garden shed",
     "icon": "circle-dot",
     "isInbox": false,
@@ -42,6 +43,13 @@
       "key": "mtm-kind",
       "from": null,
       "to": "matter"
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Matters/Garden shed.md",
+      "key": "mtm-id",
+      "from": null,
+      "to": "00000000-0000-4000-8000-000000000001"
     },
     {
       "kind": "property",

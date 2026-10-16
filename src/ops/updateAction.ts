@@ -144,7 +144,7 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 	}
 
 	// The plan.
-	const builder = new PlanBuilder();
+	const builder = new PlanBuilder(s);
 	const before = note.frontmatter ?? {};
 	const after: Record<string, unknown> = { ...before };
 	if (FRONTMATTER_FIELDS.some((f) => input[f] !== undefined)) {
@@ -159,6 +159,8 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 		});
 		applyFieldEdit(after, edit, keyOf, vaultView(s).today);
 		builder.edit(path, before, after, EXPLICIT_KEYS);
+		// A Matter named in the request decided the lane.
+		if (input.matter !== undefined && builder.changes.length) builder.rely(matterPath);
 	}
 	// Body edits that leave the note as it is (the same details again) are not planned.
 	let content = bodyEdits.length ? (s.content(path) ?? '') : '';
@@ -169,6 +171,8 @@ export function updateAction(input: UpdateActionInput, s: Snapshot): OpResult<Ac
 		content = next;
 	}
 	if (newPath !== path) builder.rename(path, newPath);
+	// A body or a rename is a write too: the Action gets the ID it lacks.
+	if (builder.plan.bodies.length || builder.plan.renames.length) builder.ensureId(path, after);
 
 	if (startsAfterDue(parseMtmDate(after['mtm-start']), parseMtmDate(after['mtm-due']))) warnings.push({ code: 'start-after-due', message: T.startAfterDue });
 	const changed = builder.changes.length > 0;

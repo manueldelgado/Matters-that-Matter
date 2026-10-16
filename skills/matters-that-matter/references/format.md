@@ -58,6 +58,7 @@ The file name (without `.md`) is the Action's title. Properties:
 | Property | Form | Meaning |
 |---|---|---|
 | `mtm-kind` | `action` | Required. Marks the note as an Action |
+| `mtm-id` | a UUID | A stable identifier, written once and never changed; tools may name the Action by it. See the writer's duties |
 | `mtm-type` | type ID | The Action type |
 | `mtm-status` | status ID | The status (board column) |
 | `mtm-matter` | link | The Matter it belongs to |
@@ -121,6 +122,7 @@ When editing a body, change only the lines you mean to change.
 ```markdown
 ---
 mtm-kind: action
+mtm-id: 6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40
 mtm-type: call
 mtm-status: waiting
 mtm-matter: "[[Kitchen renovation]]"
@@ -149,6 +151,7 @@ The file name is the Matter's name.
 | Property | Form | Meaning |
 |---|---|---|
 | `mtm-kind` | `matter` | Required. Marks the note as a Matter |
+| `mtm-id` | a UUID | A stable identifier, as on Actions |
 | `mtm-icon` | Lucide icon name | `circle-dot` when absent; the Inbox uses `inbox`. Matters have no colour |
 | `mtm-state` | `active`, `dormant` or `closed` | `active` when absent. Dormant and closed Matters start collapsed |
 | `mtm-lane-order` | number | Its place on the board, lower first; Matters without one come after, by name |
@@ -163,6 +166,7 @@ A new Matter is a note in `folders.matters` with `mtm-kind: matter`, `mtm-icon`,
 ```markdown
 ---
 mtm-kind: matter
+mtm-id: 0b9e7d52-3f1a-4e8c-b6d4-7a2c5e9f1b38
 mtm-icon: hammer
 mtm-state: active
 mtm-lane-order: 4
@@ -176,7 +180,7 @@ Matters are not deleted: they are closed (`mtm-state: closed`). The Inbox is alw
 
 ## Person notes
 
-Any note an Action links to in `mtm-waiting-on` or `mtm-people`. People are not an entity of their own and get no `mtm-` properties. New person notes, when the user asks for one, are plain notes in `folders.people`.
+Any note an Action links to in `mtm-waiting-on` or `mtm-people`. People have no `mtm-kind`; a person note's only `mtm-` property is `mtm-id`. New person notes, when the user asks for one, go in `folders.people` with an `mtm-id` and nothing else.
 
 ## The writer's duties
 
@@ -184,6 +188,7 @@ The plugin keeps two dates by watching changes. A tool that changes notes direct
 
 - **Completion date.** When an Action moves from a status that isn't closed into a closed one, set `mtm-completed` to today, unless it is already set. When it moves from a closed status to one that isn't, remove `mtm-completed`. Moving between two closed statuses leaves it alone. Never fill it in for Actions that were done before and lack it.
 - **Waiting since.** When `mtm-waiting-on` is set, or changed to another person, set `mtm-waiting-since` to today and add the same link to `mtm-people` if it isn't there. When `mtm-waiting-on` is removed, remove `mtm-waiting-since`. Never fill it in for older Actions that lack it.
+- **IDs.** A new Action, Matter or person note gets `mtm-id`, a new random UUID in lower case (as `crypto.randomUUID()` makes), right after `mtm-kind`. When you write to an Action or a Matter that has none, add one. Never change, copy or reuse an ID.
 - **New notes.** Use the file-name rules, and set `mtm-type`, `mtm-status` and `mtm-matter` explicitly. A new Action in a closed status gets `mtm-completed`; one with `mtm-waiting-on` gets `mtm-waiting-since`.
 - **Order.** When moving an Action to another status or another Matter, remove `mtm-order`.
 - **Only your lines.** Change only the `mtm-` properties you are writing. Keep every other property, the order of the lines and the body as they are.

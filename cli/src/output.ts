@@ -359,10 +359,11 @@ const clip = (t: string) => {
 	return one.length > 48 ? `${one.slice(0, 47)}…` : one;
 };
 
-/** What changed, property by property: `mtm-status     next → done`. */
+/** What changed, property by property: `mtm-status     next → done`. A note's new `mtm-id` is bookkeeping, not shown. */
 export function changeLines(changes: readonly Change[], st: Style): string[] {
 	const rows: [string, string][] = [];
 	for (const c of changes) {
+		if (c.kind === 'property' && c.key === 'mtm-id') continue;
 		if (c.kind === 'property') rows.push([c.key, `${valueText(c.from)} → ${valueText(c.to)}`]);
 		else if (c.kind === 'details') rows.push([CLI.detailsKey, `${c.from ? quote(clip(c.from)) : CLI.none} → ${c.to ? quote(clip(c.to)) : CLI.none}`]);
 		else if (c.kind === 'checklist') c.added.forEach((item, i) => rows.push([i === 0 ? CLI.checklistKey : '', `+ ${item}`]));
@@ -438,7 +439,8 @@ export function formatChanged(
 ): string[] {
 	if (!changes.length) return [CLI.already(before.title)];
 	const rename = changes.find((c): c is Extract<Change, { kind: 'rename' }> => c.kind === 'rename');
-	const props = changes.filter((c) => c.kind !== 'rename' && c.kind !== 'create');
+	// A note's new `mtm-id` is bookkeeping: on its own it isn't a change worth a heading.
+	const props = changes.filter((c) => c.kind !== 'rename' && c.kind !== 'create' && !(c.kind === 'property' && c.key === 'mtm-id'));
 	const out: string[] = [];
 	if (props.length) {
 		out.push(dryRun ? verb.would(quote(before.title), st.b) : verb.done(quote(before.title), st.g));

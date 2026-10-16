@@ -8,6 +8,7 @@ import { toActionItem, type ActionItem } from '../services/actionItems';
 import type { MatterInfo } from '../services/boardModel';
 import type { ResolveLink } from '../services/effective';
 import { linkedNotes, matterList, peoplePaths, personCandidates, type NoteData, type PersonCandidate } from '../services/notesModel';
+import { clock } from './clock';
 import type { Snapshot } from './types';
 
 export interface ActionNote {
@@ -69,7 +70,7 @@ export function vaultView(s: Snapshot): VaultView {
 	const cached = views.get(s);
 	if (cached) return cached;
 
-	const today = toYmd(s.now);
+	const today = toYmd(clock(s));
 	const byPath = new Map(s.notes.map((n) => [n.path, n]));
 	const kind = (n: NoteData) => n.frontmatter?.['mtm-kind'];
 	const resolvePath = (link: string, fromPath: string) => s.resolve(link, fromPath);

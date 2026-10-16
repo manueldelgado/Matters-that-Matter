@@ -57,6 +57,8 @@ export interface NamedNote {
 	path: string;
 	name: string;
 	rank?: number;
+	/** The note's `mtm-id`: naming it finds the note whatever its path or name now is. */
+	id?: string | null;
 }
 
 const withoutMd = (path: string) => path.replace(/\.md$/i, '');
@@ -78,7 +80,7 @@ export interface MatchNoteOptions {
 }
 
 /**
- * A note named by its vault path (`.md` optional), by link text as a wikilink would resolve it, or by its name
+ * A note named by its `mtm-id`, by its vault path (`.md` optional), by link text as a wikilink would resolve it, or by its name
  * (fuzzy, as quick add matches). Brackets, an alias or a heading around link text are ignored. Two notes with the
  * same name and rank are ambiguous even where a wikilink would pick one; a lower rank wins ties, as in quick add.
  * `resolve` turns link text into a path.
@@ -94,6 +96,10 @@ export function matchNote<T extends NamedNote>(
 	// Case and Unicode form ignored, as macOS and Windows compare file names.
 	const fold = foldName;
 	const lower = fold(withoutMd(text));
+
+	// An ID names one note across renames; two notes holding one ID (a copied file) are ambiguous by it.
+	const byId = fromList(notes.filter((n) => n.id && n.id.toLowerCase() === text.toLowerCase()));
+	if (byId) return byId;
 
 	const byPath = fromList(notes.filter((n) => fold(withoutMd(n.path)) === lower));
 	if (byPath) return byPath;

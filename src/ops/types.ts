@@ -17,6 +17,11 @@ export interface Snapshot {
 	readonly settings: MattersSettings;
 	/** The time every rule uses (today, overdue, completion dates). */
 	readonly now: Date;
+	/**
+	 * The IANA time zone that `now` is read in (`Europe/Madrid`): "today", overdue and the dates written follow its wall
+	 * clock. Absent, the host's zone.
+	 */
+	readonly timeZone?: string;
 	/** Every Markdown note in the vault, with its frontmatter (undefined when it has none). */
 	readonly notes: readonly NoteData[];
 	/**
@@ -37,6 +42,18 @@ export interface Snapshot {
 	exists(path: string): boolean;
 	/** Whether renames update links in other notes (Obsidian's "Automatically update internal links"); absent is no. */
 	readonly updatesLinks?: boolean;
+	/**
+	 * A new random ID for `mtm-id` (a UUID). Each Action and Matter gets one when it is created, or at its first write
+	 * if it has none. A host without it writes no IDs.
+	 */
+	newId?(): string;
+	/**
+	 * A file's version as read: an opaque token that changes whenever its bytes do (the command line uses a SHA-256 of
+	 * the content), or null when there is no such file. With it, plans record what they were computed from (`basis`).
+	 */
+	version?(path: string): string | null;
+	/** The settings' version as read, a token like `version`'s. */
+	readonly settingsVersion?: string;
 }
 
 // ——— What the operations plan ———
@@ -53,15 +70,33 @@ export type BodyEdit =
 	/** Adds a line at the end of the body: a link to a note (`[[link text]]`) or a web address. */
 	| { kind: 'link'; line: string };
 
+/** A file a plan was computed from: its version when read, or null when it must not exist. */
+export interface BasisEntry {
+	path: string;
+	version: string | null;
+}
+
 /**
  * The writes an operation needs. Apply creates, then edits, then bodies, then renames: paths in edits and bodies are
  * the paths before any rename. Edits name `mtm-` keys only; every other key and line stays as it is.
+ *
+ * A plan is applied only if what it was computed from still holds: every `basis` entry at its version (or still
+ * absent), and the settings at `settingsVersion`. Otherwise nothing is written and the operation is planned again.
  */
 export interface Plan {
+	/** The operation's ID, set by whoever applies the plan: the same for every attempt at one request. */
+	id?: string;
 	creates: { path: string; frontmatter: FrontmatterEntry[]; body: string }[];
 	edits: { path: string; set: Record<string, unknown>; remove: string[] }[];
 	bodies: { path: string; edit: BodyEdit }[];
 	renames: { from: string; to: string }[];
+	/**
+	 * What the plan was computed from, when the snapshot gives versions: every file it writes, every path it creates
+	 * (as must not exist), and every file whose content decided the outcome (the Matter an Action is filed under).
+	 */
+	basis?: BasisEntry[];
+	/** The settings' version the plan was computed with (statuses, types and Spheres decide what it writes). */
+	settingsVersion?: string;
 }
 
 /** What a write changes, one entry per property, body part or file; values are null when absent. */
@@ -193,6 +228,8 @@ export interface NoteRef {
 /** An Action as every operation returns it: effective values for reading, raw `mtm-` values for reference. */
 export interface ActionSummary {
 	path: string;
+	/** Its `mtm-id`, or null when it has none yet. */
+	id: string | null;
 	title: string;
 	matter: { path: string; name: string; isInbox: boolean };
 	status: { id: string; label: string; category: StatusCategory };
@@ -234,6 +271,8 @@ export interface ActionWrite {
 
 export interface MatterSummary {
 	path: string;
+	/** Its `mtm-id`, or null when it has none yet. */
+	id: string | null;
 	name: string;
 	icon: string;
 	isInbox: boolean;

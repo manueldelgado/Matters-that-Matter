@@ -1,15 +1,16 @@
-// Naming an Action: its path (`.md` optional) or its title, as a wikilink would resolve it or as quick add matches
+// Naming an Action: its `mtm-id`, its path (`.md` optional) or its title, as a wikilink would resolve it or as quick add matches
 // names. Several matches are an error that lists them: without an exact path, title or link, every strong fuzzy match
 // counts, not only the best, so a write never lands on a guess.
 
 import type { MatterInfo } from '../services/boardModel';
 import { matchNote, type Match } from '../services/match';
+import { noteId } from '../services/notesModel';
 import { STRINGS } from '../strings';
 import { done, fail, type Read } from './fields';
 import type { Snapshot } from './types';
 import { vaultView, type ActionNote } from './vaultView';
 
-const actionNotes = (s: Snapshot) => vaultView(s).actions.map((a) => ({ path: a.note.path, name: a.note.basename, action: a }));
+const actionNotes = (s: Snapshot) => vaultView(s).actions.map((a) => ({ path: a.note.path, name: a.note.basename, id: noteId(a.note.frontmatter), action: a }));
 
 export function findAction(ref: string, s: Snapshot): Read<ActionNote> {
 	const m = matchNote(ref, actionNotes(s), (t) => s.resolve(t, ''), { anyStrong: true });
@@ -23,7 +24,7 @@ export function findAction(ref: string, s: Snapshot): Read<ActionNote> {
 /** An Action or a Matter, as `findActionOrMatter` finds it. */
 export type ActionOrMatter = { kind: 'action'; action: ActionNote } | { kind: 'matter'; matter: MatterInfo };
 
-type Named = { path: string; name: string; target: ActionOrMatter };
+type Named = { path: string; name: string; id: string | null; target: ActionOrMatter };
 
 /**
  * An Action or a Matter, named by its path, its title or name, or link text. An exact match of either kind wins over
@@ -32,8 +33,9 @@ type Named = { path: string; name: string; target: ActionOrMatter };
  */
 export function findActionOrMatter(ref: string, s: Snapshot): Read<ActionOrMatter> {
 	const resolve = (t: string) => s.resolve(t, '');
-	const actions: Named[] = actionNotes(s).map((a) => ({ path: a.path, name: a.name, target: { kind: 'action', action: a.action } }));
-	const matters: Named[] = vaultView(s).matters.map((m) => ({ path: m.path, name: m.name, target: { kind: 'matter', matter: m } }));
+	const view = vaultView(s);
+	const actions: Named[] = actionNotes(s).map((a) => ({ path: a.path, name: a.name, id: a.id, target: { kind: 'action', action: a.action } }));
+	const matters: Named[] = view.matters.map((m) => ({ path: m.path, name: m.name, id: noteId(view.byPath.get(m.path)?.frontmatter), target: { kind: 'matter', matter: m } }));
 
 	const exact = matchNote(ref, [...actions, ...matters], resolve, { exact: true });
 	const found = (m: Match<Named>): Named[] => (m.kind === 'match' ? [m.item] : m.kind === 'ambiguous' ? m.items : []);

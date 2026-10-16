@@ -2,6 +2,7 @@
 // Edits change only the targeted lines, and repair damaged details markers.
 
 import { indentWidth, scanBody } from '../files/scan';
+import { readTask } from '../files/tasks';
 import { parseMtmDate, type Ymd } from './dates';
 
 // As Obsidian reads it: after an optional byte-order mark (`Vault.process` keeps it), an opening line that is exactly
@@ -11,8 +12,9 @@ const LIST_RE = /^\s*(?:[-*+]|\d+[.)])(?:\s|$)/;
 const HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
 const EMBED_RE = /^\s*!\[/;
 const FENCE_RE = /^\s*(```|~~~)/;
-// As Obsidian reads a task: the mark and then a space or the end of the line, so "- [1](https://…)" is a link.
-const TASK_RE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[([^\]])\](?=[ \t]|$)/;
+// Task items are read as Obsidian reads them, by the files layer's one reading (`readTask`): the mark and then a space
+// or the end of the line (so "- [1](https://…)" is a link), after a space or tab, in a blockquote too.
+const isTask = (line: string) => readTask(line) !== null;
 
 /** Splits off the frontmatter block (with a byte-order mark before it, its delimiters and trailing newline). */
 export function splitFrontmatter(content: string): { frontmatter: string; body: string } {
@@ -68,7 +70,7 @@ function keepingEndings(content: string, edit: (content: string) => string): str
 const indentOf = (line: string) => (/^\s*/.exec(line)?.[0] ?? '').length;
 
 function endsDetails(line: string): boolean {
-	return LIST_RE.test(line) || HEADING_RE.test(line) || EMBED_RE.test(line) || FENCE_RE.test(line);
+	return LIST_RE.test(line) || isTask(line) || HEADING_RE.test(line) || EMBED_RE.test(line) || FENCE_RE.test(line);
 }
 
 /** Index of the first body line that ends the details (list item, heading, embed or code block). */
@@ -153,7 +155,7 @@ function findMarkers(lines: readonly string[]): Markers | null {
 
 	function ends(i: number): boolean {
 		const line = lines[i] ?? '';
-		return !stray.has(i) && (TASK_RE.test(line) || HEADING_RE.test(line) || EMBED_RE.test(line) || FENCE_RE.test(line));
+		return !stray.has(i) && (isTask(line) || HEADING_RE.test(line) || EMBED_RE.test(line) || FENCE_RE.test(line));
 	}
 }
 
@@ -179,7 +181,7 @@ function splitTasks(lines: readonly string[]): { text: string[]; tasks: string[]
 	const tasks: string[] = [];
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i] ?? '';
-		if (!counts[i] || !TASK_RE.test(line)) {
+		if (!counts[i] || !isTask(line)) {
 			text.push(line);
 			continue;
 		}
@@ -290,7 +292,7 @@ export function taskLines(content: string): number[] {
 	const start = splitFrontmatter(content).frontmatter.split('\n').length - 1;
 	const counts = tasksCount(lines, start);
 	const out: number[] = [];
-	for (let i = start; i < lines.length; i++) if (counts[i - start] && TASK_RE.test(lines[i] ?? '')) out.push(i);
+	for (let i = start; i < lines.length; i++) if (counts[i - start] && isTask(lines[i] ?? '')) out.push(i);
 	return out;
 }
 
@@ -330,7 +332,7 @@ function taskAdded(content: string, text: string, lastTaskLine?: number): string
 		if (width(i) <= width(last)) break;
 		at = i + 1;
 	}
-	lines.splice(at, 0, (lines[last] ?? '').slice(0, indentOf(lines[last] ?? '')) + item);
+	lines.splice(at, 0, (readTask(lines[last] ?? '')?.prefix ?? (lines[last] ?? '').slice(0, indentOf(lines[last] ?? ''))) + item);
 	return lines.join('\n');
 }
 
@@ -339,10 +341,9 @@ export function setTaskChecked(content: string, line: number, checked: boolean):
 	const lines = content.split('\n');
 	const current = lines[line];
 	if (current === undefined) return content;
-	const m = TASK_RE.exec(current);
-	if (!m) return content;
-	const pos = m[0].length - 2;
-	lines[line] = current.slice(0, pos) + (checked ? 'x' : ' ') + current.slice(pos + 1);
+	const task = readTask(current);
+	if (!task) return content;
+	lines[line] = current.slice(0, task.mark) + (checked ? 'x' : ' ') + current.slice(task.mark + 1);
 	return lines.join('\n');
 }
 
@@ -353,13 +354,10 @@ export interface ChecklistItem {
 	text: string;
 }
 
-const TASK_TEXT_RE = /^\s*(?:[-*+]|\d+[.)])\s+\[([^\]])\](?:[ \t](.*))?$/;
-
 /** The task on a line, or null. Any mark other than a space counts as checked, as Obsidian renders it. */
 export function parseTask(line: string): { checked: boolean; text: string } | null {
-	const m = TASK_TEXT_RE.exec(line.replace(/\r$/, ''));
-	if (!m) return null;
-	return { checked: m[1] !== ' ', text: (m[2] ?? '').trim() };
+	const task = readTask(line);
+	return task && { checked: task.task !== ' ', text: task.text };
 }
 
 /** Checklist items on the given lines (from metadataCache list items), or on every task line. */

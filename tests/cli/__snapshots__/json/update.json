@@ -1,6 +1,7 @@
 {
   "action": {
     "path": "MTM/Actions/Send the October invoice.md",
+    "id": "00000000-0000-4000-8000-000000000001",
     "title": "Send the October invoice",
     "matter": {
       "path": "MTM/Matters/Advisory work.md",
@@ -38,7 +39,8 @@
       "mtm-waiting-on": "[[Lucía Pérez]]",
       "mtm-people": [
         "[[Lucía Pérez]]"
-      ]
+      ],
+      "mtm-id": "00000000-0000-4000-8000-000000000001"
     }
   },
   "changed": true,
@@ -74,6 +76,13 @@
       "to": [
         "[[Lucía Pérez]]"
       ]
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Send the invoice.md",
+      "key": "mtm-id",
+      "from": null,
+      "to": "00000000-0000-4000-8000-000000000001"
     },
     {
       "kind": "rename",

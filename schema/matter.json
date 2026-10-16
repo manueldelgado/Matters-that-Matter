@@ -12,6 +12,14 @@
 			"description": "Marks the note as a Matter. Notes are recognised by this property, never by their folder.",
 			"const": "matter"
 		},
+		"mtm-id": {
+			"description": "A stable identifier for the Matter: a random UUID, written once when the note is created (or at its first write, for a note made before the key existed) and never changed, so a reference by ID survives a rename. Tools that create a note should write one; tools that edit a note keep it as it is.",
+			"type": "string",
+			"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+			"examples": [
+				"6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40"
+			]
+		},
 		"mtm-icon": {
 			"description": "The name of a Lucide icon shown with the Matter, such as house or briefcase. Matters have no colour; the icon and the name identify them. When absent, circle-dot is shown. The Inbox uses inbox.",
 			"type": "string",

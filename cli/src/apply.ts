@@ -242,7 +242,11 @@ export function refusal(root: string, outcome: { files: readonly FileWrite[] }, 
 	return null;
 }
 
-export function applyOutcome(root: string, outcome: { files: readonly FileWrite[] }, fs: ApplyFs = nodeFs): ApplyResult {
+/**
+ * Writes an outcome all or nothing. `basis` lists files the plan was computed from beyond those it writes (by their
+ * SHA-256, or null for a path that must not exist): any that changed stops the write as a file written would.
+ */
+export function applyOutcome(root: string, outcome: { files: readonly FileWrite[]; basis?: readonly { path: string; version: string | null }[] }, fs: ApplyFs = nodeFs): ApplyResult {
 	const full = (path: string) => join(root, ...path.split('/'));
 	const inside = insideVault(root, fs);
 	if (typeof inside !== 'function') return inside;
@@ -265,6 +269,10 @@ export function applyOutcome(root: string, outcome: { files: readonly FileWrite[
 			// Only the same file under another case or Unicode form may be there (a case-insensitive file system).
 			const self = fs.stat(full(file.from));
 			if (!caseOnly(file) || !self || self.ino !== there.ino || self.dev !== there.dev) return { path: file.path, appeared: false };
+		}
+		for (const entry of outcome.basis ?? []) {
+			const now = fs.readFile(full(entry.path));
+			if (entry.version === null ? now !== null : now === null || hash(now) !== entry.version) return { path: entry.path, appeared: entry.version === null };
 		}
 		return null;
 	};

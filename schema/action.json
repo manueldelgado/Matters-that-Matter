@@ -12,6 +12,14 @@
 			"description": "Marks the note as an Action. Notes are recognised by this property, never by their folder.",
 			"const": "action"
 		},
+		"mtm-id": {
+			"description": "A stable identifier for the Action: a random UUID, written once when the note is created (or at its first write, for a note made before the key existed) and never changed, so a reference by ID survives a rename. Tools that create a note should write one; tools that edit a note keep it as it is.",
+			"type": "string",
+			"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+			"examples": [
+				"6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40"
+			]
+		},
 		"mtm-type": {
 			"description": "The Action type's ID from settings (call, message, write and so on). It sets the card's colour and icon. When absent, the default type applies; an ID that is not in settings also falls back to the default type and shows a badge until it is fixed.",
 			"type": "string",

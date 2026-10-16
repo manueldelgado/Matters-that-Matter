@@ -1,6 +1,7 @@
 {
   "action": {
     "path": "MTM/Actions/Order the tiles.md",
+    "id": "00000000-0000-4000-8000-000000000001",
     "title": "Order the tiles",
     "matter": {
       "path": "MTM/Matters/Kitchen renovation.md",
@@ -29,7 +30,8 @@
       "mtm-kind": "action",
       "mtm-type": "buy",
       "mtm-status": "later",
-      "mtm-matter": "[[Kitchen renovation]]"
+      "mtm-matter": "[[Kitchen renovation]]",
+      "mtm-id": "00000000-0000-4000-8000-000000000001"
     }
   },
   "changed": true,
@@ -49,6 +51,13 @@
       "key": "mtm-completed",
       "from": "2026-10-01",
       "to": null
+    },
+    {
+      "kind": "property",
+      "path": "MTM/Actions/Order the tiles.md",
+      "key": "mtm-id",
+      "from": null,
+      "to": "00000000-0000-4000-8000-000000000001"
     }
   ],
   "warnings": [],

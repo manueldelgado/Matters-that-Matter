@@ -1,6 +1,7 @@
 // Today: what the new tab's "What matters today?" shows (due today or late, else next up; Inbox, reviews and waits).
 
 import { todayModel } from '../services/todayModel';
+import { clock } from './clock';
 import { readiness } from './fields';
 import { emptyPlan } from './plan';
 import { actionSummary, matterSummary } from './summaries';
@@ -13,7 +14,7 @@ export function today(s: Snapshot): OpResult<TodayValue> {
 	const view = vaultView(s);
 	const items = view.actions.map((a) => a.item);
 	const fmOf = new Map(view.actions.map((a) => [a.note.path, a.note.frontmatter]));
-	const model = todayModel({ items, matters: view.matters, statuses: s.settings.statuses, inboxPath: s.settings.inboxPath, now: s.now });
+	const model = todayModel({ items, matters: view.matters, statuses: s.settings.statuses, inboxPath: s.settings.inboxPath, now: clock(s) });
 	const summary = (i: (typeof items)[number]) => actionSummary(i, fmOf.get(i.path), s);
 	const value: TodayValue = {
 		date: view.today,

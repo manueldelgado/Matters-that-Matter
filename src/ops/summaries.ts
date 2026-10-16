@@ -7,6 +7,8 @@ import type { ActionItem } from '../services/actionItems';
 import type { MatterInfo } from '../services/boardModel';
 import { linkText } from '../services/effective';
 import { lacksNextAction } from '../services/nextAction';
+import { noteId } from '../services/notesModel';
+import { clock } from './clock';
 import type { ActionSummary, MatterSummary, NoteRef, Snapshot } from './types';
 import { baseName, mtmProperties, vaultView } from './vaultView';
 
@@ -29,6 +31,7 @@ export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unkn
 	const waiting = item.waitingOn === null ? null : noteRef(raw['mtm-waiting-on'], item.path, s);
 	return {
 		path: item.path,
+		id: noteId(fm),
 		title: item.title,
 		matter: { path: effective.matterPath, name: matterName(effective.matterPath, s), isInbox: effective.matterPath === s.settings.inboxPath },
 		status: { id: effective.status.id, label: effective.status.label, category: effective.category },
@@ -36,8 +39,8 @@ export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unkn
 		priority: item.priority,
 		start: item.start && formatMtmDate(item.start),
 		due: item.due && formatMtmDate(item.due),
-		today: isToday(item.due, item.category, s.now),
-		overdue: isOverdue(item.due, s.now, closed),
+		today: isToday(item.due, item.category, clock(s)),
+		overdue: isOverdue(item.due, clock(s), closed),
 		waitingOn: waiting,
 		waitingSince: item.waitingSince,
 		completed: parseMtmDate(raw['mtm-completed'])?.date ?? null,
@@ -50,11 +53,13 @@ export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unkn
 }
 
 /** A Matter with counts over `mine`, its own Actions (see `VaultView.actionsByMatter`). */
-export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s: Snapshot): MatterSummary {
+/** A Matter as the operations return it; `fm` is its frontmatter when it isn't in the snapshot yet (a new Matter). */
+export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s: Snapshot, fm?: Readonly<Record<string, unknown>>): MatterSummary {
 	const sphere = matter.sphere === null ? null : (s.settings.spheres.find((x) => x.id === matter.sphere) ?? null);
 	const review = matter.review;
 	return {
 		path: matter.path,
+		id: noteId(fm ?? vaultView(s).byPath.get(matter.path)?.frontmatter),
 		name: matter.name,
 		icon: matter.icon,
 		isInbox: matter.isInbox,
@@ -69,7 +74,7 @@ export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s
 				: null,
 		counts: {
 			open: mine.filter((i) => i.category !== 'closed').length,
-			today: mine.filter((i) => isToday(i.due, i.category, s.now)).length,
+			today: mine.filter((i) => isToday(i.due, i.category, clock(s))).length,
 			waiting: mine.filter((i) => i.waitingOn !== null).length,
 			closed: mine.filter((i) => i.category === 'closed').length,
 			total: mine.length,

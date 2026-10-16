@@ -17,7 +17,8 @@ export interface BodyLine {
 }
 
 const LINE_BREAK = /\r\n|\r|\n/;
-const QUOTE = /^(?: {0,3}>[ \t]?)+/;
+/** Blockquote markers at the start of a line (`> `, `>> `…). */
+export const QUOTE = /^(?: {0,3}>[ \t]?)+/;
 const LIST_ITEM = /^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
 const FENCE = /^([ \t]*)(`{3,}|~{3,})(.*)$/;
 
