@@ -70,6 +70,7 @@ Every property the plugin reads or writes starts with `mtm-`, so it never touche
 ```yaml
 ---
 mtm-kind: action
+mtm-id: 6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40
 mtm-type: call
 mtm-matter: "[[Kitchen renovation]]"
 mtm-status: next
@@ -84,7 +85,7 @@ Confirm the worktop measurements before ordering.
 - [ ] Ask for the revised quote
 ```
 
-The Action's title is its file name. The body is plain Markdown: the inspector shows the text at the top as **Details** and the task items as a **Checklist**, and it never restructures the note.
+The Action's title is its file name; `mtm-id` is its own ID, written once and never changed, so other tools can find it after a rename. The body is plain Markdown: the inspector shows the text at the top as **Details** and the task items as a **Checklist**, and it never restructures the note.
 
 ![An Action note, with the banner that mirrors its card](docs/images/action-note.webp)
 

@@ -59,7 +59,7 @@ mcp                      Run as an MCP server (stdio)
 
 `matters-that-matter <command> --help` (or `matters-that-matter help <command>`) shows each command's fields and filters.
 
-An Action is named by its path (`MTM/Actions/Call Marco.md`, `.md` optional, or its full path on disk) or its title. When a name matches several Actions, nothing is written and the command lists them. Matters and people are named by name, path or link text; statuses, types and Spheres by label or ID. Commands that take no words (`today`, `list`, `matters`, `workflow`) refuse them: `list Kitchen` says to use `--matter Kitchen`.
+An Action is named by its path (`MTM/Actions/Call Marco.md`, `.md` optional, or its full path on disk), its title or its ID (the note's `mtm-id`, which `--json` gives as `id`). When a name matches several Actions, nothing is written and the command lists them. Matters are named by ID too, or by name, path or link text, and people by name, path or link text; statuses, types and Spheres by label or ID. Commands that take no words (`today`, `list`, `matters`, `workflow`) refuse them: `list Kitchen` says to use `--matter Kitchen`.
 
 ### Adding
 
@@ -160,6 +160,7 @@ matters-that-matter list --matter Kitchen --status next --json | jq '.[0]'
 ```json
 {
   "path": "MTM/Actions/Confirm the worktop measurements.md",
+  "id": "6f1c2a4e-8b3d-4c6a-9e2f-1d7b5a3c9e40",
   "title": "Confirm the worktop measurements",
   "matter": { "path": "MTM/Matters/Kitchen renovation.md", "name": "Kitchen renovation", "isInbox": false },
   "status": { "id": "next", "label": "Next", "category": "open" },
@@ -172,6 +173,8 @@ matters-that-matter list --matter Kitchen --status next --json | jq '.[0]'
   "raw": { "mtm-kind": "action", "mtm-status": "next", "…": "…" }
 }
 ```
+
+Every Action and Matter has its `id`, or `null` while the note has none: an older note gets one with its first write, which `changes` lists (the text output leaves a new ID out).
 
 `show` adds the details, the checklist, the people, and the names and paths of linked notes and of attachments (embedded files that aren't notes). Writes give the Action (or Matter) after the write, `changed`, `dryRun`, `written`, every change (`changes`), `warnings`, the links a rename updated (`links`: each note and its lines) and `danglingLinks`, the number of links left pointing to the old name when Obsidian's "Automatically update internal links" is off. `parse` gives what quick add would make of the text with its `warnings`.
 
@@ -186,7 +189,7 @@ Colour is used only when the output is a terminal and `NO_COLOR` isn't set. Noth
 | 0 | Done |
 | 1 | Nothing matched, several things did, a value can't be read, the command or its options aren't right, or a note's properties aren't valid YAML, or the properties to be changed use YAML the command line can't change safely (an anchor, alias or tag on them), so they can't be changed; change those in Obsidian. Nothing was written. Also when `matters-that-matter open` couldn't open the link. |
 | 2 | The vault isn't ready: no vault named, no settings of Matters that Matter, setup not done, or settings from a newer version of the plugin (reads still work then, with a warning; writes are refused) |
-| 3 | The write didn't happen: the vault changed after it was read (a note changed, appeared or went away, and again when planned once more; a new note whose name is taken meanwhile is planned again a few times, each time with a name still free; another write adding a note of the same name right now), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. If the vault changed, try again; make a read-only note writable first. In the rare case that something couldn't be put back, the message names those files. |
+| 3 | The write didn't happen: the vault changed after it was read (a note the write changes or relies on changed, appeared or went away, or the plugin's settings changed, and again when planned once more with everything read afresh; a new note whose name is taken meanwhile is planned again a few times, each time with a name still free; another write adding a note of the same name right now), a write would have gone outside the vault, a note to be changed is read-only, or writing failed and everything was put back. If the vault changed, try again; make a read-only note writable first. In the rare case that something couldn't be put back, the message names those files. |
 
 ## Safety
 
