@@ -1,6 +1,6 @@
 {
 	"name": "matters-that-matter",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Matters that Matter from the command line: read and change the Actions and Matters in an Obsidian vault, or run as an MCP server for AI assistants.",
 	"type": "module",
 	"bin": {
