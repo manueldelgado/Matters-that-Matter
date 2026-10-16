@@ -493,3 +493,27 @@ describe('Spanish "a" after a time', () => {
 		expect(parse('Llamar a las 5 a', { languages: ['es'] })).toMatchObject({ title: 'Llamar a', due: '2026-10-09T17:00' });
 	});
 });
+
+describe('overnight ranges', () => {
+	const range = (input: string) => {
+		const r = parse(input);
+		return [r.title, r.start, r.due];
+	};
+
+	it('put an end that is only a time, earlier than the start, on the next day', () => {
+		expect(range('Meet 18:00 to 6:00')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T06:00']);
+		expect(range('Meet 18:00 to 06:00')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T06:00']);
+		expect(range('Meet 18:00 - 07:30')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-10T07:30']);
+		// An hour of one digit is still the shortest range after the start.
+		expect(range('Meet 18:00 - 7:30')).toEqual(['Meet', '2026-10-09T18:00', '2026-10-09T19:30']);
+		expect(range('Meet 22:00 to 2:00')).toEqual(['Meet', '2026-10-09T22:00', '2026-10-10T02:00']);
+		expect(range('Reunión 18:00 hasta 6:00')).toEqual(['Reunión', '2026-10-09T18:00', '2026-10-10T06:00']);
+	});
+
+	it('start on the next such weekday when the start is a weekday', () => {
+		expect(range('Meet fri 22:00 to 2:00')).toEqual(['Meet', '2026-10-16T22:00', '2026-10-17T02:00']);
+		expect(range('Meet fri 18:00 to 6:00')).toEqual(['Meet', '2026-10-16T18:00', '2026-10-17T06:00']);
+		expect(range('Reunión el viernes de 22:00 hasta 2:00')).toEqual(['Reunión', '2026-10-16T22:00', '2026-10-17T02:00']);
+		expect(parseDateText('el viernes de 22:00 hasta 2:00', now)).toEqual({ start: '2026-10-16T22:00', due: '2026-10-17T02:00' });
+	});
+});

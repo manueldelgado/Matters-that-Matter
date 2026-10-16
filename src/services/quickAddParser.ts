@@ -375,8 +375,29 @@ function rangeEnds(r: RangeParts, now: Date): { from: MtmDate; to: MtmDate } {
 	return best ?? plain;
 }
 
+type Parse = (text: string) => ParsedResult[];
+
+/** The last range word in a range chrono read whole, and what follows it. */
+const RANGE_TAIL = /(?:\s+(?:to|until|till|through|al|a|hasta|y)\s+|\s*[-–—]\s*)(?=\S)/gi;
+
+/**
+ * The end of a range chrono read whole, when it is only a time, as written. chrono moves such an end to the
+ * afternoon after an afternoon start ("18:00 to 6:00" gives 18:00 twice); read on its own, the end keeps its hour.
+ * Null when the text after the last range word isn't a time on its own.
+ */
+function timeEndAsWritten(a: ParsedResult, parse: Parse): { c: ParsedComponents; text: string } | null {
+	if (!a.end?.isCertain('hour')) return null;
+	const words = [...a.text.matchAll(RANGE_TAIL)].at(-1);
+	if (!words) return null;
+	const tail = a.text.slice((words.index ?? 0) + words[0].length).trim();
+	const r = parse(tail)[0];
+	if (!r || r.index !== 0 || r.text.length !== tail.length || r.end) return null;
+	const c = r.start;
+	return c.isCertain('hour') && !c.isCertain('weekday') && !c.isCertain('day') && !c.isCertain('month') && !c.isCertain('year') ? { c, text: r.text } : null;
+}
+
 /** Joins two results separated by a range word ("del lunes al miércoles"), and keeps a range's end after its start. */
-function toSpans(text: string, results: readonly ParsedResult[], now: Date): DateSpan[] {
+function toSpans(text: string, results: readonly ParsedResult[], now: Date, parse: Parse): DateSpan[] {
 	const out: DateSpan[] = [];
 	for (let i = 0; i < results.length; i++) {
 		const a = results[i];
@@ -389,7 +410,14 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date): Dat
 		const fromC = a.start;
 		let toC = a.end ?? null;
 		let toText = a.text;
-		if (b && !a.end && !b.end && !zoneA && RANGE_JOIN.test(text.slice(end, b.index))) {
+		const ownEnd = timeEndAsWritten(a, parse);
+		if (ownEnd) {
+			toC = ownEnd.c;
+			toText = ownEnd.text;
+		}
+		// chrono's Spanish parser may start a time at the last letter of "hasta" ("hasta 2:00" reads "a 2:00").
+		const bStart = b && /^a\s/i.test(b.text) && /\p{L}/u.test(text[b.index - 1] ?? '') ? b.index + 1 : (b?.index ?? 0);
+		if (b && !a.end && !b.end && !zoneA && RANGE_JOIN.test(text.slice(end, bStart))) {
 			const zoneB = zoneOf(b);
 			end = b.index + b.text.length - (zoneB?.zone ? 0 : (zoneB?.cut ?? 0));
 			zone = !!zoneB?.zone;
@@ -399,7 +427,7 @@ function toSpans(text: string, results: readonly ParsedResult[], now: Date): Dat
 		}
 		let from: MtmDate;
 		let to: MtmDate | null = null;
-		if (toC) ({ from, to } = rangeEnds({ fromC, toC, fromText: a.text, toText, timeOnly: endIsTimeOnly(a, fromC, toC) }, now));
+		if (toC) ({ from, to } = rangeEnds({ fromC, toC, fromText: a.text, toText, timeOnly: !!ownEnd || endIsTimeOnly(a, fromC, toC) }, now));
 		else from = toMtmDate(fromC, now, a.text);
 		let problem: DateProblem | undefined = zone ? 'time-zone' : undefined;
 		// "28 to 2 November": the month chrono gives both ends is written once, after the last day; a first day after
@@ -540,8 +568,8 @@ function findDate(text: string, ctx: QuickAddContext): DateSpan | null {
 	const now = wallClock(ctx.now, ctx.timeZone);
 	const spans: DateSpan[] = [];
 	for (const lang of languages) {
-		const results = lang === 'en' ? chronoEnDayFirst.parse(text, now, { forwardDate: true }) : parseSpanish(text, now);
-		spans.push(...toSpans(text, results, now));
+		const parse: Parse = (t) => (lang === 'en' ? chronoEnDayFirst.parse(t, now, { forwardDate: true }) : parseSpanish(t, now));
+		spans.push(...toSpans(text, parse(text), now, parse));
 		spans.push(...dayOfMonthSpans(text, now, lang));
 	}
 	if (languages.includes('es')) spans.push(...spanishSpans(text, now));
