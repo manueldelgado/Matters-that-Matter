@@ -41,6 +41,7 @@ import { createPersonNote } from '../../../vault/notes';
 import { loadCandidates } from '../../../vault/candidates';
 import { appendIcon, swapClasses, tileEl, typeClasses } from '../../components/dom';
 import { showAddedNotice } from '../../components/addedNotice';
+import { showStatusPicker } from '../../components/menus';
 import {
 	isSuggestion,
 	renderSuggestions,
@@ -82,6 +83,8 @@ export class QuickAddModal extends Modal {
 
 	private contextMatter: string | null;
 	private readonly contextStatus: string | null;
+	/** Status chosen from the status token's menu; kept for the next capture after Shift+Enter, as the context is. */
+	private chosenStatus: string | null = null;
 	private contextDue: string | null;
 	private contextSphere: string | null;
 	private readonly contextType: string | null;
@@ -227,6 +230,7 @@ export class QuickAddModal extends Modal {
 		const draft = draftOf(result, {
 			contextMatter: this.contextMatter,
 			contextStatus: this.contextStatus,
+			chosenStatus: this.chosenStatus,
 			contextType: this.contextType,
 			contextDue: this.contextDue,
 			inboxPath: s.inboxPath,
@@ -367,6 +371,7 @@ export class QuickAddModal extends Modal {
 				this.contextDue = null;
 				this.refocus();
 			},
+			onPickStatus: (anchor) => this.openStatusMenu(anchor, draft.statusId),
 		});
 
 		renderTypePicker(this.pickerEl, s.types, draft.typeId, (t) => this.pickType(t));
@@ -447,6 +452,25 @@ export class QuickAddModal extends Modal {
 		// The accepted token stops suggesting until the caret moves to another one.
 		this.dismissedAt = token.start;
 		this.setInput(next.input, next.caret);
+	}
+
+	/** The status token's menu: the status picked becomes the capture's, the current one included (a default becomes a choice). */
+	private openStatusMenu(anchor: HTMLElement, currentId: string): void {
+		anchor.addClass('is-open');
+		showStatusPicker(
+			anchor,
+			this.settings.statuses,
+			currentId,
+			(statusId) => {
+				this.chosenStatus = statusId;
+				this.refocus();
+			},
+			() => {
+				anchor.removeClass('is-open');
+				// Closed without a choice (Escape, a click elsewhere): back to typing.
+				if (this.input.isConnected) this.input.focus();
+			},
+		);
 	}
 
 	/** The picker sets the type, as the latest type pill; a `/type` typed afterwards replaces it. */

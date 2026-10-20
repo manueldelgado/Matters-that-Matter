@@ -15,6 +15,37 @@ function showUnder(menu: Menu, anchor: HTMLElement | { x: number; y: number }): 
 	menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 });
 }
 
+/** A menu of every status in workflow order, with its dot, the current one ticked. */
+function statusItems(statuses: readonly StatusDef[], currentId: string, onPick: (statusId: string) => void): Menu {
+	// The status dots carry each status's tone; a native menu would show plain text.
+	const menu = new Menu().setUseNativeMenu(false);
+	for (const status of statuses) {
+		menu.addItem((i) =>
+			i
+				.setTitle(createFragment((f) => statusChip(f.createSpan(), status)))
+				.setChecked(status.id === currentId)
+				.onClick(() => onPick(status.id)),
+		);
+	}
+	return menu;
+}
+
+/**
+ * The status a new Action will get (quick add): every status and nothing else, since choosing the done status says
+ * what "Mark as done" would. Picking the current one counts too: it turns a default into a choice.
+ */
+export function showStatusPicker(
+	anchor: HTMLElement,
+	statuses: readonly StatusDef[],
+	currentId: string,
+	onPick: (statusId: string) => void,
+	onHide: () => void,
+): void {
+	const menu = statusItems(statuses, currentId, onPick);
+	menu.onHide(onHide);
+	showUnder(menu, anchor);
+}
+
 /** Every status, then Mark as done or Reopen. */
 export function showStatusMenu(
 	anchor: HTMLElement | { x: number; y: number },
@@ -24,18 +55,9 @@ export function showStatusMenu(
 	/** Items added after Mark as done / Reopen (the swipe board's "Move to Matter…"). */
 	extra?: (menu: Menu) => void,
 ): void {
-	// The status dots carry each status's tone; a native menu would show plain text.
-	const menu = new Menu().setUseNativeMenu(false);
-	for (const status of statuses) {
-		menu.addItem((i) =>
-			i
-				.setTitle(createFragment((f) => statusChip(f.createSpan(), status)))
-				.setChecked(status.id === current.statusId)
-				.onClick(() => {
-					if (status.id !== current.statusId) onPick(status.id);
-				}),
-		);
-	}
+	const menu = statusItems(statuses, current.statusId, (statusId) => {
+		if (statusId !== current.statusId) onPick(statusId);
+	});
 	menu.addSeparator();
 	const closed = current.category === 'closed';
 	const target = closed ? backlogStatus(statuses) : doneStatus(statuses);

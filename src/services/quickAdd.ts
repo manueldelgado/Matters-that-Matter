@@ -127,6 +127,8 @@ export interface QuickAddDefaults {
 	contextMatter: string | null;
 	/** Status from the column the modal was opened in. */
 	contextStatus: string | null;
+	/** Status chosen in the dialog's status menu; it replaces the column's. */
+	chosenStatus?: string | null;
 	/** Type of the list group the modal was opened from; a typed or picked type replaces it. */
 	contextType: string | null;
 	/** Due date from the calendar day the modal was opened from ('YYYY-MM-DD'); a typed date replaces it. */
@@ -144,7 +146,10 @@ export interface Draft {
 	/** Whether the Matter is only the Inbox fallback. */
 	matterIsDefault: boolean;
 	statusId: string;
+	/** The status is only the backlog fallback: neither a column's nor chosen. */
 	statusIsDefault: boolean;
+	/** The status was chosen in the dialog. */
+	statusChosen: boolean;
 	/** Paths, or new people (see isNewPath). */
 	people: string[];
 	priority: Priority | null;
@@ -159,13 +164,15 @@ export function draftOf(result: QuickAddResult, d: QuickAddDefaults): Draft {
 	const matter = result.matterPath ?? d.contextMatter;
 	const typedDate = result.due !== null || result.start !== null;
 	const contextDue = typedDate ? null : (d.contextDue ?? null);
+	const chosen = d.chosenStatus ?? null;
 	return {
 		title: result.title,
 		typeId: result.typeId ?? d.contextType ?? d.defaultTypeId,
 		matterPath: matter ?? d.inboxPath,
 		matterIsDefault: matter === null,
-		statusId: d.contextStatus ?? d.backlogId,
-		statusIsDefault: d.contextStatus === null,
+		statusId: chosen ?? d.contextStatus ?? d.backlogId,
+		statusIsDefault: chosen === null && d.contextStatus === null,
+		statusChosen: chosen !== null,
 		people: result.people,
 		priority: result.priority,
 		start: result.start,

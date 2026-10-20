@@ -129,6 +129,23 @@ describe('draftOf', () => {
 		expect(draftOf(parseQuickAdd('Paint #kitchen', ctx), withContext).matterPath).toBe('M/Kitchen renovation.md');
 	});
 
+	it('takes a status chosen in the dialog over the column and the backlog', () => {
+		expect(draftOf(parseQuickAdd('Paint', ctx), defaults)).toMatchObject({ statusId: 'later', statusIsDefault: true, statusChosen: false });
+		const chosen = { ...defaults, chosenStatus: 'next' };
+		expect(draftOf(parseQuickAdd('Paint', ctx), chosen)).toMatchObject({ statusId: 'next', statusIsDefault: false, statusChosen: true });
+		const fromColumn = { ...defaults, contextStatus: 'doing' };
+		expect(draftOf(parseQuickAdd('Paint', ctx), fromColumn)).toMatchObject({ statusId: 'doing', statusIsDefault: false, statusChosen: false });
+		expect(draftOf(parseQuickAdd('Paint', ctx), { ...fromColumn, chosenStatus: 'waiting' })).toMatchObject({ statusId: 'waiting', statusChosen: true });
+	});
+
+	it('counts the backlog status as a choice once it is chosen', () => {
+		expect(draftOf(parseQuickAdd('Paint', ctx), { ...defaults, chosenStatus: 'later' })).toMatchObject({
+			statusId: 'later',
+			statusIsDefault: false,
+			statusChosen: true,
+		});
+	});
+
 	it('prefers a typed type over the context one', () => {
 		const picked = { ...defaults, contextType: 'follow-up' };
 		expect(draftOf(parseQuickAdd('Paint', ctx), picked).typeId).toBe('follow-up');

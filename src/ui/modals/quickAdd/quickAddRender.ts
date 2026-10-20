@@ -9,7 +9,7 @@ import type { PersonCandidate } from '../../../services/notesModel';
 import type { NoteCandidate } from '../../../services/quickAddParser';
 import type { ShownChip } from '../../../services/quickAddPills';
 import { avatarEl, priorityEl } from '../../components/card';
-import { appendIcon, statusClasses, tileEl, typeClasses } from '../../components/dom';
+import { appendIcon, pressable, statusClasses, tileEl, typeClasses } from '../../components/dom';
 
 export interface MatterCandidate extends NoteCandidate {
 	name: string;
@@ -49,6 +49,8 @@ export interface TokensInput {
 	onRemoveChip: (chip: ShownChip) => void;
 	onRemoveMatter: () => void;
 	onRemoveContextDue: () => void;
+	/** The status token was pressed: open the status menu under it. */
+	onPickStatus: (anchor: HTMLElement) => void;
 }
 
 function token(parent: HTMLElement, cls: string[], tooltip?: string): HTMLElement {
@@ -88,13 +90,15 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 	}
 
 	if (t.status) {
-		const status = token(
-			row,
-			['mod-status', ...statusClasses(t.status), ...(draft.statusIsDefault ? ['mod-ghost'] : [])],
-			draft.statusIsDefault ? q.defaultStatus(t.status.label) : q.contextStatus,
-		);
+		const source = draft.statusIsDefault ? q.defaultStatus(t.status.label) : draft.statusChosen ? q.chosenStatus : q.contextStatus;
+		const status = token(row, ['mod-status', 'mod-pick', ...statusClasses(t.status), ...(draft.statusIsDefault ? ['mod-ghost'] : [])], q.statusTip(source));
+		status.setAttrs({ 'aria-haspopup': 'menu', 'aria-label': q.statusLabel(t.status.label) });
 		status.createSpan({ cls: 'mtm-status-dot' });
 		status.appendText(t.status.label);
+		appendIcon(status.createSpan({ cls: 'mtm-token-chevron' }), 'chevron-down');
+		// The input keeps the focus (and its caret) when the token is clicked; the keyboard reaches it with Tab.
+		status.addEventListener('mousedown', (e) => e.preventDefault());
+		pressable(status, () => t.onPickStatus(status));
 	}
 
 	if (draft.dueFromContext && draft.due) {
