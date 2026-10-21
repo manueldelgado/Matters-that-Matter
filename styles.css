@@ -1428,6 +1428,9 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* Phones: quick add's sheet rides on the keyboard (Obsidian's --keyboard-height, 0 when it's down), and keeps its buttons clear of the home indicator when it's down. */
 .is-phone .modal.mtm-quick-add{--dialog-max-height:calc(100vh - env(safe-area-inset-top,0px) - var(--keyboard-height,0px));margin-bottom:var(--keyboard-height,0px);transition:margin-bottom 250ms var(--mtm-ease)}
 .is-phone .mtm-quick-add .mtm-qa-footer{padding-bottom:max(10px,calc(env(safe-area-inset-bottom,0px) - var(--keyboard-height,0px)))}
+/* Phones: the #Matter and @person suggestions open above the sheet, across it, no taller than the room up to the top of the screen (--mtm-suggest-room, set by the dialog). */
+.is-phone .mtm-quick-add .modal-content,.is-phone .mtm-quick-add .mtm-qa-field{position:static}
+.is-phone .mtm-quick-add .mtm-suggest{top:auto;bottom:calc(100% + 8px);left:16px;right:16px;width:auto;max-width:none;max-height:min(240px,var(--mtm-suggest-room,240px))}
 /* Keyboard focus for controls that hide until hover, and a ring for the plugin's own controls (Obsidian's buttons and icons bring theirs). */
 .mtm-lane-handle:focus-visible,.mtm-sphere-head .mtm-lane-menu:focus-visible{opacity:1}
 :is(.mtm-lane-handle,.mtm-drag-handle,.mtm-row-add,.mtm-icon-cell,.mtm-destination):focus-visible{outline:none;box-shadow:0 0 0 2px var(--background-modifier-border-focus)}

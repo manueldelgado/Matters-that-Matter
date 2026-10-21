@@ -376,6 +376,16 @@ export class QuickAddModal extends Modal {
 
 		renderTypePicker(this.pickerEl, s.types, draft.typeId, (t) => this.pickType(t));
 		this.addButton.disabled = !draft.canAdd || this.busy;
+		this.fitSuggestions();
+	}
+
+	/** Phones: the suggestions open above the sheet (the keyboard is below it), as tall as the sheet could still grow. */
+	private fitSuggestions(): void {
+		if (!this.suggestEl || !this.modalEl.ownerDocument.body.hasClass('is-phone')) return;
+		const reach = parseFloat(getComputedStyle(this.modalEl).maxHeight);
+		if (!Number.isFinite(reach)) return;
+		const room = Math.max(80, Math.floor(reach - this.modalEl.offsetHeight - 16));
+		this.suggestEl.setCssProps({ '--mtm-suggest-room': `${room}px` });
 	}
 
 	/** × on a pill: it sets nothing, and its words, if still in the text, are plain words for the rest of the capture. */
