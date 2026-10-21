@@ -65,6 +65,7 @@ CI (`.github/workflows/lint.yml`) builds, lints and tests every push. Node 22 or
 - Menus whose items carry colour or icons that matter use `menu.setUseNativeMenu(false)`: macOS native menus show plain text only.
 - There is no public submenu API: a "Move to …" item opens a second `Menu` at the same position.
 - Keyboard: every icon-only control goes through `pressable()` (`ui/components/dom.ts`: role, tab stop, Enter and Space), and a menu it opens from the keyboard opens at the element (`showMenuFor`, `menuPoint`). Native menus on macOS never appear in the DOM, so tests of menus switch them off.
+- `setTooltip` writes the element's `aria-label`, and Obsidian draws the tooltip from it: an `aria-label` set afterwards replaces the tooltip. An element with a tooltip has one text for both, so make it name what the element shows as well as what the tooltip adds.
 - A write started from a dialog, a menu or a watcher reports failure with `reportWriteFailed` (a log line and the notice); never leave the promise unhandled.
 - A label that must end in "…" needs its text in a child element: `text-overflow` does nothing to a flex container's own text.
 - Don't name a view member `focus`: it shadows `View.focus()`, which Obsidian calls.
