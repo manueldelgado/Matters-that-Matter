@@ -1425,6 +1425,9 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 /* Phones: the tap area reaches 36px without making the token bigger. */
 .is-phone .mtm-token.mod-pick{position:relative}
 .is-phone .mtm-token.mod-pick::after{content:"";position:absolute;inset:-6px -4px}
+/* Phones: quick add's sheet rides on the keyboard (Obsidian's --keyboard-height, 0 when it's down), and keeps its buttons clear of the home indicator when it's down. */
+.is-phone .modal.mtm-quick-add{--dialog-max-height:calc(100vh - env(safe-area-inset-top,0px) - var(--keyboard-height,0px));margin-bottom:var(--keyboard-height,0px);transition:margin-bottom 250ms var(--mtm-ease)}
+.is-phone .mtm-quick-add .mtm-qa-footer{padding-bottom:max(10px,calc(env(safe-area-inset-bottom,0px) - var(--keyboard-height,0px)))}
 /* Keyboard focus for controls that hide until hover, and a ring for the plugin's own controls (Obsidian's buttons and icons bring theirs). */
 .mtm-lane-handle:focus-visible,.mtm-sphere-head .mtm-lane-menu:focus-visible{opacity:1}
 :is(.mtm-lane-handle,.mtm-drag-handle,.mtm-row-add,.mtm-icon-cell,.mtm-destination):focus-visible{outline:none;box-shadow:0 0 0 2px var(--background-modifier-border-focus)}
