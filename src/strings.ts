@@ -329,10 +329,10 @@ export const STRINGS = {
 		defaultMatter: (inbox: string) => `No Matter given, so it goes to the ${inbox}`,
 		defaultStatus: (status: string) => `New Actions start in ${status}`,
 		contextMatter: 'From the lane you added it in',
-		contextStatus: 'From the column you added it in',
-		chosenStatus: 'Chosen here',
+		contextStatus: (status: string) => `${status}, from the column you added it in`,
+		chosenStatus: (status: string) => `${status}, chosen here`,
+		/** The status token's tooltip, which is also its accessible name: Obsidian reads both from `aria-label`. */
 		statusTip: (source: string) => `${source}. Click to choose another status`,
-		statusLabel: (status: string) => `Status: ${status}. Choose another`,
 		contextDue: 'From the calendar day you added it on',
 		noType: (query: string, fallback: string) => `No type called “${query}”, so it uses the default type, ${fallback}`,
 		noMatter: (query: string) => `No Matter called “${query}”`,

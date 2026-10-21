@@ -90,11 +90,13 @@ export function renderTokens(row: HTMLElement, t: TokensInput): void {
 	}
 
 	if (t.status) {
-		const source = draft.statusIsDefault ? q.defaultStatus(t.status.label) : draft.statusChosen ? q.chosenStatus : q.contextStatus;
+		const label = t.status.label;
+		const source = draft.statusIsDefault ? q.defaultStatus(label) : draft.statusChosen ? q.chosenStatus(label) : q.contextStatus(label);
+		// The tooltip is the token's aria-label, so it names the status as well as where it came from.
 		const status = token(row, ['mod-status', 'mod-pick', ...statusClasses(t.status), ...(draft.statusIsDefault ? ['mod-ghost'] : [])], q.statusTip(source));
-		status.setAttrs({ 'aria-haspopup': 'menu', 'aria-label': q.statusLabel(t.status.label) });
+		status.setAttr('aria-haspopup', 'menu');
 		status.createSpan({ cls: 'mtm-status-dot' });
-		status.appendText(t.status.label);
+		status.appendText(label);
 		appendIcon(status.createSpan({ cls: 'mtm-token-chevron' }), 'chevron-down');
 		// The input keeps the focus (and its caret) when the token is clicked; the keyboard reaches it with Tab.
 		status.addEventListener('mousedown', (e) => e.preventDefault());
