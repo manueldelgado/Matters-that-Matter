@@ -69,7 +69,7 @@ export class NewMatterModal extends Modal {
 		const input = row.createEl('input', { type: 'text', value: this.initialName, attr: { 'aria-label': t.name, placeholder: t.placeholder } });
 
 		const outcomeField = body.createDiv({ cls: 'mtm-field' });
-		outcomeField.createDiv({ cls: 'mtm-label', text: t.outcome }).createSpan({ cls: 'mtm-label-aside', text: t.optional });
+		outcomeField.createDiv({ cls: 'mtm-label', text: t.outcome }).createSpan({ cls: 'mtm-label-optional', text: t.optional });
 		const outcome = outcomeField.createEl('input', { type: 'text', attr: { 'aria-label': t.outcome, placeholder: t.outcomePlaceholder } });
 		outcomeField.createSpan({ cls: 'mtm-field-hint', text: t.outcomeHint });
 

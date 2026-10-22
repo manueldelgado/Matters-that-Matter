@@ -553,7 +553,7 @@ export const STRINGS = {
 		sphere: 'Sphere',
 		noSphere: 'None',
 		outcome: 'Outcome',
-		optional: 'Optional',
+		optional: '(optional)',
 		outcomePlaceholder: 'What does done look like?',
 		outcomeHint: 'One line. For a Matter that never ends, the standard you want to keep.',
 		create: 'Create Matter',

@@ -1179,8 +1179,10 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 .mtm-today-empty-text{max-width:320px;font-size:13px;line-height:1.5;color:var(--text-muted)}
 /* Narrower tabs: one column, the day first. */
 @container (max-width:820px){.mtm-today{display:flex;flex-direction:column;align-items:stretch;width:min(640px,100%);gap:24px;padding:40px 24px 32px}.mtm-today-side{position:static}}
-/* Phones: tighter; the tiles stay three across. */
-.is-phone .mtm-today{gap:18px;padding:26px 16px 24px}
+/* Phones: tighter; the tiles stay three across. The panel fills the whole tab, so it starts below the status bar and
+   Obsidian's header (floating or not), ends above the floating navigation bar, and fades under the header as notes do. */
+.is-phone .empty-state.mtm-has-today{mask-image:var(--view-top-fade-mask)}
+.is-phone .mtm-today{gap:18px;padding:calc(var(--view-header-top-offset,0px) + var(--view-header-height,0px) + 16px) 16px calc(24px + var(--view-bottom-spacing,0px))}
 .is-phone .mtm-today-title{font-size:30px}
 .is-phone .mtm-today .mtm-stat{padding:8px 10px}
 .is-phone .mtm-today .mtm-stat-value{font-size:20px}
@@ -1437,3 +1439,6 @@ body .mtm-today-action:not(.clickable-icon):hover{box-shadow:var(--mtm-card-shad
 :is(.mtm-lane-handle,.mtm-drag-handle){border-radius:var(--radius-s)}
 .mtm-swatch:focus-visible{outline:none;box-shadow:0 0 0 2px var(--background-primary),0 0 0 4px var(--background-modifier-border-focus)}
 .mtm-swatch.is-active:focus-visible{box-shadow:0 0 0 2px var(--background-primary),0 0 0 4px var(--mtm-strong),0 0 0 6px var(--background-modifier-border-focus)}
+/* ——— "(optional)" after a field's label ——— */
+/* Right after the label in its size and colour, in regular weight: part of the label, unlike an aside at the row's end. */
+.mtm-label-optional{font-weight:500}
