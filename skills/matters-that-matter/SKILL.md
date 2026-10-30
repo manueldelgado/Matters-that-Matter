@@ -1,6 +1,6 @@
 ---
 name: matters-that-matter
-description: Read and change the user's work in Matters that Matter, an Obsidian plugin where every Action (one card on a board) and every Matter (an open line of work, one lane on the board) is a note in the vault. Use it when the user keeps their work in Obsidian with Matters that Matter and asks to add, capture or remember something to do; to update, move, reschedule, delegate, complete or reopen an Action; to find Actions (due, late, waiting on someone, in a Matter, with a person); to ask what matters today; or to list or add Matters. Works through the matters-that-matter MCP server or command line when they are available, and otherwise by reading and writing the notes in the plugin's format.
+description: Read and change the user's work in Matters that Matter, an Obsidian plugin where every Action (one card on a board) and every Matter (an open line of work, one lane on the board) is a note in the vault. Use it when the user keeps their work in Obsidian with Matters that Matter and asks to add, capture or remember something to do; to update, move, reschedule, delegate, complete or reopen an Action; to find Actions (due, late, waiting on someone, in a Matter, with a person); to ask what matters today; to go through the Inbox, see what they are waiting on, plan the day or review the week; or to list or add Matters. Works through the matters-that-matter MCP server or command line when they are available, and otherwise by reading and writing the notes in the plugin's format.
 license: MIT
 ---
 
@@ -29,30 +29,27 @@ Use the plugin's words with the user, capitalised as shown: **Action**, **Matter
 
 ## With the MCP server (preferred)
 
-When the MCP tools of Matters that Matter are available (`add_action`, `get_today` and the others below, under whatever name the host gave the server; it is started as `npx -y matters-that-matter mcp --vault <path>`), use them. They apply all of the plugin's rules, so you never need the file format.
+When the MCP tools of Matters that Matter are available (`add_action`, `get_today` and the others below, under whatever name the host gave the server; it is started as `npx -y matters-that-matter mcp --vault <path>`), use them. They apply all of the plugin's rules, and their descriptions say what each one takes, so you never need the file format.
 
-| Tool | Does |
+| Tool | For |
 |---|---|
-| `get_today` | What matters today: Actions due today or late (else the next ones), the Inbox count, reviews due, long waits |
-| `list_actions` | Actions, filtered by Matter, status, type, Sphere, person, due range or waiting; done Actions hidden unless asked for |
-| `get_action` | One Action: its values, details, checklist, people and the names of its linked notes and attachments |
-| `add_action` | Adds an Action from fields, from quick add text (`/call #Kitchen @Marco !1 fri 10:00`), or both (fields win) |
-| `update_action` | Changes an Action: title (renames the note), status, Matter, type, dates, priority, waiting on, people, details; adds checklist items or a link |
-| `mark_as_done` | Moves an Action to the done status and records today as its completion date |
-| `reopen_action` | Moves a done Action back to the backlog status |
-| `list_matters` | Matters in board order, with state, Sphere, outcome, review and counts |
-| `add_matter` | Adds a Matter (name, icon, Sphere, state, outcome, review rhythm), last on the board |
-| `get_workflow` | The statuses, types and Spheres, with their IDs and labels |
+| `get_today` | What matters today: a good first call |
+| `list_actions` | Finding Actions |
+| `get_action` | One Action in full |
+| `add_action` | Something new to do |
+| `update_action` | Changing an Action that exists |
+| `mark_as_done` | Finishing an Action |
+| `reopen_action` | Undoing Mark as done |
+| `list_matters` | The Matters, and where an Action belongs |
+| `add_matter` | A new Matter, only when the user asks for one |
+| `get_workflow` | The statuses, types and Spheres |
 
-- Name an Action by its path (`MTM/Actions/Call Marco.md`) or its title. When several match, the tool lists them: ask the user which one, or use the path.
-- Statuses, types, Spheres and Matters can be given by label or ID; the notes always get IDs. Call `get_workflow` when you need the choices.
-- `add_action` falls back like quick add (an unknown Matter gives the Inbox, an unknown type the default type) and warns: pass the warnings on. `update_action` refuses unknown values and changes nothing: show the user the valid values instead of guessing.
-- Leave out the fields you don't mean to change. On `update_action`, `null` removes a value and an empty value is refused; `people` replaces the whole list.
+- When a name matches several Actions, the tool lists them: ask the user which one, or use the path.
+- Pass on every warning a tool gives. When a tool refuses a value, show the user the values it offers instead of guessing.
 - Every write reports what it changed, property by property. Tell the user in a line or two (where the Action went, its status, its date).
-- The host usually asks before each write. The server may run read-only (`--read-only`) or offer only some tools (`--tools`); if a tool is missing, say what you'd have done and don't work around it by editing files.
-- Dates take the stored forms (`2026-10-16`, `2026-10-16T10:00`) or words as quick add reads them ("fri 10:00", "tomorrow"). They are in the user's local time: never pass a time zone (`Z`, `+02:00`, "EST"). A date with one is refused, and in quick add text it gets no date; convert it to the user's local time first.
-- In quick add text, people and dates keep their words in the title (a name without its `@`), and `/type`, `#Matter` and `!1` to `!3` leave it. Write the text as the title should read ("Call @Marco on Friday about the quote"), or pass the date as `due` to keep it out of the title.
-- `get_today` returns the vault's today in `date`. Use that as today, for what is due or late and for relative dates, even if your own clock says otherwise; prefer passing dates in words ("next tue") and let the tools resolve them.
+- The host usually asks before each write. The server may run read-only or offer only some tools; if a tool is missing, say what you'd have done and don't work around it by editing files.
+- Give dates in words ("next tue") when you can, and let the tools resolve them against the vault's today.
+- For a routine (going through the Inbox, what you're waiting on, planning the day, the week's review), read `references/routines.md` first.
 
 ## With the command line
 
@@ -115,6 +112,7 @@ Ask whether the worktop can be fitted before the 20th.
 
 ## Reference
 
+- `references/routines.md`: going through the Inbox, what you're waiting on, planning the day, the week's review.
 - `references/format.md`: every property, the body, the settings, and what readers must compute (done, overdue, today, orphaned values).
 - JSON Schemas: https://matters-that-matter.app/schema/v1/action.json, https://matters-that-matter.app/schema/v1/matter.json, https://matters-that-matter.app/schema/v1/settings.json
 - Docs: https://matters-that-matter.app/docs/connect/
