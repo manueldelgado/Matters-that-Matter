@@ -110,7 +110,7 @@ Follow Obsidian's [developer policies](https://docs.obsidian.md/Developer+polici
 
 - Bump with `npm version <x.y.z>`: it updates `manifest.json` and `versions.json` (plugin version → `minAppVersion`).
 - Keep `minAppVersion` accurate when using newer APIs.
-- The GitHub release tag equals the manifest version (no `v` prefix). Pushing the tag runs `.github/workflows/release.yml`, which creates a draft release with `main.js`, `manifest.json` and `styles.css`.
+- The GitHub release tag equals the manifest version (no `v` prefix). Pushing the tag runs `.github/workflows/release.yml`, which creates a draft release with `main.js`, `manifest.json`, `styles.css` and the skill's ZIP, retrying GitHub's passing 5xx errors. If an upload still fails, run the workflow by hand for that tag (Actions, Run workflow, or `gh workflow run release.yml -f tag=x.y.z`): it uploads only the files the release lacks.
 - Never change the plugin `id`.
 - The CLI has its own version (`cli/package.json`) and its own tags, `cli-x.y.z`; it is published to npm from `cli/` (`npm publish --access public`), never by the plugin's release workflow, which reacts only to `x.y.z` tags.
 - Run `npm run lint` before every release.

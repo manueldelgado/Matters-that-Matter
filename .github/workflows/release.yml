@@ -5,6 +5,14 @@ on:
         tags:
             # Plugin releases only (1.1.0); CLI releases are tagged cli-x.y.z and published to npm by hand.
             - '[0-9]+.[0-9]+.[0-9]+'
+    # Run again for a tag already pushed, with this workflow: it finishes a release whose upload failed, and uploads
+    # nothing to one that has all its files.
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: 'The release tag, such as 1.1.7'
+                required: true
+                type: string
 
 jobs:
     build:
@@ -15,6 +23,8 @@ jobs:
             attestations: write
         steps:
             - uses: actions/checkout@v6
+              with:
+                  ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
 
             - name: Use Node.js
               uses: actions/setup-node@v6
@@ -46,14 +56,31 @@ jobs:
                   cd skills
                   zip -r -X ../matters-that-matter-skill.zip matters-that-matter
 
+            # A draft release, then each file it doesn't have yet. GitHub sometimes answers 5xx for a few minutes, so each
+            # call is tried a few times; a run for a release that has every file uploads nothing.
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+                  FILES: main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }} matters-that-matter-skill.zip
               run: |
-                  tag="${GITHUB_REF#refs/tags/}"
-
-                  gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
-                    main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }} \
-                    matters-that-matter-skill.zip
+                  try() {
+                    for i in 1 2 3 4 5; do
+                      "$@" && return 0
+                      echo "Attempt $i failed; trying again." >&2
+                      sleep $((i * 15))
+                    done
+                    return 1
+                  }
+                  ensure_release() {
+                    gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --title="$TAG" --draft
+                  }
+                  try ensure_release
+                  have=$(try gh release view "$TAG" --json assets --jq '.assets[].name')
+                  for f in $FILES; do
+                    if grep -qxF "$f" <<< "$have"; then
+                      echo "$f is on the release already."
+                    else
+                      try gh release upload "$TAG" "$f" --clobber
+                    fi
+                  done
