@@ -52,8 +52,12 @@ export function snapshot(vault: TestVault, options: { settings?: Partial<Matters
 		settings,
 		now: options.now ?? NOW,
 		notes: Object.entries(vault).map(([path, note]) => ({ path, basename: name(path), frontmatter: note.frontmatter })),
-		// As hosts do: the content of every Action note is ready; other notes' content is never asked for.
-		content: (path) => (vault[path]?.frontmatter?.['mtm-kind'] === 'action' ? render(vault[path]) : null),
+		// As hosts do: the content of every Action and Matter note is ready; other notes' content is never asked for.
+		content: (path) => {
+			const note = vault[path];
+			const kind = note?.frontmatter?.['mtm-kind'];
+			return note && (kind === 'action' || kind === 'matter') ? render(note) : null;
+		},
 		links: (path) => [...(vault[path]?.body ?? '').matchAll(/(?<!!)\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1] ?? ''),
 		embeds: (path) => [...(vault[path]?.body ?? '').matchAll(/!\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) => m[1] ?? ''),
 		resolve: (link) => resolve(link),

@@ -53,7 +53,8 @@ When the user asks to review their week, see what they got done, or get ready fo
 2. **Slipped**: `get_today` for the late Actions; ask about each: a new date, done after all, or no longer wanted.
 3. **Coming**: `list_actions` due from today to seven days ahead.
 4. **Waiting**: as in "What am I waiting on", briefly.
-5. **Matters to review**: the Matters `get_today` lists as due for review. For each, `list_actions` in that Matter: does it have an Action to do next? If not, propose one and add it with `add_action` on the user's yes.
-6. Apply what the user accepted, one Action at a time, then sum up the week in a few lines.
+5. **Matters to review**: the Matters `get_today` lists as due for review, each with its latest review note ("Last time: …"). For each, `list_actions` in that Matter: does it have an Action to do next? If not, propose one and add it with `add_action` on the user's yes. Ask whether its outcome, state or review rhythm still hold, and change them with `update_matter` if the user says so.
+6. When the user has been through a Matter, mark it with `mark_as_reviewed` on their yes, with a line for next time if they give one (what was decided, what to look at next).
+7. Apply what the user accepted, one Action or Matter at a time, then sum up the week in a few lines.
 
-In Obsidian: marking each reviewed Matter with "Mark as reviewed" (on the Matter, or in Review Matters), which the tools can't do; changing a Matter's outcome, state or review rhythm.
+In Obsidian: renaming or deleting a Matter.

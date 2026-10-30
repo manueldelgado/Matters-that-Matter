@@ -24,6 +24,8 @@ const HELP = `Matters that Matter, from the command line.            matters-tha
   show <action>            Everything about one Action
   list [filters]           Actions, done hidden
   add-matter <name>        New Matter
+  update-matter <matter>   Change a Matter
+  reviewed <matter>        Mark as reviewed
   matters                  Matters in board order
   workflow                 Statuses, types and Spheres
   parse <text>             What quick add would make of it

@@ -1020,6 +1020,8 @@ export const STRINGS = {
 		badState: (value: string) => `“${value}” isn’t a Matter state. Use active, dormant or closed.`,
 		badRhythm: (value: string) => `“${value}” isn’t a review rhythm. Use a number of days, weeks or months, such as 2w.`,
 		badIcon: (value: string) => `“${value}” isn’t an icon name. Use a Lucide name, such as house.`,
+		inboxNotReviewed: 'The Inbox isn’t reviewed: go through it instead.',
+		inboxOnlyIcon: (field: string) => `The Inbox has only an icon to change, not “${field}”.`,
 		badText: (field: string) => `${field} must be text.`,
 		emptyValue: (field: string) => `“${field}” is empty. Give a value, or null to remove it.`,
 		emptyFilter: (field: string) => `“${field}” is empty: give a value, or leave the filter out.`,

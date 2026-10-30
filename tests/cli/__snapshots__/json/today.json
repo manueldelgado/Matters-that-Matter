@@ -266,6 +266,7 @@
         "due": true,
         "daysSince": null
       },
+      "lastReviewNote": null,
       "counts": {
         "open": 3,
         "today": 1,
@@ -296,6 +297,7 @@
         "due": true,
         "daysSince": 40
       },
+      "lastReviewNote": null,
       "counts": {
         "open": 4,
         "today": 1,
@@ -323,6 +325,7 @@
         "due": true,
         "daysSince": 9
       },
+      "lastReviewNote": null,
       "counts": {
         "open": 2,
         "today": 0,

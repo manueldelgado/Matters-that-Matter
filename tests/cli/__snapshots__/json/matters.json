@@ -11,6 +11,7 @@
     "outcome": null,
     "laneOrder": 50,
     "review": null,
+    "lastReviewNote": null,
     "counts": {
       "open": 3,
       "today": 1,
@@ -41,6 +42,7 @@
       "due": true,
       "daysSince": 19
     },
+    "lastReviewNote": null,
     "counts": {
       "open": 3,
       "today": 1,
@@ -65,6 +67,7 @@
     "outcome": null,
     "laneOrder": 2,
     "review": null,
+    "lastReviewNote": null,
     "counts": {
       "open": 1,
       "today": 0,
@@ -86,6 +89,7 @@
     "outcome": null,
     "laneOrder": 3,
     "review": null,
+    "lastReviewNote": null,
     "counts": {
       "open": 0,
       "today": 0,

@@ -1,6 +1,6 @@
 ---
 name: matters-that-matter
-description: Read and change the user's work in Matters that Matter, an Obsidian plugin where every Action (one card on a board) and every Matter (an open line of work, one lane on the board) is a note in the vault. Use it when the user keeps their work in Obsidian with Matters that Matter and asks to add, capture or remember something to do; to update, move, reschedule, delegate, complete or reopen an Action; to find Actions (due, late, waiting on someone, in a Matter, with a person); to ask what matters today; to go through the Inbox, see what they are waiting on, plan the day or review the week; or to list or add Matters. Works through the matters-that-matter MCP server or command line when they are available, and otherwise by reading and writing the notes in the plugin's format.
+description: Read and change the user's work in Matters that Matter, an Obsidian plugin where every Action (one card on a board) and every Matter (an open line of work, one lane on the board) is a note in the vault. Use it when the user keeps their work in Obsidian with Matters that Matter and asks to add, capture or remember something to do; to update, move, reschedule, delegate, complete or reopen an Action; to find Actions (due, late, waiting on someone, in a Matter, with a person); to ask what matters today; to go through the Inbox, see what they are waiting on, plan the day or review the week; or to list, add or change Matters and mark them as reviewed. Works through the matters-that-matter MCP server or command line when they are available, and otherwise by reading and writing the notes in the plugin's format.
 license: MIT
 ---
 
@@ -16,7 +16,7 @@ Matters that Matter is an Obsidian plugin for personal work. It shows a board, a
 
 ## Vocabulary
 
-Use the plugin's words with the user, capitalised as shown: **Action**, **Matter**, **Inbox**, **Sphere**; "status", "type", "Mark as done", "Reopen", "waiting on", "What matters today?". Don't call Actions or Matters by other names, and don't impose a productivity method's terms on the user's workflow: their statuses and types are whatever their settings say.
+Use the plugin's words with the user, capitalised as shown: **Action**, **Matter**, **Inbox**, **Sphere**; "status", "type", "Mark as done", "Reopen", "Mark as reviewed", "waiting on", "What matters today?". Don't call Actions or Matters by other names, and don't impose a productivity method's terms on the user's workflow: their statuses and types are whatever their settings say.
 
 ## Add or update?
 
@@ -42,6 +42,8 @@ When the MCP tools of Matters that Matter are available (`add_action`, `get_toda
 | `reopen_action` | Undoing Mark as done |
 | `list_matters` | The Matters, and where an Action belongs |
 | `add_matter` | A new Matter, only when the user asks for one |
+| `update_matter` | Changing a Matter: its state, outcome, review rhythm, Sphere or icon |
+| `mark_as_reviewed` | Recording that the user has looked a Matter over, with a line for next time |
 | `get_workflow` | The statuses, types and Spheres |
 
 - When a name matches several Actions, the tool lists them: ask the user which one, or use the path.
@@ -49,6 +51,7 @@ When the MCP tools of Matters that Matter are available (`add_action`, `get_toda
 - Every write reports what it changed, property by property. Tell the user in a line or two (where the Action went, its status, its date).
 - The host usually asks before each write. The server may run read-only or offer only some tools; if a tool is missing, say what you'd have done and don't work around it by editing files.
 - Give dates in words ("next tue") when you can, and let the tools resolve them against the vault's today.
+- Ask before closing a Matter that still has open Actions. Mark a Matter as reviewed only once the user has looked it over, and offer to keep a line for next time.
 - For a routine (going through the Inbox, what you're waiting on, planning the day, the week's review), read `references/routines.md` first.
 
 ## With the command line
@@ -63,7 +66,7 @@ npx -y matters-that-matter update "Call Marco about the quote" --due 2026-10-20 
 npx -y matters-that-matter done "Call Marco about the quote" --vault ~/Notes
 ```
 
-Commands: `today`, `list`, `show`, `add`, `update`, `done`, `reopen`, `matters`, `add-matter`, `workflow`, `parse` (what quick add would make of a text; writes nothing), `open` (opens the Action or Matter in Obsidian through a link). `--dry-run` shows what a write would change without writing; `--json` gives raw and effective values for scripts. `npx -y matters-that-matter <command> --help` lists each command's fields.
+Commands: `today`, `list`, `show`, `add`, `update`, `done`, `reopen`, `matters`, `add-matter`, `update-matter`, `reviewed` (Mark as reviewed, with `--note` for a line for next time), `workflow`, `parse` (what quick add would make of a text; writes nothing), `open` (opens the Action or Matter in Obsidian through a link). `--dry-run` shows what a write would change without writing; `--json` gives raw and effective values for scripts. `npx -y matters-that-matter <command> --help` lists each command's fields.
 
 The command finds the vault's configuration folder by itself. If it says several configuration folders hold the settings, add `--config-dir <folder>` with the one the user names.
 
@@ -86,6 +89,7 @@ Only when neither the MCP server nor the command line is available, read and wri
 - When editing, change only the `mtm-` lines you mean to change. Leave every other property, the body and the formatting as they are.
 - Don't rename Action or Matter files: links to them would break. Use the tools, or ask the user to rename in Obsidian, which updates links.
 - "Mark as done" sets the done status; "Reopen" sets the backlog status.
+- "Mark as reviewed" sets the Matter's `mtm-last-reviewed` to today; a line for next time goes at the end of the Matter note as `- Reviewed YYYY-MM-DD: text`.
 
 A minimal example, `MTM/Actions/Call Marco about the quote.md`:
 

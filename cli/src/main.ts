@@ -9,10 +9,10 @@ import { resolve } from 'node:path';
 import type { VaultReader } from '../../src/files/index';
 import { toYmd } from '../../src/model/dates';
 import { clock } from '../../src/ops/clock';
-import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, parseQuickAdd, reopen, today, updateAction } from '../../src/ops';
+import { addAction, addMatter, getAction, getWorkflow, listActions, listMatters, markAsDone, markReviewed, parseQuickAdd, reopen, today, updateAction, updateMatter } from '../../src/ops';
 import { readiness } from '../../src/ops/fields';
 import { findActionOrMatter } from '../../src/ops/findAction';
-import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, OpError, OpResult, Snapshot, Warning } from '../../src/ops/types';
+import type { ActionFields, ActionWrite, ListActionsInput, MatterSummary, MatterWrite, OpError, OpResult, Snapshot, UpdateMatterInput, Warning } from '../../src/ops/types';
 import type { ApplyFs } from './apply';
 import { boolFlag, listFlag, parseArgs, textFlag, type Command, type FlagValue } from './args';
 import type { ContentsAfter } from './filesLayer';
@@ -24,6 +24,7 @@ import {
 	formatError,
 	formatList,
 	formatMatterAdded,
+	formatMatterChanged,
 	formatMatters,
 	formatParse,
 	formatShow,
@@ -196,7 +197,7 @@ async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise
 		case 'workflow':
 			return read(ctx, getWorkflow, (v) => formatWorkflow(v, ctx.out));
 		case 'matters':
-			return read(ctx, listMatters, (v) => formatMatters(v, ctx.out));
+			return read(ctx, listMatters, (v, s) => formatMatters(v, toYmd(clock(s)), ctx.out));
 		case 'list':
 			return read(ctx, (s) => listActions(listInput(ctx.flags, ctx.vault.root), s), (v, s) => formatList(v, toYmd(clock(s)), typeTones(s), ctx.out, width));
 		case 'show':
@@ -226,11 +227,39 @@ async function dispatch(command: Exclude<Command, 'mcp'>, ctx: Context): Promise
 		case 'add-matter':
 			if (!words) return usageError(ctx, CLI.nameNew);
 			return writeMatter(ctx, words);
+		case 'update-matter': {
+			if (!ref) return usageError(ctx, CLI.nameMatter);
+			const blank = MATTER_FIELDS.find(([flag]) => {
+				const v = ctx.flags[flag];
+				return typeof v === 'string' && !v.trim();
+			});
+			if (blank) return usageError(ctx, blank[0] === 'icon' || blank[0] === 'state' ? CLI.emptyKept(blank[0]) : CLI.emptyFlag(blank[0]));
+			const input: UpdateMatterInput = { matter: ref };
+			for (const [flag, key] of MATTER_FIELDS) {
+				const v = textFlag(ctx.flags, flag);
+				if (v !== undefined) Object.assign(input, { [key]: v });
+			}
+			return writeMatterChange(ctx, (s) => updateMatter(input, s), CLI.changed);
+		}
+		case 'reviewed': {
+			if (!ref) return usageError(ctx, CLI.nameMatter);
+			const note = textFlag(ctx.flags, 'note');
+			return writeMatterChange(ctx, (s) => markReviewed({ matter: ref, ...(typeof note === 'string' ? { note } : {}) }, s), CLI.markedReviewed);
+		}
 		case 'open':
 			if (!ref) return usageError(ctx, CLI.nameTarget);
 			return open(ctx, ref);
 	}
 }
+
+/** A Matter's fields, by flag and input key. */
+const MATTER_FIELDS = [
+	['icon', 'icon'],
+	['sphere', 'sphere'],
+	['state', 'state'],
+	['outcome', 'outcome'],
+	['review-every', 'reviewEvery'],
+] as const;
 
 /** Flags whose empty value, on update, is refused rather than read as removing the value. */
 const BLANK_REFUSED = ['priority', 'start', 'due', 'waiting-on', 'details'] as const;
@@ -379,13 +408,7 @@ function writeAction(ctx: Context, op: (s: Snapshot) => OpResult<ActionWrite>, v
 function writeMatter(ctx: Context, name: string): number {
 	const f = ctx.flags;
 	const input = { name } as Parameters<typeof addMatter>[0];
-	for (const [flag, key] of [
-		['icon', 'icon'],
-		['sphere', 'sphere'],
-		['state', 'state'],
-		['outcome', 'outcome'],
-		['review-every', 'reviewEvery'],
-	] as const) {
+	for (const [flag, key] of MATTER_FIELDS) {
 		const v = textFlag(f, flag);
 		if (typeof v === 'string') input[key] = v;
 	}
@@ -395,6 +418,17 @@ function writeMatter(ctx: Context, name: string): number {
 	vaultWarnings(ctx, r.warnings);
 	if (ctx.json) print(ctx.io.stdout, stringify(writeJson({ matter: r.value }, r, outcome, ctx.dryRun, written)));
 	else print(ctx.io.stdout, formatMatterAdded(r.value, r.warnings, ctx.dryRun, ctx.out));
+	return EXIT.done;
+}
+
+/** Update-matter and reviewed: what changed in the Matter. */
+function writeMatterChange(ctx: Context, op: (s: Snapshot) => OpResult<MatterWrite>, verb: WriteVerb): number {
+	const w = write(ctx, op);
+	if (typeof w === 'number') return w;
+	const { r, outcome, written } = w;
+	vaultWarnings(ctx, r.warnings);
+	if (ctx.json) print(ctx.io.stdout, stringify(writeJson({ matter: r.value.matter }, r, outcome, ctx.dryRun, written)));
+	else print(ctx.io.stdout, formatMatterChanged(verb, r.value.matter, r.changes, r.warnings, ctx.dryRun, ctx.out));
 	return EXIT.done;
 }
 

@@ -292,7 +292,8 @@ export function formatShow(a: ActionDetail, today: Ymd, st: Style): string[] {
 /** A label from the plugin mid-line: its first letter in lower case ("dormant", "no next Action"). */
 const midLine = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
 
-export function formatMatters(list: readonly MatterSummary[], st: Style): string[] {
+/** Matters in board order, one per row, each followed by its latest review note when it has one. */
+export function formatMatters(list: readonly MatterSummary[], today: Ymd, st: Style): string[] {
 	const rows: Cell[][] = list.map((m) => {
 		const parts: string[] = [];
 		const add = (label: string) => parts.push(parts.length ? midLine(label) : label);
@@ -310,7 +311,11 @@ export function formatMatters(list: readonly MatterSummary[], st: Style): string
 		if (m.noNextAction) add(STRINGS.nextAction.hint);
 		return [[m.name, st.b], parts.join(' · ')];
 	});
-	return [...columns(rows, [3], ''), '', st.d(CLI.matters(list.length))];
+	const lines = columns(rows, [3], '').flatMap((line, i) => {
+		const note = list[i]?.lastReviewNote;
+		return note ? [line, `  ${st.d(`${STRINGS.review.lastTime(shortDate(note.date, today))}:`)} ${note.text}`] : [line];
+	});
+	return [...lines, '', st.d(CLI.matters(list.length))];
 }
 
 export function formatWorkflow(w: WorkflowValue, st: Style): string[] {
@@ -368,6 +373,7 @@ export function changeLines(changes: readonly Change[], st: Style): string[] {
 		else if (c.kind === 'details') rows.push([CLI.detailsKey, `${c.from ? quote(clip(c.from)) : CLI.none} → ${c.to ? quote(clip(c.to)) : CLI.none}`]);
 		else if (c.kind === 'checklist') c.added.forEach((item, i) => rows.push([i === 0 ? CLI.checklistKey : '', `+ ${item}`]));
 		else if (c.kind === 'link') rows.push([CLI.linkKey, `+ ${c.line}`]);
+		else if (c.kind === 'review-note') rows.push([CLI.reviewNoteKey, `+ ${c.line.replace(/^- /, '')}`]);
 	}
 	const width = Math.max(0, ...rows.map(([k]) => k.length)) + 2;
 	return rows.map(([k, v]) => `  ${k ? st.d(k) : ''}${' '.repeat(width - k.length)}${v}`);
@@ -422,6 +428,16 @@ export function formatMatterAdded(m: MatterSummary, warnings: readonly Warning[]
 	const out = [`${head} ${quote(m.name)}`, `  ${parts.join(' · ')}`];
 	if (m.outcome) out.push(`  ${m.outcome}`);
 	out.push(...warningLines(warnings, st), `  ${st.d(m.path)}`);
+	if (dryRun) out.push(CLI.dryRun);
+	return out;
+}
+
+/** An existing Matter changed (update-matter, reviewed): its properties and review note. */
+export function formatMatterChanged(verb: WriteVerb, m: MatterSummary, changes: readonly Change[], warnings: readonly Warning[], dryRun: boolean, st: Style): string[] {
+	// A note's new `mtm-id` is bookkeeping: on its own it isn't a change worth a heading.
+	const shown = changes.filter((c) => !(c.kind === 'property' && c.key === 'mtm-id'));
+	if (!shown.length) return [CLI.already(m.name)];
+	const out = [dryRun ? verb.would(quote(m.name), st.b) : verb.done(quote(m.name), st.g), ...changeLines(shown, st), `  ${st.d(m.path)}`, ...warningLines(warnings, st)];
 	if (dryRun) out.push(CLI.dryRun);
 	return out;
 }

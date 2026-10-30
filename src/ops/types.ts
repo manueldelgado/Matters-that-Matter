@@ -26,8 +26,8 @@ export interface Snapshot {
 	readonly notes: readonly NoteData[];
 	/**
 	 * A note's whole content, frontmatter included; null when there is no such note. Synchronous: a host must have the
-	 * content of every Action note ready when it builds the snapshot (the plugin reads them ahead with `cachedRead`).
-	 * Operations ask only for Action notes.
+	 * content of every Action and Matter note ready when it builds the snapshot (the plugin reads them ahead with
+	 * `cachedRead`). Operations ask only for Action and Matter notes.
 	 */
 	content(path: string): string | null;
 	/** A note's outgoing links in its body, as written (link text, headings kept; embeds left out). */
@@ -68,7 +68,9 @@ export type BodyEdit =
 	/** Adds checklist items after the last one, or at the end of the body. */
 	| { kind: 'checklist'; items: string[] }
 	/** Adds a line at the end of the body: a link to a note (`[[link text]]`) or a web address. */
-	| { kind: 'link'; line: string };
+	| { kind: 'link'; line: string }
+	/** Adds a review note at the end of a Matter note, as `- Reviewed <date>: <text>` (the text already cleaned). */
+	| { kind: 'review-note'; date: string; text: string };
 
 /** A file a plan was computed from: its version when read, or null when it must not exist. */
 export interface BasisEntry {
@@ -106,7 +108,8 @@ export type Change =
 	| { kind: 'property'; path: string; key: string; from: unknown; to: unknown }
 	| { kind: 'details'; path: string; from: string; to: string }
 	| { kind: 'checklist'; path: string; added: string[] }
-	| { kind: 'link'; path: string; line: string };
+	| { kind: 'link'; path: string; line: string }
+	| { kind: 'review-note'; path: string; line: string };
 
 // ——— How the operations answer ———
 
@@ -217,6 +220,26 @@ export interface AddMatterInput {
 	reviewEvery?: string;
 }
 
+/** A Matter's own fields to change; only those given change, null removes one (the outcome, the rhythm, the Sphere). */
+export interface UpdateMatterInput {
+	/** The Matter: its name, path or link text. */
+	matter: string;
+	/** A Lucide icon name. */
+	icon?: string;
+	state?: string;
+	outcome?: string | null;
+	/** `<n>d`, `<n>w` or `<n>m`. */
+	reviewEvery?: string | null;
+	sphere?: string | null;
+}
+
+export interface MarkReviewedInput {
+	/** The Matter: its name, path or link text. */
+	matter: string;
+	/** A line for next time, written at the end of the note. */
+	note?: string;
+}
+
 // ——— Values ———
 
 export interface NoteRef {
@@ -283,9 +306,17 @@ export interface MatterSummary {
 	outcome: string | null;
 	laneOrder: number | null;
 	review: { every: string; lastReviewed: string | null; nextDue: string | null; due: boolean; daysSince: number | null } | null;
+	/** The latest review note in the note (`- Reviewed <date>: <text>`), with or without a rhythm. */
+	lastReviewNote: { date: string; text: string } | null;
 	counts: { open: number; today: number; waiting: number; closed: number; total: number };
 	/** An active Matter (not the Inbox) with nothing in motion. */
 	noNextAction: boolean;
+}
+
+export interface MatterWrite {
+	matter: MatterSummary;
+	/** False when the Matter already was as asked and nothing is planned. */
+	changed: boolean;
 }
 
 export interface TodayValue {

@@ -50,6 +50,8 @@ reopen <action>          Reopen a done Action
 show <action>            Everything about one Action
 list [filters]           Actions, done hidden
 add-matter <name>        New Matter
+update-matter <matter>   Change a Matter
+reviewed <matter>        Mark as reviewed
 matters                  Matters in board order
 workflow                 Statuses, types and Spheres
 parse <text>             What quick add would make of it
@@ -129,6 +131,17 @@ matters-that-matter add-matter "Garden shed" --sphere Home --review-every 1m
 ```
 
 The new Matter goes last on the board. Fields: `--icon` (a Lucide icon name, such as `house`), `--sphere`, `--state` (`active`, the default, `dormant` or `closed`), `--outcome` (what done looks like, in one line) and `--review-every` (a review rhythm such as `7d`, `2w` or `1m`).
+
+### Changing a Matter, and its reviews
+
+```bash
+matters-that-matter update-matter "Garden shed" --state dormant --no-review-every
+matters-that-matter reviewed "Kitchen renovation" --note "Waiting for the planning decision"
+```
+
+`update-matter` takes the same fields as `add-matter`; only those given change, and it is strict, as `update` is. `--no-outcome`, `--no-review-every` and `--no-sphere` remove a value. The Inbox has only its icon to change, and a Matter's name changes in Obsidian, which updates the links to it.
+
+`reviewed` marks a Matter as reviewed: today becomes its last review, so it is no longer due. `--note` adds a line for next time at the end of the Matter's note (`- Reviewed 2026-10-30: Waiting for the planning decision`), as the plugin's review does; `matters` shows the latest one under each Matter. The Inbox isn't reviewed.
 
 ### Listing
 
@@ -239,7 +252,7 @@ command = "npx"
 args = ["-y", "matters-that-matter", "mcp", "--vault", "~/Notes"]
 ```
 
-**Grok Build** (untested): add a local (stdio) MCP server named `matters` with the command `npx` and the arguments `-y matters-that-matter mcp --vault ~/Notes`, as its documentation describes for MCP servers.
+**Grok Build** (untested): add a local (stdio) MCP server named `matters-that-matter` with the command `npx` and the arguments `-y matters-that-matter mcp --vault ~/Notes`, as its documentation describes for MCP servers.
 
 Other assistants that run local MCP servers take the same command and arguments.
 
@@ -257,10 +270,12 @@ If you [installed](#install) the command line, the command can be `matters-that-
 | `list_actions` | Actions, with the filters of `matters-that-matter list`; every match, not a page of them | read only |
 | `get_today` | What matters today? | read only |
 | `add_matter` | Adds a Matter | writes, not destructive |
+| `update_matter` | Changes a Matter; strict, as `matters-that-matter update-matter` | writes, destructive (it can replace and remove values) |
+| `mark_as_reviewed` | Marks a Matter as reviewed, with an optional line for next time | writes, not destructive |
 | `list_matters` | Matters in board order | read only |
 | `get_workflow` | Statuses, types and Spheres | read only |
 
-Fields have the names of the command line's flags without the dashes in front (`waiting-on`, `due-from`, `review-every`), plus `text` for quick add text, `action` for the Action a tool works on and `name` for a new Matter. On `update_action`, `null` removes a value (the details too), and an empty value is refused; on `add_action`, empty values are left out. Each result is the command's output as text, plus the `--json` value as structured content; `list_actions` and `list_matters` give their list inside an object, as `{ "actions": […] }` and `{ "matters": […] }`. A name that matches several things, or a value that matches nothing, is a tool error that lists what would work, and nothing is written.
+Fields have the names of the command line's flags without the dashes in front (`waiting-on`, `due-from`, `review-every`), plus `text` for quick add text, `action` for the Action a tool works on, `name` for a new Matter, `matter` for the Matter `update_matter` and `mark_as_reviewed` work on, and `note` for a review's line. On `update_action` and `update_matter`, `null` removes a value (the details too), and an empty value is refused; on `add_action`, empty values are left out. Each result is the command's output as text, plus the `--json` value as structured content; `list_actions` and `list_matters` give their list inside an object, as `{ "actions": […] }` and `{ "matters": […] }`. A name that matches several things, or a value that matches nothing, is a tool error that lists what would work, and nothing is written.
 
 The tools carry MCP's hints, so an assistant's app can let reads run freely and ask before each write (Claude does by default).
 

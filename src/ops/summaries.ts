@@ -2,6 +2,7 @@
 
 import { isToday } from '../model/actions';
 import { formatMtmDate, isOverdue, parseMtmDate } from '../model/dates';
+import { latestReviewNote } from '../model/body';
 import { formatCadence } from '../model/matters';
 import type { ActionItem } from '../services/actionItems';
 import type { MatterInfo } from '../services/boardModel';
@@ -52,11 +53,20 @@ export function actionSummary(item: ActionItem, fm: Readonly<Record<string, unkn
 	};
 }
 
-/** A Matter with counts over `mine`, its own Actions (see `VaultView.actionsByMatter`). */
-/** A Matter as the operations return it; `fm` is its frontmatter when it isn't in the snapshot yet (a new Matter). */
-export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s: Snapshot, fm?: Readonly<Record<string, unknown>>): MatterSummary {
+/**
+ * A Matter as the operations return it, with counts over `mine`, its own Actions (see `VaultView.actionsByMatter`).
+ * `fm` is its frontmatter and `content` its note when they aren't the snapshot's (a new Matter, a write just planned).
+ */
+export function matterSummary(
+	matter: MatterInfo,
+	mine: readonly ActionItem[],
+	s: Snapshot,
+	fm?: Readonly<Record<string, unknown>>,
+	content: string | null = s.content(matter.path),
+): MatterSummary {
 	const sphere = matter.sphere === null ? null : (s.settings.spheres.find((x) => x.id === matter.sphere) ?? null);
 	const review = matter.review;
+	const note = content === null ? null : latestReviewNote(content);
 	return {
 		path: matter.path,
 		id: noteId(fm ?? vaultView(s).byPath.get(matter.path)?.frontmatter),
@@ -72,6 +82,7 @@ export function matterSummary(matter: MatterInfo, mine: readonly ActionItem[], s
 			review && review.cadence
 				? { every: formatCadence(review.cadence), lastReviewed: review.lastReviewed, nextDue: review.nextDue, due: review.due, daysSince: review.daysSince }
 				: null,
+		lastReviewNote: note && { date: note.date, text: note.text },
 		counts: {
 			open: mine.filter((i) => i.category !== 'closed').length,
 			today: mine.filter((i) => isToday(i.due, i.category, clock(s))).length,

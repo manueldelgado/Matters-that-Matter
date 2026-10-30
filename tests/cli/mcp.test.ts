@@ -63,11 +63,11 @@ const call = async (client: Client, name: string, args: Record<string, unknown> 
 const text = (r: CallToolResult) => r.content.map((c) => (c.type === 'text' ? c.text : '')).join('\n');
 const data = <T = Record<string, unknown>>(r: CallToolResult) => r.structuredContent as T;
 
-const ALL = ['add_action', 'update_action', 'mark_as_done', 'reopen_action', 'get_action', 'list_actions', 'get_today', 'add_matter', 'list_matters', 'get_workflow'];
+const ALL = ['add_action', 'update_action', 'mark_as_done', 'reopen_action', 'get_action', 'list_actions', 'get_today', 'add_matter', 'update_matter', 'mark_as_reviewed', 'list_matters', 'get_workflow'];
 const READS = ['get_action', 'list_actions', 'get_today', 'list_matters', 'get_workflow'];
 
 describe('the server', () => {
-	it('lists the ten tools with their hints and schemas, and its instructions', async () => {
+	it('lists the twelve tools with their hints and schemas, and its instructions', async () => {
 		const root = keep(fixtureCopy());
 		const { client, done } = await connect(['--vault', root]);
 		expect(client.getServerVersion()).toMatchObject({ name: 'matters-that-matter', version: '0.5.0' });
@@ -79,8 +79,8 @@ describe('the server', () => {
 			const reads = READS.includes(t.name);
 			expect(t.annotations?.readOnlyHint, t.name).toBe(reads);
 			expect(t.annotations?.openWorldHint, t.name).toBe(false);
-			// Only update_action replaces or removes values; the other writes add, or move a status that moves back.
-			expect(t.annotations?.destructiveHint, t.name).toBe(reads ? undefined : t.name === 'update_action');
+			// Only the updates replace or remove values; the other writes add, or move a status or a review date that moves back.
+			expect(t.annotations?.destructiveHint, t.name).toBe(reads ? undefined : ['update_action', 'update_matter'].includes(t.name));
 			expect(t.annotations?.idempotentHint, t.name).toBe(reads ? undefined : ['mark_as_done', 'reopen_action'].includes(t.name));
 			expect(t.inputSchema).toMatchObject({ type: 'object', additionalProperties: false });
 			expect(t.outputSchema, t.name).toMatchObject({ type: 'object' });
@@ -118,6 +118,9 @@ describe('the server', () => {
 		});
 		expect(client.getInstructions()).not.toContain('dry run');
 		expect(Object.keys(byName.add_matter?.inputSchema.properties ?? {})).toEqual(['name', 'icon', 'sphere', 'state', 'outcome', 'review-every']);
+		expect(Object.keys(byName.update_matter?.inputSchema.properties ?? {})).toEqual(['matter', 'icon', 'sphere', 'state', 'outcome', 'review-every']);
+		expect(byName.update_matter?.inputSchema.required).toEqual(['matter']);
+		expect(Object.keys(byName.mark_as_reviewed?.inputSchema.properties ?? {})).toEqual(['matter', 'note']);
 		expect(Object.keys(byName.list_actions?.inputSchema.properties ?? {})).toContain('due-from');
 		expect(byName.get_today?.inputSchema.properties).toEqual({});
 		await client.close();
@@ -245,6 +248,42 @@ describe('writing', () => {
 		expect(note).toContain('mtm-review-every: 2w\n');
 	});
 
+	it('update_matter and mark_as_reviewed', async () => {
+		const root = keep(fixtureCopy());
+		const { client } = await connect(['--vault', root]);
+		const ajv = new Ajv({ allErrors: true });
+		const { tools } = await client.listTools();
+		const valid = (name: string, r: CallToolResult) => ajv.compile(tools.find((t) => t.name === name)?.outputSchema ?? {})(r.structuredContent);
+		const path = 'MTM/Sample/Matters/Kitchen renovation.md';
+
+		const changed = await call(client, 'update_matter', { matter: 'Kitchen renovation', state: 'dormant', 'review-every': null });
+		expect(changed.isError).toBeFalsy();
+		expect(text(changed).split('\n')[0]).toBe('Changed “Kitchen renovation”');
+		expect(data(changed)).toMatchObject({ matter: { state: 'dormant', review: null }, changed: true, written: true });
+		expect(valid('update_matter', changed)).toBe(true);
+		expect(read(root, path)).toContain('mtm-state: dormant\n');
+		expect(read(root, path)).not.toContain('mtm-review-every');
+
+		const strict = await call(client, 'update_matter', { matter: 'Kitchen renovation', sphere: 'Sea' });
+		expect(strict.isError).toBe(true);
+		expect(text(strict)).toContain('Nothing was changed.');
+
+		const reviewed = await call(client, 'mark_as_reviewed', { matter: 'Kitchen renovation', note: 'Paused until the spring' });
+		expect(reviewed.isError).toBeFalsy();
+		expect(text(reviewed).split('\n')[0]).toBe('“Kitchen renovation” marked as reviewed');
+		expect(data(reviewed)).toMatchObject({ matter: { lastReviewNote: { date: '2026-10-09', text: 'Paused until the spring' } }, changed: true });
+		expect(valid('mark_as_reviewed', reviewed)).toBe(true);
+		expect(read(root, path).endsWith('- Reviewed 2026-10-09: Paused until the spring\n')).toBe(true);
+
+		const listed = await call(client, 'list_matters');
+		expect(text(listed)).toContain('Last time, 9 Oct: Paused until the spring');
+
+		const inbox = await call(client, 'mark_as_reviewed', { matter: 'Inbox' });
+		expect(inbox.isError).toBe(true);
+		const nowhere = await call(client, 'update_matter', { matter: 'Boat', state: 'active' });
+		expect(text(nowhere)).toContain('list_matters gives the names.');
+	});
+
 	it('--dry-run says what would change and writes nothing', async () => {
 		const root = keep(fixtureCopy());
 		const before = hashes(root);
@@ -287,7 +326,7 @@ describe('narrowing', () => {
 		expect(unknown).toEqual({
 			code: 2,
 			stderr:
-				'There’s no tool “delete_everything”. Tools: add_action, update_action, mark_as_done, reopen_action, get_action, list_actions, get_today, add_matter, list_matters, get_workflow.\n',
+				'There’s no tool “delete_everything”. Tools: add_action, update_action, mark_as_done, reopen_action, get_action, list_actions, get_today, add_matter, update_matter, mark_as_reviewed, list_matters, get_workflow.\n',
 		});
 		expect((await refused(['--vault', root, '--tools', ','])).code).toBe(2);
 		expect(await refused(['--vault', root, '--read-only', '--tools', 'add_action,get_today'])).toEqual({

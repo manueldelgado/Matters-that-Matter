@@ -1,4 +1,4 @@
-// `matters-that-matter mcp`: Matters that Matter as an MCP server over stdio, for AI assistants. Ten tools over the same operations as the
+// `matters-that-matter mcp`: Matters that Matter as an MCP server over stdio, for AI assistants. Twelve tools over the same operations as the
 // command line; each call reads the vault afresh, and writes go through the same all-or-nothing writer. No network
 // listener, only the plugin's data out (an Action's details, checklist and the names of linked notes, never other notes'
 // content), nothing deleted, settings never written.
@@ -9,13 +9,13 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError, type CallToolResult, type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { toYmd } from '../../src/model/dates';
 import { clock } from '../../src/ops/clock';
-import { addAction, addMatter, getAction, getWorkflow, inputKey, listActions, listMatters, markAsDone, reopen, today, updateAction } from '../../src/ops';
-import type { ActionWrite, MatterSummary, OpError, OpResult, Snapshot, Warning } from '../../src/ops/types';
+import { addAction, addMatter, getAction, getWorkflow, inputKey, listActions, listMatters, markAsDone, markReviewed, reopen, today, updateAction, updateMatter } from '../../src/ops';
+import type { ActionWrite, MarkReviewedInput, MatterSummary, MatterWrite, OpError, OpResult, Snapshot, UpdateMatterInput, Warning } from '../../src/ops/types';
 import { STRINGS } from '../../src/strings';
 import type { ApplyFs } from './apply';
 import type { ContentsAfter } from './filesLayer';
 import { writeJson, type ErrorJson } from './json';
-import { formatActionWrite, formatError, formatList, formatMatterAdded, formatMatters, formatShow, formatToday, formatWorkflow, shownPath, style, typeTones } from './output';
+import { formatActionWrite, formatError, formatList, formatMatterAdded, formatMatterChanged, formatMatters, formatShow, formatToday, formatWorkflow, shownPath, style, typeTones } from './output';
 import { CLI, MCP, type WriteVerb } from './strings';
 import { PACKAGE_NAME, VERSION } from './version';
 import { inVault, openVault, type Vault } from './vault';
@@ -32,6 +32,8 @@ export const TOOL_NAMES = [
 	'list_actions',
 	'get_today',
 	'add_matter',
+	'update_matter',
+	'mark_as_reviewed',
 	'list_matters',
 	'get_workflow',
 ] as const;
@@ -146,6 +148,18 @@ const FIELDS: Record<ToolName, Field[]> = {
 		{ name: 'state', kind: 'text', enum: ['active', 'dormant', 'closed'], description: F.state },
 		{ name: 'outcome', kind: 'text', description: F.outcome },
 		{ name: 'review-every', kind: 'text', description: F.reviewEvery },
+	],
+	update_matter: [
+		{ name: 'matter', kind: 'text', required: true, description: F.matterRef },
+		{ name: 'icon', kind: 'text', description: F.iconUpdate },
+		{ name: 'sphere', kind: 'nullableText', description: F.sphereUpdate },
+		{ name: 'state', kind: 'text', enum: ['active', 'dormant', 'closed'], description: F.stateUpdate },
+		{ name: 'outcome', kind: 'nullableText', description: F.outcomeUpdate },
+		{ name: 'review-every', kind: 'nullableText', description: F.reviewEveryUpdate },
+	],
+	mark_as_reviewed: [
+		{ name: 'matter', kind: 'text', required: true, description: F.matterRef },
+		{ name: 'note', kind: 'text', description: F.note },
 	],
 	list_matters: [],
 	get_workflow: [],
@@ -272,6 +286,7 @@ const MATTER = obj({
 	outcome: strOrNull,
 	laneOrder: orNull({ type: 'number' }),
 	review: orNull(obj({ every: str, lastReviewed: strOrNull, nextDue: strOrNull, due: bool, daysSince: orNull(int) })),
+	lastReviewNote: orNull(obj({ date: str, text: str })),
 	counts: obj({ open: int, today: int, waiting: int, closed: int, total: int }),
 	noNextAction: bool,
 });
@@ -285,7 +300,7 @@ const WRITE = (entity: 'action' | 'matter', schema: JsonSchema): JsonSchema =>
 		changed: bool,
 		dryRun: bool,
 		written: bool,
-		changes: arr({ type: 'object', properties: { kind: { enum: ['create', 'rename', 'property', 'details', 'checklist', 'link'] } }, required: ['kind'] }),
+		changes: arr({ type: 'object', properties: { kind: { enum: ['create', 'rename', 'property', 'details', 'checklist', 'link', 'review-note'] } }, required: ['kind'] }),
 		warnings: arr(WARNING),
 		links: arr(obj({ path: str, lines: arr(int) })),
 		danglingLinks: int,
@@ -311,6 +326,8 @@ const OUTPUT: Record<ToolName, JsonSchema> = {
 		longWaits: int,
 	}),
 	add_matter: WRITE('matter', MATTER),
+	update_matter: WRITE('matter', MATTER),
+	mark_as_reviewed: WRITE('matter', MATTER),
 	list_matters: obj({ matters: arr(MATTER) }),
 	get_workflow: obj({
 		statuses: arr(obj({ id: str, label: str, category: { enum: ['open', 'active', 'closed'] }, tone: str, backlog: bool, done: bool })),
@@ -319,10 +336,13 @@ const OUTPUT: Record<ToolName, JsonSchema> = {
 	}),
 };
 
-const WRITES: readonly ToolName[] = ['add_action', 'update_action', 'mark_as_done', 'reopen_action', 'add_matter'];
+const WRITES: readonly ToolName[] = ['add_action', 'update_action', 'mark_as_done', 'reopen_action', 'add_matter', 'update_matter', 'mark_as_reviewed'];
 const IDEMPOTENT: readonly ToolName[] = ['mark_as_done', 'reopen_action'];
-/** Writes that may replace or remove values (people, details, dates, the title); the others only add, or move a status that can be moved back. */
-const DESTRUCTIVE: readonly ToolName[] = ['update_action'];
+/**
+ * Writes that may replace or remove values (people, details, dates, the title, a Matter's outcome); the others only
+ * add, or move a status or a review date that can be moved back.
+ */
+const DESTRUCTIVE: readonly ToolName[] = ['update_action', 'update_matter'];
 
 /** A tool as `tools/list` gives it. */
 export function toolDefinition(name: ToolName): Tool {
@@ -375,7 +395,7 @@ function toolError(lines: readonly string[]): CallToolResult {
 /** Where the assistant can find the names that would work. */
 function pointer(field: string | undefined, code: string): string | null {
 	if (field === 'action' && code === 'not-found') return MCP.findActions;
-	if (field === 'matter' && code === 'unmatched') return MCP.findMatters;
+	if (field === 'matter' && (code === 'unmatched' || code === 'not-found')) return MCP.findMatters;
 	return null;
 }
 
@@ -436,6 +456,17 @@ function writeMatter(vault: Vault, now: Date, config: McpConfig, input: Record<s
 	};
 }
 
+/** Update a Matter, mark one as reviewed: what changed in it. */
+function writeMatterChange(vault: Vault, now: Date, config: McpConfig, op: (s: Snapshot) => OpResult<MatterWrite>, verb: WriteVerb): CallToolResult {
+	const w = planAndWrite(writeSource(vault, now, config), op);
+	if (!w.ok) return failed(w);
+	const { r, outcome, written } = w;
+	return {
+		content: [{ type: 'text', text: textResult([...vaultNotes(vault, r.warnings, false), ...formatMatterChanged(verb, r.value.matter, r.changes, r.warnings, config.dryRun, plain)]) }],
+		structuredContent: writeJson({ matter: r.value.matter }, r, outcome, config.dryRun, written) as unknown as Record<string, unknown>,
+	};
+}
+
 /** Runs one tool call on the vault as it is now. User mistakes are tool errors, never protocol errors. */
 export function callTool(config: McpConfig, name: ToolName, args: unknown): CallToolResult {
 	const opened = openVault(config.vault, config.configDir, config.cwd, config.home);
@@ -454,7 +485,7 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
 		case 'get_workflow':
 			return read(vault, now, config, getWorkflow, (v) => formatWorkflow(v, plain));
 		case 'list_matters':
-			return read(vault, now, config, listMatters, (v) => formatMatters(v, plain), 'matters');
+			return read(vault, now, config, listMatters, (v, s) => formatMatters(v, toYmd(clock(s)), plain), 'matters');
 		case 'list_actions':
 			return read(vault, now, config, (s) => listActions(input, s), (v, s) => formatList(v, toYmd(clock(s)), typeTones(s), plain), 'actions');
 		case 'get_action':
@@ -469,6 +500,10 @@ export function callTool(config: McpConfig, name: ToolName, args: unknown): Call
 			return writeAction(vault, now, config, (s) => reopen(ref, s), CLI.reopened);
 		case 'add_matter':
 			return writeMatter(vault, now, config, input);
+		case 'update_matter':
+			return writeMatterChange(vault, now, config, (s) => updateMatter(input as unknown as UpdateMatterInput, s), CLI.changed);
+		case 'mark_as_reviewed':
+			return writeMatterChange(vault, now, config, (s) => markReviewed(input as unknown as MarkReviewedInput, s), CLI.markedReviewed);
 	}
 }
 

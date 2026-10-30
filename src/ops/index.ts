@@ -9,6 +9,8 @@ export { getAction } from './getAction';
 export { listActions } from './listActions';
 export { today } from './today';
 export { addMatter } from './addMatter';
+export { updateMatter } from './updateMatter';
+export { markReviewed } from './markReviewed';
 export { listMatters } from './listMatters';
 export { getWorkflow } from './getWorkflow';
 export { parseQuickAdd } from './parseQuickAdd';

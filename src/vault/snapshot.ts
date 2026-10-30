@@ -7,7 +7,7 @@ import { now } from './clock';
 import { frontmatterOf, newNoteId, pathTaken } from './notes';
 
 /**
- * Takes a snapshot for the operations. The content of every Action note is read ahead (`cachedRead`), so `content`
+ * Takes a snapshot for the operations. The content of every Action and Matter note is read ahead (`cachedRead`), so `content`
  * answers at once; `contents: false` skips that for operations that never read content (adding an Action, finding a note by name).
  */
 export async function buildSnapshot(app: App, settings: MattersSettings, options: { contents?: boolean } = {}): Promise<Snapshot> {
@@ -16,8 +16,11 @@ export async function buildSnapshot(app: App, settings: MattersSettings, options
 	const notes = files.map((file) => ({ path: file.path, basename: file.basename, frontmatter: frontmatterOf(app, file) }));
 	const contents = new Map<string, string>();
 	if (options.contents !== false) {
-		const actions = files.filter((file, i) => notes[i]?.frontmatter?.['mtm-kind'] === 'action');
-		await Promise.all(actions.map(async (file) => contents.set(file.path, await vault.cachedRead(file))));
+		const read = files.filter((file, i) => {
+			const kind = notes[i]?.frontmatter?.['mtm-kind'];
+			return kind === 'action' || kind === 'matter';
+		});
+		await Promise.all(read.map(async (file) => contents.set(file.path, await vault.cachedRead(file))));
 	}
 	return {
 		settings,

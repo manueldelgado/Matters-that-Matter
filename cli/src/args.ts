@@ -38,8 +38,8 @@ export const FLAGS: Record<string, FlagSpec> = {
 	details: { kind: 'value', negatable: true },
 	checklist: { kind: 'list' },
 	link: { kind: 'value' },
-	// List filters.
-	sphere: { kind: 'value' },
+	// List filters (a Sphere is a Matter field too).
+	sphere: { kind: 'value', negatable: true },
 	person: { kind: 'value' },
 	'due-from': { kind: 'value' },
 	'due-to': { kind: 'value' },
@@ -48,8 +48,9 @@ export const FLAGS: Record<string, FlagSpec> = {
 	// Matter fields.
 	icon: { kind: 'value' },
 	state: { kind: 'value' },
-	outcome: { kind: 'value' },
-	'review-every': { kind: 'value' },
+	outcome: { kind: 'value', negatable: true },
+	'review-every': { kind: 'value', negatable: true },
+	note: { kind: 'value' },
 	// The MCP server.
 	'read-only': { kind: 'bool' },
 	tools: { kind: 'value' },
@@ -61,7 +62,7 @@ export const GLOBAL_FLAGS = ['vault', 'config-dir', 'json', 'dry-run', 'help', '
 
 const ACTION_FIELDS = ['title', 'matter', 'status', 'type', 'priority', 'start', 'due', 'waiting-on', 'people', 'details', 'checklist', 'link'];
 
-export const COMMANDS = ['today', 'add', 'update', 'done', 'reopen', 'show', 'list', 'add-matter', 'matters', 'workflow', 'parse', 'open', 'mcp'] as const;
+export const COMMANDS = ['today', 'add', 'update', 'done', 'reopen', 'show', 'list', 'add-matter', 'update-matter', 'reviewed', 'matters', 'workflow', 'parse', 'open', 'mcp'] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export const COMMAND_FLAGS: Record<Command, readonly string[]> = {
@@ -73,6 +74,8 @@ export const COMMAND_FLAGS: Record<Command, readonly string[]> = {
 	show: [],
 	list: ['matter', 'status', 'type', 'sphere', 'person', 'due-from', 'due-to', 'waiting', 'done'],
 	'add-matter': ['icon', 'sphere', 'state', 'outcome', 'review-every'],
+	'update-matter': ['icon', 'sphere', 'state', 'outcome', 'review-every'],
+	reviewed: ['note'],
 	matters: [],
 	workflow: [],
 	parse: [],
@@ -170,6 +173,8 @@ export function parseArgs(argv: readonly string[]): ArgsResult {
 		const allowed = new Set<string>([...GLOBAL_FLAGS, ...COMMAND_FLAGS[command]]);
 		for (const name of Object.keys(flags)) {
 			if (!allowed.has(name)) return { ok: false, message: CLI.notForCommand(name, command) };
+			// A filter is left out, never removed.
+			if (command === 'list' && flags[name] === null) return { ok: false, message: CLI.notForCommand(`no-${name}`, command) };
 		}
 	}
 	return { ok: true, args: { command, words, flags } };

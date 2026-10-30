@@ -1,6 +1,6 @@
 // Building plans, and the pure pieces any applier uses: body edits and frontmatter edits.
 
-import { appendLine, getDetails, insertTask, setDetails } from '../model/body';
+import { appendLine, appendReviewNote, getDetails, insertTask, reviewNoteLine, setDetails } from '../model/body';
 import { hasNoteId, IDENTIFIED_KINDS, withNoteId } from '../services/notesModel';
 import { foldName } from '../files/paths';
 import type { BodyEdit, Change, Plan, Snapshot } from './types';
@@ -18,6 +18,8 @@ export function applyBodyEdit(content: string, edit: BodyEdit): string {
 			return edit.items.reduce((c, item) => insertTask(c, item), content);
 		case 'link':
 			return appendLine(content, edit.line);
+		case 'review-note':
+			return appendReviewNote(content, edit.date, edit.text);
 	}
 }
 
@@ -137,6 +139,7 @@ export class PlanBuilder {
 	private describeBody(path: string, content: string, edit: BodyEdit): void {
 		if (edit.kind === 'details') this.changes.push({ kind: 'details', path, from: getDetails(content), to: edit.text.trim() });
 		else if (edit.kind === 'checklist') this.changes.push({ kind: 'checklist', path, added: [...edit.items] });
-		else this.changes.push({ kind: 'link', path, line: edit.line });
+		else if (edit.kind === 'link') this.changes.push({ kind: 'link', path, line: edit.line });
+		else this.changes.push({ kind: 'review-note', path, line: reviewNoteLine(edit.date, edit.text) ?? '' });
 	}
 }

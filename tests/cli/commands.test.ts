@@ -287,6 +287,52 @@ describe('writing', () => {
 		expect(json).toMatchObject({ matter: { name: 'Boat', sphere: null }, dryRun: true, written: false, warnings: [{ code: 'unmatched-sphere' }] });
 	});
 
+	it('update-matter', async () => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['update-matter', 'Garden', '--state', 'active', '--review-every', '1m', '--outcome', 'A garden to sit in', '--vault', root], writer);
+		expect(r.code).toBe(0);
+		expect(r.stdout).toMatchInlineSnapshot(`
+			"Changed “Garden”
+			  mtm-state         dormant → active
+			  mtm-outcome       (none) → A garden to sit in
+			  mtm-review-every  (none) → 1m
+			  MTM/Matters/Garden.md
+			"
+		`);
+		expect(read(root, 'MTM/Matters/Garden.md')).toContain('mtm-review-every: 1m');
+		const removed = await mtm(['update-matter', 'Garden', '--no-outcome', '--vault', root], writer);
+		expect(read(root, 'MTM/Matters/Garden.md')).not.toContain('mtm-outcome');
+		expect(removed.stdout).toContain('mtm-outcome');
+		const blank = await mtm(['update-matter', 'Garden', '--outcome', ' ', '--vault', root], writer);
+		expect(blank).toMatchObject({ code: 1, stderr: '--outcome can’t be empty: give a value, or remove it with --no-outcome.\n' });
+		expect((await mtm(['update-matter', 'Garden', '--state', '', '--vault', root], writer)).stderr).toBe('--state can’t be empty: give a value, or leave it out.\n');
+		const inbox = await mtm(['update-matter', 'Inbox', '--state', 'dormant', '--vault', root], writer);
+		expect(inbox).toMatchObject({ code: 1, stderr: 'The Inbox has only an icon to change, not “state”.\nNothing was changed.\n' });
+		expect((await mtm(['update-matter', '--state', 'active', '--vault', root], writer)).stderr).toBe('Name the Matter: its name or its path.\n');
+	});
+
+	it('reviewed', async () => {
+		const root = keep(syntheticVault());
+		const r = await mtm(['reviewed', 'Kitchen renovation', '--note', 'Waiting for the planning decision', '--vault', root], writer);
+		expect(r.code).toBe(0);
+		expect(r.stdout).toMatchInlineSnapshot(`
+			"“Kitchen renovation” marked as reviewed
+			  mtm-last-reviewed  2026-09-20 → 2026-10-09
+			  review note        + Reviewed 2026-10-09: Waiting for the planning decision
+			  MTM/Matters/Kitchen renovation.md
+			"
+		`);
+		const note = read(root, 'MTM/Matters/Kitchen renovation.md');
+		expect(note).toContain('mtm-last-reviewed: 2026-10-09');
+		expect(note.endsWith('- Reviewed 2026-10-09: Waiting for the planning decision\n')).toBe(true);
+		expect((await mtm(['reviewed', 'Kitchen renovation', '--vault', root], writer)).stdout).toBe('“Kitchen renovation” is already as asked. Nothing was changed.\n');
+		const matters = await mtm(['matters', '--vault', root]);
+		expect(matters.stdout).toContain('  Last time, 9 Oct: Waiting for the planning decision');
+		const json = JSON.parse((await mtm(['reviewed', 'Garden', '--json', '--dry-run', '--vault', root], writer)).stdout) as Record<string, unknown>;
+		expect(json).toMatchObject({ matter: { name: 'Garden', lastReviewNote: null }, changed: true, dryRun: true, written: false });
+		expect((await mtm(['reviewed', 'Inbox', '--vault', root], writer)).code).toBe(1);
+	});
+
 	it('--dry-run leaves every file as it was', async () => {
 		const root = keep(syntheticVault());
 		const before = hashes(root);
@@ -296,6 +342,8 @@ describe('writing', () => {
 			['done', 'Send the invoice'],
 			['reopen', 'Order the tiles'],
 			['add-matter', 'Boat'],
+			['update-matter', 'Garden', '--state', 'closed', '--no-sphere'],
+			['reviewed', 'Kitchen renovation', '--note', 'Seen'],
 		]) {
 			const r = await mtm([...argv, '--dry-run', '--vault', root], writer);
 			expect(r.code, argv.join(' ')).toBe(0);

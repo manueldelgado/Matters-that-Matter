@@ -176,6 +176,8 @@ mtm-outcome: A working kitchen by Christmas
 ---
 ```
 
+The body is the user's own text about the Matter. Reviews may leave a line each at its end, `- Reviewed YYYY-MM-DD: text` (one line, at most 300 characters); the latest by date is shown as "Last time" at the next review. Add one only at the end, after a blank line unless the last line is a review note too, and never change earlier ones.
+
 Matters are not deleted: they are closed (`mtm-state: closed`). The Inbox is always active; don't change its state, and don't remove its `mtm-kind`. Don't create a Matter named like the Inbox ("Inbox", "Inbox 2"): the plugin takes it for a copy of the Inbox.
 
 ## Person notes
