@@ -39,6 +39,13 @@ jobs:
                       main.js
                       ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
 
+            # The skill for AI assistants, as a ZIP with its folder at the top, ready to upload; Obsidian reads only the
+            # three files above.
+            - name: Package the skill
+              run: |
+                  cd skills
+                  zip -r -X ../matters-that-matter-skill.zip matters-that-matter
+
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,4 +55,5 @@ jobs:
                   gh release create "$tag" \
                     --title="$tag" \
                     --draft \
-                    main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
+                    main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }} \
+                    matters-that-matter-skill.zip

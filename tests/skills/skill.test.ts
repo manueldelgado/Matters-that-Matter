@@ -1,5 +1,6 @@
 // The skill for AI assistants (skills/matters-that-matter): its frontmatter follows the Agent Skills format, it names
-// only tools the MCP server has, it keeps to the product's words, and the notes it shows as examples are valid.
+// only tools the MCP server has, it leaves what each tool takes to the tools' own descriptions, it keeps to the product's
+// words, and the notes it shows as examples are valid.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -7,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
 import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
+import { MCP } from '../../cli/src/strings';
+import { TOOL_NAMES, toolDefinition } from '../../cli/src/mcp';
 import { DEFAULT_SETTINGS } from '../../src/settings';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
@@ -15,21 +18,11 @@ const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 const skill = read(`${SKILL_DIR}/SKILL.md`);
 const format = read(`${SKILL_DIR}/references/format.md`);
+const routines = read(`${SKILL_DIR}/references/routines.md`);
 const openai = read(`${SKILL_DIR}/agents/openai.yaml`);
 
 /** The MCP server's tools, by their public names. */
-const MCP_TOOLS = [
-	'add_action',
-	'update_action',
-	'mark_as_done',
-	'reopen_action',
-	'get_action',
-	'list_actions',
-	'get_today',
-	'add_matter',
-	'list_matters',
-	'get_workflow',
-];
+const MCP_TOOLS: readonly string[] = TOOL_NAMES;
 
 type Json = Record<string, unknown>;
 const ajv = new Ajv2020({ allErrors: true, strict: true });
@@ -91,16 +84,37 @@ describe('the skill', () => {
 	});
 
 	it('names only tools the MCP server has, and every one of them', () => {
-		for (const text of [skill, format]) {
+		for (const text of [skill, format, routines]) {
 			const names = new Set(text.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? []);
 			expect([...names].filter((n) => !MCP_TOOLS.includes(n))).toEqual([]);
 		}
 		expect(MCP_TOOLS.filter((t) => !skill.includes(`\`${t}\``))).toEqual([]);
 	});
 
+	it('leaves what each tool takes to the tools’ own descriptions', () => {
+		const section = /^## With the MCP server[\s\S]*?(?=^## )/m.exec(body)?.[0] ?? '';
+		expect(section).not.toBe('');
+		const fields = new Set(TOOL_NAMES.flatMap((t) => Object.keys(toolDefinition(t).inputSchema.properties ?? {})));
+		const code = [...section.matchAll(/`([^`\n]+)`/g)].map((m) => m[1] ?? '');
+		expect(code.filter((c) => fields.has(c))).toEqual([]);
+		expect(prose(section).match(/\bnull\b|\bempty value\b|\btime zones?\b/gi) ?? []).toEqual([]);
+	});
+
+	it('finds in the tools’ descriptions what it no longer says itself', () => {
+		for (const field of [MCP.fields.date, MCP.fields.dateUpdate]) expect(field).toMatch(/local time[\s\S]*time zone/);
+		expect(MCP.fields.text).toContain('time zone');
+		expect(MCP.tools.get_today.description).toContain('`date` is the vault’s today');
+	});
+
+	it('points to each routine it names', () => {
+		expect(skill).toContain('references/routines.md');
+		for (const heading of ['## Go through the Inbox', '## What am I waiting on', '## Plan my day', "## This week's review"]) expect(routines).toContain(heading);
+	});
+
 	it.each([
 		['SKILL.md', skill],
 		['references/format.md', format],
+		['references/routines.md', routines],
 		['agents/openai.yaml', openai],
 	])('%s keeps to the product’s words', (_file, text) => {
 		const forbidden = /\b(?:tasks?|projects?|to-?dos?|contexts?|gtd)\b|getting things done/gi;
@@ -136,7 +150,7 @@ describe('the format reference', () => {
 			expect(format).toContain(`https://matters-that-matter.app/schema/v1/${name}.json`);
 			expect(skill).toContain(`https://matters-that-matter.app/schema/v1/${name}.json`);
 		}
-		const urls = [...`${skill}\n${format}\n${openai}`.matchAll(/https?:\/\/[^\s)>"]+/g)].map((m) => m[0]);
+		const urls = [...`${skill}\n${format}\n${routines}\n${openai}`.matchAll(/https?:\/\/[^\s)>"]+/g)].map((m) => m[0]);
 		expect(urls.filter((u) => !u.startsWith('https://matters-that-matter.app/'))).toEqual([]);
 	});
 });

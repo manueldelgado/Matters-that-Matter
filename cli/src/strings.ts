@@ -294,7 +294,7 @@ export const MCP = {
 		get_today: {
 			title: 'What matters today?',
 			description:
-				'What matters today: Actions due today or late (or, when none are, the next ones), how many Actions wait in the Inbox to be sorted, the Matters whose review is due, and the Actions waiting on others, longest first. A good first call for an overview of the day. Read only.',
+				'What matters today: Actions due today or late (or, when none are, the next ones), how many Actions wait in the Inbox to be sorted, the Matters whose review is due, and the Actions waiting on others, longest first. A good first call for an overview of the day. Its `date` is the vault’s today: use it as today, for what is due or late and for relative dates, whatever your own clock says. Read only.',
 		},
 		add_matter: {
 			title: 'New Matter',
@@ -315,7 +315,7 @@ export const MCP = {
 
 	/** What each field takes, by its public name. */
 	fields: {
-		text: 'Quick add text: the title with /type, #Matter, @person, !1 to !3 and dates in words.',
+		text: 'Quick add text: the title with /type, #Matter, @person, !1 to !3 and dates in words, in the user’s local time (a date with a time zone isn’t read as a date).',
 		title: 'The title, which is also the note’s file name.',
 		titleUpdate: 'A new title; the note is renamed and links to it are updated.',
 		action: 'The Action: its path (such as MTM/Actions/Call Marco.md) or its title.',
@@ -324,8 +324,8 @@ export const MCP = {
 		type: 'An Action type, by label or ID (see get_workflow).',
 		priority: '1, 2 or 3, or high, medium or low.',
 		priorityUpdate: '1, 2 or 3, or high, medium or low; null removes it.',
-		date: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”.',
-		dateUpdate: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”; null removes it.',
+		date: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”, in the user’s local time. A time zone (Z, +02:00) is refused: convert to local time first.',
+		dateUpdate: '2026-10-16 (all day), 2026-10-16T10:00, or words such as “fri 10:00”, in the user’s local time; null removes it. A time zone (Z, +02:00) is refused: convert to local time first.',
 		waitingOn: 'A person (a note) the Action waits on; they are added to the people too.',
 		waitingOnUpdate: 'A person (a note) the Action waits on; they are added to the people too. null removes it (they stay among the people).',
 		people: 'People (notes) involved.',
